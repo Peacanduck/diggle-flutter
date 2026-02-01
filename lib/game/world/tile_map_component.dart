@@ -201,7 +201,7 @@ class TileMapComponent extends PositionComponent with HasGameRef {
   Vector2 getSpawnPosition() {
     return Vector2(
       (config.width / 2) * tileSize + (tileSize / 2),
-      (config.surfaceRows) * tileSize + (tileSize / 2),
+      (config.surfaceRows - 1) * tileSize + (tileSize / 2),
     );
   }
 

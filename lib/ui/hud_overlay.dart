@@ -7,8 +7,9 @@
 /// - Movement controls
 /// 
 /// This is a Flutter widget that overlays the Flame game.
-/// It uses ListenableBuilder to react to system changes.
+/// Uses periodic rebuilds to sync with game state.
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../game/diggle_game.dart';
 import '../game/player/drill_component.dart';
@@ -16,10 +17,33 @@ import '../game/systems/fuel_system.dart';
 import '../game/systems/economy_system.dart';
 
 /// Main HUD overlay widget
-class HudOverlay extends StatelessWidget {
+class HudOverlay extends StatefulWidget {
   final DiggleGame game;
 
   const HudOverlay({super.key, required this.game});
+
+  @override
+  State<HudOverlay> createState() => _HudOverlayState();
+}
+
+class _HudOverlayState extends State<HudOverlay> {
+  /// Timer for periodic UI updates
+  late Timer _updateTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Update HUD 10 times per second to sync with game state
+    _updateTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _updateTimer.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,11 +67,12 @@ class HudOverlay extends StatelessWidget {
           ),
 
           // Shop button (only when at surface)
-          Positioned(
-            top: 80,
-            right: 16,
-            child: _buildShopButton(),
-          ),
+          if (widget.game.drill.isAtSurface)
+            Positioned(
+              top: 80,
+              right: 16,
+              child: _buildShopButton(),
+            ),
         ],
       ),
     );
@@ -95,121 +120,107 @@ class HudOverlay extends StatelessWidget {
 
   /// Fuel gauge with visual bar
   Widget _buildFuelGauge() {
-    return ListenableBuilder(
-      listenable: game.fuelSystem,
-      builder: (context, _) {
-        final fuel = game.fuelSystem;
-        final percentage = fuel.fuelPercentage;
-        
-        Color barColor;
-        if (fuel.isCritical) {
-          barColor = Colors.red;
-        } else if (fuel.isLow) {
-          barColor = Colors.orange;
-        } else {
-          barColor = Colors.green;
-        }
+    final fuel = widget.game.fuelSystem;
+    final percentage = fuel.fuelPercentage;
+    
+    Color barColor;
+    if (fuel.isCritical) {
+      barColor = Colors.red;
+    } else if (fuel.isLow) {
+      barColor = Colors.orange;
+    } else {
+      barColor = Colors.green;
+    }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
           children: [
-            Row(
-              children: [
-                const Icon(Icons.local_gas_station, 
-                    color: Colors.white70, size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  '${fuel.fuel.toInt()}/${fuel.maxFuel.toInt()}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Container(
-              height: 8,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade800,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: percentage.clamp(0, 1),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: barColor,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
+            const Icon(Icons.local_gas_station, 
+                color: Colors.white70, size: 16),
+            const SizedBox(width: 4),
+            Text(
+              '${fuel.fuel.toInt()}/${fuel.maxFuel.toInt()}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
-        );
-      },
+        ),
+        const SizedBox(height: 4),
+        Container(
+          height: 8,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade800,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: percentage.clamp(0, 1),
+            child: Container(
+              decoration: BoxDecoration(
+                color: barColor,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   /// Cargo capacity display
   Widget _buildCargoDisplay() {
-    return ListenableBuilder(
-      listenable: game.economySystem,
-      builder: (context, _) {
-        final economy = game.economySystem;
-        final isFull = economy.isCargoFull;
+    final economy = widget.game.economySystem;
+    final isFull = economy.isCargoFull;
 
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.inventory_2,
-              color: isFull ? Colors.red : Colors.white70,
-              size: 16,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              '${economy.cargoCount}/${economy.maxCapacity}',
-              style: TextStyle(
-                color: isFull ? Colors.red : Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        );
-      },
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.inventory_2,
+          color: isFull ? Colors.red : Colors.white70,
+          size: 16,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '${economy.cargoCount}/${economy.maxCapacity}',
+          style: TextStyle(
+            color: isFull ? Colors.red : Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 
   /// Cash display
   Widget _buildCashDisplay() {
-    return ListenableBuilder(
-      listenable: game.economySystem,
-      builder: (context, _) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.attach_money, 
-                color: Colors.amber, size: 16),
-            Text(
-              '${game.economySystem.cash}',
-              style: const TextStyle(
-                color: Colors.amber,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        );
-      },
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.attach_money, 
+            color: Colors.amber, size: 16),
+        Text(
+          '${widget.game.economySystem.cash}',
+          style: const TextStyle(
+            color: Colors.amber,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 
   /// Depth meter
   Widget _buildDepthMeter() {
+    final depth = widget.game.drill.depth;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -217,7 +228,7 @@ class HudOverlay extends StatelessWidget {
             color: Colors.white70, size: 16),
         const SizedBox(width: 2),
         Text(
-          '${game.drill.depth}m',
+          '${depth}m',
           style: const TextStyle(
             color: Colors.white,
             fontSize: 12,
@@ -228,15 +239,10 @@ class HudOverlay extends StatelessWidget {
     );
   }
 
-  /// Shop button (only visible at surface)
+  /// Shop button
   Widget _buildShopButton() {
-    // Check if at surface
-    if (!game.drill.isAtSurface) {
-      return const SizedBox.shrink();
-    }
-
     return ElevatedButton.icon(
-      onPressed: () => game.openShop(),
+      onPressed: () => widget.game.openShop(),
       icon: const Icon(Icons.store),
       label: const Text('SHOP'),
       style: ElevatedButton.styleFrom(
@@ -269,11 +275,22 @@ class HudOverlay extends StatelessWidget {
             ],
           ),
 
-          // Down control
-          _buildControlButton(
-            icon: Icons.arrow_downward,
-            direction: MoveDirection.down,
-            size: 80,
+          // Up/Down controls
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildControlButton(
+                icon: Icons.arrow_upward,
+                direction: MoveDirection.up,
+                size: 64,
+              ),
+              const SizedBox(height: 8),
+              _buildControlButton(
+                icon: Icons.arrow_downward,
+                direction: MoveDirection.down,
+                size: 64,
+              ),
+            ],
           ),
         ],
       ),
@@ -287,9 +304,9 @@ class HudOverlay extends StatelessWidget {
     double size = 64,
   }) {
     return GestureDetector(
-      onTapDown: (_) => game.handleMove(direction),
-      onTapUp: (_) => game.handleMoveRelease(),
-      onTapCancel: () => game.handleMoveRelease(),
+      onTapDown: (_) => widget.game.handleMove(direction),
+      onTapUp: (_) => widget.game.handleMoveRelease(),
+      onTapCancel: () => widget.game.handleMoveRelease(),
       child: Container(
         width: size,
         height: size,

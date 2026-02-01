@@ -18,7 +18,7 @@ import '../systems/economy_system.dart';
 import '../diggle_game.dart';
 
 /// Movement direction for the drill
-enum MoveDirection { left, right, down, none }
+enum MoveDirection { left, right, up, down, none }
 
 /// The player's drill vehicle
 class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
@@ -192,8 +192,12 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
       case MoveDirection.down:
         targetY++;
         break;
+      case MoveDirection.up:
+        targetY--;
+        break;
       case MoveDirection.none:
         return;
+      
     }
 
     // Check bounds
