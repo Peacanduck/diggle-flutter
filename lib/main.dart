@@ -1,4 +1,377 @@
+/// main.dart
+/// Application entry point for Diggle.
+/// 
+/// This file:
+/// - Initializes Flutter binding
+/// - Creates the game instance
+/// - Registers all overlays
+/// - Sets up the GameWidget
+/// - Initializes optional Solana wallet service
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flame/game.dart';
+import 'package:provider/provider.dart';
+
+import 'game/diggle_game.dart';
+import 'ui/hud_overlay.dart';
+import 'ui/shop_overlay.dart';
+import 'solana/wallet_service.dart';
+
+void main() async {
+  // Ensure Flutter bindings are initialized
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Lock to portrait mode for consistent gameplay
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  // Set fullscreen mode
+  await SystemChrome.setEnabledSystemUIMode(
+    SystemUiMode.edgeToEdge,
+    overlays: [],
+  );
+
+  // Initialize wallet service (optional, non-blocking)
+  final walletService = WalletService();
+  walletService.initialize(); // Fire and forget
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: walletService),
+      ],
+      child: const DiggleApp(),
+    ),
+  );
+}
+
+/// Main application widget
+class DiggleApp extends StatelessWidget {
+  const DiggleApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Diggle',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.brown,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      home: const GameScreen(),
+    );
+  }
+}
+
+/// Main game screen that hosts the Flame game
+class GameScreen extends StatefulWidget {
+  const GameScreen({super.key});
+
+  @override
+  State<GameScreen> createState() => _GameScreenState();
+}
+
+class _GameScreenState extends State<GameScreen> {
+  /// The game instance
+  late final DiggleGame _game;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Create game with random seed (could use DateTime for daily challenges)
+    _game = DiggleGame(
+      seed: DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: GameWidget(
+        game: _game,
+        
+        // ========================================
+        // OVERLAY BUILDER
+        // ========================================
+        // Overlays are Flutter widgets that render on top of the game.
+        // They're defined here and activated/deactivated by the game
+        // using overlays.add('name') and overlays.remove('name').
+        //
+        // Each overlay receives the game instance so it can:
+        // - Read game state
+        // - Call game methods
+        // - Listen to changes
+        
+        overlayBuilderMap: {
+          // HUD overlay - always visible during gameplay
+          'hud': (context, game) => HudOverlay(game: game as DiggleGame),
+          
+          // Shop overlay - shown when player accesses shop at surface
+          'shop': (context, game) => ShopOverlay(game: game as DiggleGame),
+          
+          // Game Over overlay - shown when fuel depletes underground
+          'gameOver': (context, game) => GameOverOverlay(game: game as DiggleGame),
+          
+          // Pause overlay - for pause menu (optional)
+          'pause': (context, game) => _buildPauseOverlay(game as DiggleGame),
+          
+          // Settings overlay - for wallet connection, etc.
+          'settings': (context, game) => _buildSettingsOverlay(game as DiggleGame),
+        },
+        
+        // Loading screen while game initializes
+        loadingBuilder: (context) => const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: Colors.amber),
+              SizedBox(height: 20),
+              Text(
+                'Loading Diggle...',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ],
+          ),
+        ),
+        
+        // Error screen if game fails to load
+        errorBuilder: (context, error) => Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error, color: Colors.red, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                'Failed to load game:\n$error',
+                style: const TextStyle(color: Colors.red),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+        
+        // Background color while loading
+        backgroundBuilder: (context) => Container(
+          color: const Color(0xFF1a1a2e),
+        ),
+      ),
+    );
+  }
+
+  /// Pause menu overlay
+  Widget _buildPauseOverlay(DiggleGame game) {
+    return Container(
+      color: Colors.black.withOpacity(0.7),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'PAUSED',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 48,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 40),
+            ElevatedButton(
+              onPressed: () => game.resume(),
+              child: const Text('RESUME'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                game.overlays.add('settings');
+              },
+              child: const Text('SETTINGS'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => game.restart(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade700,
+              ),
+              child: const Text('RESTART'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Settings overlay (includes wallet connection)
+  Widget _buildSettingsOverlay(DiggleGame game) {
+    return Container(
+      color: Colors.black.withOpacity(0.9),
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => game.overlays.remove('settings'),
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  ),
+                  const Text(
+                    'Settings',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(color: Colors.white24),
+
+            // Wallet section
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: _WalletSettingsSection(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Wallet settings section widget
+class _WalletSettingsSection extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<WalletService>(
+      builder: (context, wallet, _) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade900,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.account_balance_wallet, color: Colors.purple),
+                  SizedBox(width: 8),
+                  Text(
+                    'Solana Wallet',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Connect a wallet for future features like NFT cosmetics and on-chain leaderboards.',
+                style: TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+
+              // Connection status
+              if (!wallet.isAvailable)
+                const Text(
+                  'No Solana wallet app installed',
+                  style: TextStyle(color: Colors.orange),
+                )
+              else if (wallet.isConnected)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.check_circle, 
+                            color: Colors.green, size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          wallet.walletName ?? 'Connected',
+                          style: const TextStyle(color: Colors.green),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      wallet.shortPublicKey ?? '',
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () => wallet.disconnect(),
+                        child: const Text('Disconnect'),
+                      ),
+                    ),
+                  ],
+                )
+              else if (wallet.isConnecting)
+                const Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'Connecting...',
+                      style: TextStyle(color: Colors.white54),
+                    ),
+                  ],
+                )
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (wallet.errorMessage != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          wallet.errorMessage!,
+                          style: const TextStyle(color: Colors.red, fontSize: 12),
+                        ),
+                      ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => wallet.connect(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.purple,
+                        ),
+                        child: const Text('Connect Wallet'),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/*import 'package:flutter/material.dart';
 
 void main() {
   runApp(const MyApp());
@@ -119,4 +492,4 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
   }
-}
+}*/

@@ -28,6 +28,8 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Required for Solana Mobile
+         multiDexEnabled = true
     }
 
     buildTypes {
@@ -41,4 +43,17 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Kotlin Coroutines for async wallet operations
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+
+     // MultiDex support for older Android versions
+    implementation("androidx.multidex:multidex:2.0.1")
+    
+    // Solana Mobile Wallet Adapter
+    // Uncomment when ready to integrate wallet features:
+    // implementation("com.solanamobile:mobile-wallet-adapter-clientlib-ktx:2.0.0")
 }
