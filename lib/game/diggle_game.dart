@@ -1,178 +1,95 @@
 /// diggle_game.dart
 /// Main Flame game class for Diggle.
-/// 
-/// This is the root of the game hierarchy. It:
-/// - Initializes the game world
-/// - Sets up camera following
-/// - Manages game state (playing, paused, game over)
-/// - Coordinates overlays (HUD, shop, game over)
-/// - Handles player input routing
-import 'dart:math' as math;
 
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
+import 'package:flame/experimental.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
-import 'package:flame/experimental.dart';
 
 import 'world/tile_map_component.dart';
 import 'world/world_generator.dart';
 import 'player/drill_component.dart';
 import 'systems/fuel_system.dart';
 import 'systems/economy_system.dart';
+import 'systems/hull_system.dart';
 
-/// Game states
-enum GameState {
-  /// Normal gameplay
-  playing,
-  
-  /// Shop menu open
-  shopping,
-  
-  /// Game over screen
-  gameOver,
-  
-  /// Paused
-  paused,
-}
+enum GameState { playing, shopping, gameOver, paused }
 
-/// Main game class
 class DiggleGame extends FlameGame with HasCollisionDetection {
-  // ============================================================
-  // GAME COMPONENTS
-  // ============================================================
-
-  /// The tile-based world
   late TileMapComponent tileMap;
-
-  /// The player's drill
   late DrillComponent drill;
-
-  /// Fuel management system
   late FuelSystem fuelSystem;
-
-  /// Economy/inventory system
   late EconomySystem economySystem;
+  late HullSystem hullSystem;
 
-  // ============================================================
-  // GAME STATE
-  // ============================================================
-
-  /// Current game state
   GameState _state = GameState.playing;
-
-  /// World configuration
   final WorldConfig worldConfig;
-
-  /// Random seed for this run
   final int seed;
 
   DiggleGame({
     this.seed = 42,
     WorldConfig? config,
-  }) : worldConfig = config ??
-            WorldConfig(
-              width: 64,
-              height: 128,
-              surfaceRows: 3,
-              seed: seed,
-            );
-
-  // ============================================================
-  // LIFECYCLE
-  // ============================================================
+  }) : worldConfig = config ?? WorldConfig(
+    width: 64,
+    height: 128,
+    surfaceRows: 3,
+    seed: seed,
+  );
 
   @override
   Future<void> onLoad() async {
-    // Initialize systems first
+    // Initialize systems
     fuelSystem = FuelSystem();
     economySystem = EconomySystem();
+    hullSystem = HullSystem();
 
     // Create tile map
     tileMap = TileMapComponent(config: worldConfig);
-    
-    // Create drill (player)
+
+    // Create drill with all systems
     drill = DrillComponent(
       tileMap: tileMap,
       fuelSystem: fuelSystem,
       economySystem: economySystem,
+      hullSystem: hullSystem,
       onGameOver: _handleGameOver,
       onReachSurface: _handleReachSurface,
     );
 
-    // ========================================
-    // CAMERA SETUP
-    // ========================================
-    // 
-    // Flame's camera system works as follows:
-    // 1. CameraComponent has a viewport (what we see on screen)
-    // 2. CameraComponent has a viewfinder (what part of world to show)
-    // 3. We add game objects to camera.world
-    // 4. We configure camera.viewfinder to follow the player
-    //
-    // The world component is separate from the camera's world.
-    // We add our tileMap and drill to camera.world so they render
-    // through the camera's transformation.
-
-    // Add components to the camera's world (not directly to game)
+    // Add to world
     world.add(tileMap);
     world.add(drill);
 
-    // Configure camera to follow player with some bounds
+    // Camera setup - FAST follow for responsive feel
     camera.viewfinder.anchor = Anchor.center;
-    
-    // Follow the drill with smooth interpolation
     camera.follow(
       drill,
-      maxSpeed: 200, // Smooth follow speed
+      maxSpeed: 500, // Much faster camera to keep up with flying
       horizontalOnly: false,
     );
-
-    // Set initial zoom (1.0 = no zoom)
     camera.viewfinder.zoom = 1.5;
 
-    // Clamp camera to world bounds
+    // Camera bounds
     camera.setBounds(
-      Rectangle.fromLTWH(
-        0,
-        0,
-        tileMap.worldSize.x,
-        tileMap.worldSize.y,
-      ),
+      Rectangle.fromLTWH(0, 0, tileMap.worldSize.x, tileMap.worldSize.y),
     );
 
-    // ========================================
-    // OVERLAYS
-    // ========================================
-    // Overlays are Flutter widgets that render on top of the game.
-    // They're registered in main.dart and toggled here.
-    
-    // Show HUD by default
     overlays.add('hud');
   }
 
   @override
   void update(double dt) {
     super.update(dt);
-
-    // Only update game logic when playing
     if (_state != GameState.playing) return;
-
-    // Update depth tracking
     economySystem.updateMaxDepth(drill.depth);
   }
 
   @override
   Color backgroundColor() => const Color(0xFF1a1a2e);
 
-  // ============================================================
-  // GAME STATE MANAGEMENT
-  // ============================================================
-
-  /// Current game state
+  // State management
   GameState get state => _state;
-
-  /// Check if game is actively playing
   bool get isPlaying => _state == GameState.playing;
 
   void _handleGameOver() {
@@ -182,50 +99,34 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     overlays.remove('hud');
   }
 
-  void _handleReachSurface() {
-    // Could trigger events when reaching surface
-    // For now, just ensure shop is accessible
-  }
+  void _handleReachSurface() {}
 
-  /// Open the shop overlay
   void openShop() {
     if (!drill.isAtSurface) return;
-    
     _state = GameState.shopping;
     fuelSystem.pause();
     overlays.add('shop');
   }
 
-  /// Close the shop overlay
   void closeShop() {
     _state = GameState.playing;
     fuelSystem.resume();
     overlays.remove('shop');
   }
 
-  /// Restart the game
   void restart() {
-    // Reset systems
     fuelSystem.reset();
     economySystem.reset();
-    
-    // Reset world
+    hullSystem.reset();
     tileMap.reset();
-    
-    // Reset player
     drill.reset();
-    
-    // Reset state
     _state = GameState.playing;
     fuelSystem.resume();
-    
-    // Update overlays
     overlays.remove('gameOver');
     overlays.remove('shop');
     overlays.add('hud');
   }
 
-  /// Pause the game
   void pause() {
     if (_state != GameState.playing) return;
     _state = GameState.paused;
@@ -233,7 +134,6 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     overlays.add('pause');
   }
 
-  /// Resume the game
   void resume() {
     if (_state != GameState.paused) return;
     _state = GameState.playing;
@@ -241,31 +141,19 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     overlays.remove('pause');
   }
 
-  // ============================================================
-  // INPUT HANDLING
-  // ============================================================
-
-  /// Handle movement input from controls
+  // Input
   void handleMove(MoveDirection direction) {
     if (_state != GameState.playing) return;
-    drill.startMove(direction);
+    drill.heldDirection = direction;
   }
 
-  /// Handle movement release
   void handleMoveRelease() {
-    drill.stopMove();
+    drill.heldDirection = MoveDirection.none;
   }
 
-  // ============================================================
-  // SHOP TRANSACTIONS
-  // ============================================================
+  // Shop transactions
+  int sellOre() => economySystem.sellAllOre();
 
-  /// Sell all ore
-  int sellOre() {
-    return economySystem.sellAllOre();
-  }
-
-  /// Refuel the drill
   bool refuel() {
     final cost = fuelSystem.getRefillCost();
     if (economySystem.spend(cost)) {
@@ -275,7 +163,6 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     return false;
   }
 
-  /// Upgrade fuel tank
   bool upgradeFuelTank() {
     final cost = fuelSystem.getUpgradeCost();
     if (cost > 0 && economySystem.spend(cost)) {
@@ -285,8 +172,23 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     return false;
   }
 
-  /// Upgrade cargo capacity
-  bool upgradeCargo() {
-    return economySystem.upgradeCargo();
+  bool upgradeCargo() => economySystem.upgradeCargo();
+
+  bool repairHull() {
+    final cost = hullSystem.getRepairCost();
+    if (cost > 0 && economySystem.spend(cost)) {
+      hullSystem.fullRepair();
+      return true;
+    }
+    return false;
+  }
+
+  bool upgradeHull() {
+    final cost = hullSystem.getUpgradeCost();
+    if (cost > 0 && economySystem.spend(cost)) {
+      hullSystem.upgrade();
+      return true;
+    }
+    return false;
   }
 }

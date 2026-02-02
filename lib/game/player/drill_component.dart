@@ -1,12 +1,5 @@
 /// drill_component.dart
-/// The player-controlled drill component.
-/// 
-/// Handles:
-/// - Movement (left, right, down)
-/// - Digging mechanics
-/// - Fuel consumption
-/// - Collision with world
-/// - Gravity when over empty space
+/// Smooth movement drill with fall damage (no fuel loss while falling)
 
 import 'dart:ui';
 import 'package:flame/components.dart';
@@ -15,392 +8,355 @@ import '../world/tile_map_component.dart';
 import '../world/tile.dart';
 import '../systems/fuel_system.dart';
 import '../systems/economy_system.dart';
+import '../systems/hull_system.dart';
 import '../diggle_game.dart';
 
-/// Movement direction for the drill
-enum MoveDirection { left, right, up, down, none }
+enum MoveDirection { left, right, down, up, none }
 
-/// The player's drill vehicle
 class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
-  /// Reference to the tile map
   final TileMapComponent tileMap;
-
-  /// Reference to fuel system
   final FuelSystem fuelSystem;
-
-  /// Reference to economy system
   final EconomySystem economySystem;
+  final HullSystem hullSystem;
 
-  /// Current movement direction
-  MoveDirection _currentDirection = MoveDirection.none;
+  MoveDirection heldDirection = MoveDirection.none;
 
-  /// Current grid position
-  int _gridX = 0;
-  int _gridY = 0;
+  // Target we're moving toward
+  Vector2 _target = Vector2.zero();
 
-  /// Target position for smooth movement
-  Vector2 _targetPosition = Vector2.zero();
+  // Digging state
+  bool _digging = false;
+  int _digX = 0;
+  int _digY = 0;
 
-  /// Whether currently moving/digging
-  bool _isMoving = false;
-  bool _isDigging = false;
-
-  /// Movement speed (pixels per second)
-  static const double moveSpeed = 128.0;
-
-  /// Digging speed multiplier
-  static const double digSpeedMultiplier = 1.5;
-
-  /// Gravity speed when falling
-  static const double fallSpeed = 200.0;
-
-  /// Whether drill is falling
+  // Fall tracking
   bool _isFalling = false;
+  int _fallStartY = 0;
+  int _currentFallY = 0;
 
-  /// Callback when game over (fuel depleted underground)
+  // Speeds
+  static const double normalSpeed = 200.0;
+  static const double flySpeed = 320.0;
+  static const double fallSpeed = 280.0;
+  static const double digSpeed = 4.0;
+
+  // Fall damage settings
+  static const int safeFallDistance = 3;
+  static const double damagePerTile = 15.0;
+
   final void Function()? onGameOver;
-
-  /// Callback when player reaches surface
   final void Function()? onReachSurface;
 
   DrillComponent({
     required this.tileMap,
     required this.fuelSystem,
     required this.economySystem,
+    required this.hullSystem,
     this.onGameOver,
     this.onReachSurface,
   }) : super(
-          size: Vector2.all(TileMapComponent.tileSize * 0.8),
-          anchor: Anchor.center,
-        );
+    size: Vector2.all(TileMapComponent.tileSize * 0.8),
+    anchor: Anchor.center,
+  );
 
-  // ============================================================
-  // LIFECYCLE
-  // ============================================================
+  int get gridX => (position.x / TileMapComponent.tileSize).floor();
+  int get gridY => (position.y / TileMapComponent.tileSize).floor();
+  int get depth => (gridY - tileMap.config.surfaceRows).clamp(0, 999);
+  bool get isAtSurface => gridY <= tileMap.config.surfaceRows;
+
+  Vector2 _tileCenter(int x, int y) => Vector2(
+    x * TileMapComponent.tileSize + TileMapComponent.tileSize / 2,
+    y * TileMapComponent.tileSize + TileMapComponent.tileSize / 2,
+  );
 
   @override
   Future<void> onLoad() async {
-    // Spawn at surface
     position = tileMap.getSpawnPosition();
-    _updateGridPosition();
-    _targetPosition = position.clone();
+    _target = position.clone();
+    tileMap.revealAround(gridX, gridY);
   }
 
   @override
   void update(double dt) {
     super.update(dt);
 
-    // Check for game over (fuel depleted underground)
-    if (fuelSystem.isEmpty && !_isAtSurface()) {
+    // Check for game over conditions
+    if (hullSystem.isDestroyed) {
+      onGameOver?.call();
+      return;
+    }
+    if (fuelSystem.isEmpty && !isAtSurface) {
       onGameOver?.call();
       return;
     }
 
-    // Handle falling
-    if (_isFalling) {
-      _handleFalling(dt);
+    // If digging, handle that first
+    if (_digging) {
+      _handleDigging(dt);
       return;
     }
 
-    // Handle movement
-    if (_isMoving || _isDigging) {
-      _handleMovement(dt);
+    final toTarget = _target - position;
+    final dist = toTarget.length;
+
+    if (dist > 1) {
+      // Move toward target
+      final speed = _getCurrentSpeed();
+      final move = toTarget.normalized() * speed * dt;
+      if (move.length > dist) {
+        position = _target.clone();
+      } else {
+        position += move;
+      }
+      tileMap.revealAround(gridX, gridY);
+    } else {
+      // Reached target
+      position = _target.clone();
+
+      // Update fall tracking when reaching new tile
+      if (_isFalling) {
+        _currentFallY = gridY;
+      }
+
+      _decideNextMove(dt);
     }
 
-    // Check if should fall
-    _checkForFall();
+    economySystem.updateMaxDepth(depth);
 
-    // Update statistics
-    economySystem.updateMaxDepth(_gridY - tileMap.config.surfaceRows);
+    if (isAtSurface) {
+      onReachSurface?.call();
+    }
+  }
+
+  double _getCurrentSpeed() {
+    if (heldDirection == MoveDirection.up) return flySpeed;
+    if (_isFalling) return fallSpeed;
+    return normalSpeed;
+  }
+
+  void _decideNextMove(double dt) {
+    final gx = gridX;
+    final gy = gridY;
+
+    // Check tile below for falling logic
+    final below = tileMap.getTileAt(gx, gy + 1);
+    final canFall = below != null && below.type == TileType.empty;
+
+    // If holding a direction, try to go that way
+    if (heldDirection != MoveDirection.none) {
+      int nx = gx, ny = gy;
+      switch (heldDirection) {
+        case MoveDirection.left: nx--; break;
+        case MoveDirection.right: nx++; break;
+        case MoveDirection.down: ny++; break;
+        case MoveDirection.up: ny--; break;
+        case MoveDirection.none: break;
+      }
+
+      final tile = tileMap.getTileAt(nx, ny);
+      if (tile == null) {
+        // Can't move there, check for fall
+        if (canFall) _continueFalling(gx, gy);
+        return;
+      }
+
+      if (heldDirection == MoveDirection.up) {
+        // Flying - only through empty space
+        if (tile.type == TileType.empty) {
+          // Flying cancels fall WITHOUT damage (you saved yourself!)
+          _isFalling = false;
+          _fallStartY = 0;
+          _currentFallY = 0;
+          _target = _tileCenter(nx, ny);
+          fuelSystem.consume(0.4);
+        } else {
+          // Can't fly through solid - but pressing UP still cancels fall damage
+          // (you're trying to save yourself, just blocked by ceiling)
+          _isFalling = false;
+          _fallStartY = 0;
+          _currentFallY = 0;
+          // Check if we should start falling again
+          if (canFall) _continueFalling(gx, gy);
+        }
+      } else if (heldDirection == MoveDirection.left || heldDirection == MoveDirection.right) {
+        // Horizontal movement
+        if (tile.type == TileType.empty) {
+          // Moving sideways cancels fall WITHOUT damage
+          _isFalling = false;
+          _fallStartY = 0;
+          _currentFallY = 0;
+          _target = _tileCenter(nx, ny);
+          fuelSystem.consume(0.5);
+        } else if (tile.type != TileType.bedrock) {
+          // Digging sideways while falling - take damage first
+          if (_isFalling) {
+            _land();
+          }
+          _digging = true;
+          _digX = nx;
+          _digY = ny;
+          tileMap.startDig(nx, ny);
+        } else {
+          // Bedrock - check for fall
+          if (canFall) _continueFalling(gx, gy);
+        }
+      } else if (heldDirection == MoveDirection.down) {
+        // Downward movement
+        if (tile.type == TileType.empty) {
+          // Continue or start falling (no fuel cost)
+          if (!_isFalling) {
+            _startFalling(gy);
+          }
+          _target = _tileCenter(nx, ny);
+          // NO fuel consumption while falling!
+        } else if (tile.type != TileType.bedrock) {
+          // Digging down into solid - take fall damage!
+          if (_isFalling) {
+            _land();
+          }
+          _digging = true;
+          _digX = nx;
+          _digY = ny;
+          tileMap.startDig(nx, ny);
+        }
+        // Bedrock below = can't move, already on ground
+      }
+    } else {
+      // Not holding direction - check for falling
+      if (canFall) {
+        _continueFalling(gx, gy);
+      } else if (_isFalling) {
+        // We were falling but now there's ground - land!
+        _land();
+      }
+    }
+  }
+
+  void _startFalling(int startY) {
+    _isFalling = true;
+    _fallStartY = startY;
+    _currentFallY = startY;
+  }
+
+  void _continueFalling(int gx, int gy) {
+    if (!_isFalling) {
+      _startFalling(gy);
+    }
+    _target = _tileCenter(gx, gy + 1);
+    // NO fuel consumption while falling!
+  }
+
+  void _land() {
+    if (!_isFalling) return;
+
+    final fallDistance = _currentFallY - _fallStartY;
+    _isFalling = false;
+    _fallStartY = 0;
+    _currentFallY = 0;
+
+    if (fallDistance > safeFallDistance) {
+      final damageTiles = fallDistance - safeFallDistance;
+      final damage = damageTiles * damagePerTile;
+      hullSystem.takeDamage(damage);
+    }
+  }
+
+  void _handleDigging(double dt) {
+    final tile = tileMap.getTileAt(_digX, _digY);
+    if (tile == null || tile.type == TileType.empty) {
+      _digging = false;
+      return;
+    }
+
+    final progress = (dt * digSpeed) / tile.type.digTime;
+    final result = tileMap.updateDig(_digX, _digY, progress);
+
+    if (result != null) {
+      // Check for hazards BEFORE moving into the tile
+      if (result.isLethal) {
+        // Lava = instant death!
+        hullSystem.takeDamage(9999);
+        _digging = false;
+        return;
+      }
+
+      if (result.isHazard && result.hazardDamage > 0) {
+        // Gas = take damage but survive
+        hullSystem.takeDamage(result.hazardDamage);
+      }
+
+      fuelSystem.consume(result.fuelCost);
+      if (result.isOre) {
+        economySystem.collectOre(result);
+      }
+      tileMap.revealAround(_digX, _digY);
+      _target = _tileCenter(_digX, _digY);
+      _digging = false;
+    }
   }
 
   @override
   void render(Canvas canvas) {
-    // Draw drill body
     final bodyRect = Rect.fromCenter(
       center: Offset(size.x / 2, size.y / 2),
       width: size.x,
       height: size.y,
     );
 
-    // Main body color
-    final bodyPaint = Paint()
-      ..color = fuelSystem.isCritical
-          ? Colors.red.shade700
-          : fuelSystem.isLow
-              ? Colors.orange.shade700
-              : Colors.blue.shade700;
+    // Color based on status
+    Color color;
+    if (hullSystem.isCritical) {
+      color = Colors.red.shade900;
+    } else if (hullSystem.isLow) {
+      color = Colors.orange.shade700;
+    } else if (fuelSystem.isCritical) {
+      color = Colors.red.shade700;
+    } else if (fuelSystem.isLow) {
+      color = Colors.orange.shade700;
+    } else {
+      color = Colors.blue.shade700;
+    }
 
     canvas.drawRRect(
       RRect.fromRectAndRadius(bodyRect, const Radius.circular(4)),
-      bodyPaint,
+      Paint()..color = color,
     );
 
-    // Cockpit (lighter area)
-    final cockpitRect = Rect.fromCenter(
-      center: Offset(size.x / 2, size.y / 3),
-      width: size.x * 0.5,
-      height: size.y * 0.3,
-    );
+    // Cockpit
     canvas.drawRRect(
-      RRect.fromRectAndRadius(cockpitRect, const Radius.circular(2)),
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(size.x / 2, size.y / 3),
+          width: size.x * 0.5,
+          height: size.y * 0.3,
+        ),
+        const Radius.circular(2),
+      ),
       Paint()..color = Colors.lightBlue.shade300,
     );
 
-    // Drill bit at bottom
-    final drillPath = Path()
+    // Drill bit
+    final drill = Path()
       ..moveTo(size.x / 2 - 6, size.y * 0.75)
       ..lineTo(size.x / 2, size.y)
       ..lineTo(size.x / 2 + 6, size.y * 0.75)
       ..close();
+    canvas.drawPath(drill, Paint()..color = Colors.grey.shade400);
 
-    canvas.drawPath(
-      drillPath,
-      Paint()..color = Colors.grey.shade400,
-    );
-
-    // Treads/tracks
-    final leftTread = Rect.fromLTWH(-2, size.y * 0.4, 4, size.y * 0.5);
-    final rightTread = Rect.fromLTWH(size.x - 2, size.y * 0.4, 4, size.y * 0.5);
-    final treadPaint = Paint()..color = Colors.grey.shade800;
-    
-    canvas.drawRect(leftTread, treadPaint);
-    canvas.drawRect(rightTread, treadPaint);
+    // Treads
+    final tread = Paint()..color = Colors.grey.shade800;
+    canvas.drawRect(Rect.fromLTWH(-2, size.y * 0.4, 4, size.y * 0.5), tread);
+    canvas.drawRect(Rect.fromLTWH(size.x - 2, size.y * 0.4, 4, size.y * 0.5), tread);
   }
 
-  // ============================================================
-  // MOVEMENT CONTROL
-  // ============================================================
-
-  /// Start moving in a direction
-  void startMove(MoveDirection direction) {
-    if (_isMoving || _isDigging || _isFalling || fuelSystem.isEmpty) return;
-    
-    _currentDirection = direction;
-    
-    // Calculate target tile
-    int targetX = _gridX;
-    int targetY = _gridY;
-
-    switch (direction) {
-      case MoveDirection.left:
-        targetX--;
-        break;
-      case MoveDirection.right:
-        targetX++;
-        break;
-      case MoveDirection.down:
-        targetY++;
-        break;
-      case MoveDirection.up:
-        targetY--;
-        break;
-      case MoveDirection.none:
-        return;
-      
-    }
-
-    // Check bounds
-    final targetTile = tileMap.getTileAt(targetX, targetY);
-    if (targetTile == null) return;
-
-    // Check if diggable or empty
-    if (targetTile.type == TileType.bedrock) return;
-
-    // Set target position
-    _targetPosition = Vector2(
-      targetX * TileMapComponent.tileSize + TileMapComponent.tileSize / 2,
-      targetY * TileMapComponent.tileSize + TileMapComponent.tileSize / 2,
-    );
-
-    if (targetTile.type == TileType.empty) {
-      // Just move
-      _isMoving = true;
-      fuelSystem.consume(TileType.empty.fuelCost);
-    } else {
-      // Need to dig first
-      _isDigging = true;
-      tileMap.startDig(targetX, targetY);
-    }
-  }
-
-  /// Stop current movement
-  void stopMove() {
-    if (_isDigging) {
-      // Cancel dig in progress
-      final targetX = _getTargetGridX();
-      final targetY = _getTargetGridY();
-      tileMap.cancelDig(targetX, targetY);
-    }
-    _currentDirection = MoveDirection.none;
-    _isMoving = false;
-    _isDigging = false;
-  }
-
-  // ============================================================
-  // MOVEMENT HANDLING
-  // ============================================================
-
-  void _handleMovement(double dt) {
-    if (_isDigging) {
-      _handleDigging(dt);
-    } else if (_isMoving) {
-      _moveTowardsTarget(dt);
-    }
-  }
-
-  void _handleDigging(double dt) {
-    final targetX = _getTargetGridX();
-    final targetY = _getTargetGridY();
-    final targetTile = tileMap.getTileAt(targetX, targetY);
-    
-    if (targetTile == null || !targetTile.type.isDiggable) {
-      stopMove();
-      return;
-    }
-
-    // Calculate dig progress
-    final digTime = targetTile.type.digTime;
-    final progressDelta = (dt * digSpeedMultiplier) / digTime;
-
-    // Update dig and check completion
-    final dugType = tileMap.updateDig(targetX, targetY, progressDelta);
-    
-    if (dugType != null) {
-      // Dig completed - consume fuel
-      fuelSystem.consume(dugType.fuelCost);
-      
-      // Collect ore if applicable
-      if (dugType.isOre) {
-        economySystem.collectOre(dugType);
-      }
-
-      // Reveal surrounding tiles
-      tileMap.revealAround(targetX, targetY);
-
-      // Start moving into the space
-      _isDigging = false;
-      _isMoving = true;
-    }
-  }
-
-  void _moveTowardsTarget(double dt) {
-    final distance = position.distanceTo(_targetPosition);
-    
-    if (distance < 1) {
-      // Reached target
-      position = _targetPosition.clone();
-      _updateGridPosition();
-      _isMoving = false;
-      
-      // Check if at surface
-      if (_isAtSurface()) {
-        onReachSurface?.call();
-      }
-    } else {
-      // Move towards target
-      final direction = (_targetPosition - position).normalized();
-      position += direction * moveSpeed * dt;
-    }
-  }
-
-  void _handleFalling(double dt) {
-    // Check tile below
-    final belowTile = tileMap.getTileAt(_gridX, _gridY + 1);
-    
-    if (belowTile == null || belowTile.type != TileType.empty) {
-      // Stop falling
-      _isFalling = false;
-      _snapToGrid();
-      return;
-    }
-
-    // Update target to next empty tile below
-    _targetPosition = Vector2(
-      _gridX * TileMapComponent.tileSize + TileMapComponent.tileSize / 2,
-      (_gridY + 1) * TileMapComponent.tileSize + TileMapComponent.tileSize / 2,
-    );
-
-    // Move down
-    position.y += fallSpeed * dt;
-
-    // Check if passed target
-    if (position.y >= _targetPosition.y) {
-      position = _targetPosition.clone();
-      _updateGridPosition();
-      // Consume fuel for falling
-      fuelSystem.consume(TileType.empty.fuelCost * 0.5);
-    }
-  }
-
-  void _checkForFall() {
-    if (_isMoving || _isDigging || _isFalling) return;
-
-    final belowTile = tileMap.getTileAt(_gridX, _gridY + 1);
-    if (belowTile != null && belowTile.type == TileType.empty) {
-      _isFalling = true;
-    }
-  }
-
-  // ============================================================
-  // UTILITY
-  // ============================================================
-
-  void _updateGridPosition() {
-    _gridX = (position.x / TileMapComponent.tileSize).floor();
-    _gridY = (position.y / TileMapComponent.tileSize).floor();
-    
-    // Reveal surrounding tiles
-    tileMap.revealAround(_gridX, _gridY);
-  }
-
-  void _snapToGrid() {
-    position = Vector2(
-      _gridX * TileMapComponent.tileSize + TileMapComponent.tileSize / 2,
-      _gridY * TileMapComponent.tileSize + TileMapComponent.tileSize / 2,
-    );
-    _targetPosition = position.clone();
-  }
-
-  int _getTargetGridX() {
-    return (_targetPosition.x / TileMapComponent.tileSize).floor();
-  }
-
-  int _getTargetGridY() {
-    return (_targetPosition.y / TileMapComponent.tileSize).floor();
-  }
-
-  bool _isAtSurface() {
-    return tileMap.isAtSurface(_gridY);
-  }
-
-  // ============================================================
-  // PUBLIC API
-  // ============================================================
-
-  /// Current grid X position
-  int get gridX => _gridX;
-
-  /// Current grid Y position
-  int get gridY => _gridY;
-
-  /// Current depth (tiles below surface)
-  int get depth => (_gridY - tileMap.config.surfaceRows).clamp(0, 999);
-
-  /// Whether currently at surface
-  bool get isAtSurface => _isAtSurface();
-
-  /// Whether currently busy (moving/digging/falling)
-  bool get isBusy => _isMoving || _isDigging || _isFalling;
-
-  /// Reset to spawn position
   void reset() {
     position = tileMap.getSpawnPosition();
-    _updateGridPosition();
-    _targetPosition = position.clone();
-    _isMoving = false;
-    _isDigging = false;
+    _target = position.clone();
+    _digging = false;
     _isFalling = false;
-    _currentDirection = MoveDirection.none;
+    _fallStartY = 0;
+    _currentFallY = 0;
+    heldDirection = MoveDirection.none;
+    tileMap.revealAround(gridX, gridY);
   }
 }

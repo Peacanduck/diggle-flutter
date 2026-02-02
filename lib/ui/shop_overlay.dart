@@ -3,13 +3,14 @@
 /// - Selling collected ore
 /// - Refueling
 /// - Purchasing upgrades
-/// 
+///
 /// Only accessible when player is at surface.
 
 import 'package:flutter/material.dart';
 import '../game/diggle_game.dart';
 import '../game/systems/fuel_system.dart';
 import '../game/systems/economy_system.dart';
+import '../game/systems/hull_system.dart';
 import '../game/world/tile.dart';
 
 /// Shop overlay widget
@@ -54,6 +55,11 @@ class _ShopOverlayState extends State<ShopOverlay> {
 
                     // Refuel section
                     _buildRefuelSection(),
+
+                    const SizedBox(height: 20),
+
+                    // Repair section
+                    _buildRepairSection(),
 
                     const SizedBox(height: 20),
 
@@ -131,10 +137,16 @@ class _ShopOverlayState extends State<ShopOverlay> {
                 color: Colors.amber,
               ),
               _buildStatItem(
+                icon: Icons.shield,
+                label: 'Hull',
+                value: '${widget.game.hullSystem.hull.toInt()}/${widget.game.hullSystem.maxHull.toInt()}',
+                color: widget.game.hullSystem.isCritical ? Colors.red : Colors.green,
+              ),
+              _buildStatItem(
                 icon: Icons.local_gas_station,
                 label: 'Fuel',
                 value: '${widget.game.fuelSystem.fuel.toInt()}/${widget.game.fuelSystem.maxFuel.toInt()}',
-                color: Colors.green,
+                color: Colors.cyan,
               ),
               _buildStatItem(
                 icon: Icons.inventory_2,
@@ -300,8 +312,8 @@ class _ShopOverlayState extends State<ShopOverlay> {
                           color: fuel.isCritical
                               ? Colors.red
                               : fuel.isLow
-                                  ? Colors.orange
-                                  : Colors.green,
+                              ? Colors.orange
+                              : Colors.green,
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
@@ -355,8 +367,85 @@ class _ShopOverlayState extends State<ShopOverlay> {
           _buildFuelUpgrade(),
           const SizedBox(height: 12),
           _buildCargoUpgrade(),
+          const SizedBox(height: 12),
+          _buildHullUpgrade(),
         ],
       ),
+    );
+  }
+
+  /// Repair section
+  Widget _buildRepairSection() {
+    return ListenableBuilder(
+      listenable: widget.game.hullSystem,
+      builder: (context, _) {
+        final hull = widget.game.hullSystem;
+        final cost = hull.getRepairCost();
+        final canAfford = widget.game.economySystem.canAfford(cost);
+
+        return _buildSection(
+          title: 'REPAIR',
+          icon: Icons.build,
+          child: Column(
+            children: [
+              // Hull bar
+              Container(
+                height: 24,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade800,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Stack(
+                  children: [
+                    FractionallySizedBox(
+                      widthFactor: hull.hullPercentage,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: hull.isCritical
+                              ? Colors.red
+                              : hull.isLow
+                              ? Colors.orange
+                              : Colors.green,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    Center(
+                      child: Text(
+                        '${hull.hull.toInt()} / ${hull.maxHull.toInt()}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              if (hull.isDamaged)
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: canAfford ? _repairHull : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade700,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: Text('REPAIR HULL (\$$cost)'),
+                  ),
+                )
+              else
+                const Text(
+                  'Hull is fully repaired!',
+                  style: TextStyle(color: Colors.green),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -397,6 +486,27 @@ class _ShopOverlayState extends State<ShopOverlay> {
           cost: cost,
           canAfford: canAfford,
           onUpgrade: nextLevel != null ? _upgradeCargo : null,
+        );
+      },
+    );
+  }
+
+  Widget _buildHullUpgrade() {
+    return ListenableBuilder(
+      listenable: widget.game.hullSystem,
+      builder: (context, _) {
+        final hull = widget.game.hullSystem;
+        final nextLevel = hull.getNextUpgrade();
+        final cost = hull.getUpgradeCost();
+        final canAfford = widget.game.economySystem.canAfford(cost);
+
+        return _buildUpgradeRow(
+          title: 'Hull Armor',
+          current: hull.hullLevel.name,
+          next: nextLevel?.name,
+          cost: cost,
+          canAfford: canAfford,
+          onUpgrade: nextLevel != null ? _upgradeHull : null,
         );
       },
     );
@@ -571,6 +681,24 @@ class _ShopOverlayState extends State<ShopOverlay> {
     if (widget.game.upgradeCargo()) {
       setState(() {
         _message = 'Cargo bay upgraded!';
+      });
+      _clearMessageAfterDelay();
+    }
+  }
+
+  void _repairHull() {
+    if (widget.game.repairHull()) {
+      setState(() {
+        _message = 'Hull repaired!';
+      });
+      _clearMessageAfterDelay();
+    }
+  }
+
+  void _upgradeHull() {
+    if (widget.game.upgradeHull()) {
+      setState(() {
+        _message = 'Hull armor upgraded!';
       });
       _clearMessageAfterDelay();
     }

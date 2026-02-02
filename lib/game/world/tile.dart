@@ -11,26 +11,25 @@ import 'dart:ui';
 
 /// Enumeration of all tile types in the game
 enum TileType {
-  /// Empty space - already dug or surface
+  // Basic tiles
   empty,
-  
-  /// Standard dirt - fast to dig
   dirt,
-  
-  /// Rock - slower to dig
   rock,
-  
-  /// Coal ore - common, low value
-  coal,
-  
-  /// Copper ore - medium rarity/value
-  copper,
-  
-  /// Gold ore - rare, high value
-  gold,
-  
-  /// Bedrock - cannot be dug
   bedrock,
+
+  // Ores (ordered by value: cheapest to most valuable)
+  coal,      // $5
+  copper,    // $15
+  silver,    // $35
+  gold,      // $75
+  sapphire,  // $150
+  emerald,   // $250
+  ruby,      // $400
+  diamond,   // $600
+
+  // Hazards
+  lava,  // Instant death
+  gas,   // Damage on mine
 }
 
 /// Extension to add properties and behavior to TileType
@@ -41,17 +40,31 @@ extension TileTypeExtension on TileType {
       case TileType.empty:
         return 0;
       case TileType.dirt:
-        return 0.3;
+        return 0.12;
       case TileType.rock:
-        return 0.8;
+        return 0.3;
       case TileType.coal:
-        return 0.4;
+        return 0.15;
       case TileType.copper:
-        return 0.5;
+        return 0.18;
+      case TileType.silver:
+        return 0.22;
       case TileType.gold:
+        return 0.28;
+      case TileType.sapphire:
+        return 0.35;
+      case TileType.emerald:
+        return 0.42;
+      case TileType.ruby:
+        return 0.5;
+      case TileType.diamond:
         return 0.6;
+      case TileType.lava:
+        return 0.1;
+      case TileType.gas:
+        return 0.1;
       case TileType.bedrock:
-        return double.infinity; // Cannot dig
+        return double.infinity;
     }
   }
 
@@ -59,11 +72,21 @@ extension TileTypeExtension on TileType {
   int get value {
     switch (this) {
       case TileType.coal:
-        return 10;
+        return 5;
       case TileType.copper:
-        return 25;
+        return 15;
+      case TileType.silver:
+        return 35;
       case TileType.gold:
-        return 100;
+        return 75;
+      case TileType.sapphire:
+        return 150;
+      case TileType.emerald:
+        return 250;
+      case TileType.ruby:
+        return 400;
+      case TileType.diamond:
+        return 600;
       default:
         return 0;
     }
@@ -73,25 +96,70 @@ extension TileTypeExtension on TileType {
   double get fuelCost {
     switch (this) {
       case TileType.empty:
-        return 0.5; // Moving through empty space
+        return 0.5;
       case TileType.dirt:
         return 1.0;
       case TileType.rock:
-        return 2.0;
-      case TileType.coal:
-      case TileType.copper:
-      case TileType.gold:
         return 1.5;
+      case TileType.coal:
+        return 1.0;
+      case TileType.copper:
+        return 1.2;
+      case TileType.silver:
+        return 1.4;
+      case TileType.gold:
+        return 1.6;
+      case TileType.sapphire:
+        return 1.8;
+      case TileType.emerald:
+        return 2.0;
+      case TileType.ruby:
+        return 2.2;
+      case TileType.diamond:
+        return 2.5;
+      case TileType.lava:
+      case TileType.gas:
+        return 1.0;
       case TileType.bedrock:
-        return 0; // Can't dig anyway
+        return 0;
     }
   }
 
   /// Whether this tile type is an ore that can be collected
   bool get isOre {
-    return this == TileType.coal ||
-        this == TileType.copper ||
-        this == TileType.gold;
+    switch (this) {
+      case TileType.coal:
+      case TileType.copper:
+      case TileType.silver:
+      case TileType.gold:
+      case TileType.sapphire:
+      case TileType.emerald:
+      case TileType.ruby:
+      case TileType.diamond:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /// Whether this tile is a hazard
+  bool get isHazard {
+    return this == TileType.lava || this == TileType.gas;
+  }
+
+  /// Whether this tile is instant death
+  bool get isLethal {
+    return this == TileType.lava;
+  }
+
+  /// Damage dealt when mining this tile (for gas)
+  double get hazardDamage {
+    switch (this) {
+      case TileType.gas:
+        return 25.0;
+      default:
+        return 0;
+    }
   }
 
   /// Whether this tile can be dug
@@ -103,19 +171,33 @@ extension TileTypeExtension on TileType {
   Color get color {
     switch (this) {
       case TileType.empty:
-        return const Color(0xFF1a1a2e); // Dark background
+        return const Color(0xFF1a1a2e);
       case TileType.dirt:
-        return const Color(0xFF8B4513); // Saddle brown
+        return const Color(0xFF8B4513);
       case TileType.rock:
-        return const Color(0xFF696969); // Dim gray
+        return const Color(0xFF696969);
       case TileType.coal:
-        return const Color(0xFF2F2F2F); // Dark gray with shine
+        return const Color(0xFF2F2F2F);
       case TileType.copper:
-        return const Color(0xFFB87333); // Copper orange
+        return const Color(0xFFB87333);
+      case TileType.silver:
+        return const Color(0xFFC0C0C0);
       case TileType.gold:
-        return const Color(0xFFFFD700); // Gold
+        return const Color(0xFFFFD700);
+      case TileType.sapphire:
+        return const Color(0xFF0F52BA);
+      case TileType.emerald:
+        return const Color(0xFF50C878);
+      case TileType.ruby:
+        return const Color(0xFFE0115F);
+      case TileType.diamond:
+        return const Color(0xFFB9F2FF);
+      case TileType.lava:
+        return const Color(0xFFFF4500);
+      case TileType.gas:
+        return const Color(0xFF7CFC00);
       case TileType.bedrock:
-        return const Color(0xFF1C1C1C); // Near black
+        return const Color(0xFF1C1C1C);
     }
   }
 
@@ -132,8 +214,22 @@ extension TileTypeExtension on TileType {
         return const Color(0xFF4A4A4A);
       case TileType.copper:
         return const Color(0xFFCD853F);
+      case TileType.silver:
+        return const Color(0xFFE8E8E8);
       case TileType.gold:
         return const Color(0xFFFFE135);
+      case TileType.sapphire:
+        return const Color(0xFF1E90FF);
+      case TileType.emerald:
+        return const Color(0xFF3CB371);
+      case TileType.ruby:
+        return const Color(0xFFFF1744);
+      case TileType.diamond:
+        return const Color(0xFFE0FFFF);
+      case TileType.lava:
+        return const Color(0xFFFF6347);
+      case TileType.gas:
+        return const Color(0xFFADFF2F);
       case TileType.bedrock:
         return const Color(0xFF2D2D2D);
     }
@@ -152,32 +248,91 @@ extension TileTypeExtension on TileType {
         return 'Coal';
       case TileType.copper:
         return 'Copper';
+      case TileType.silver:
+        return 'Silver';
       case TileType.gold:
         return 'Gold';
+      case TileType.sapphire:
+        return 'Sapphire';
+      case TileType.emerald:
+        return 'Emerald';
+      case TileType.ruby:
+        return 'Ruby';
+      case TileType.diamond:
+        return 'Diamond';
+      case TileType.lava:
+        return 'Lava';
+      case TileType.gas:
+        return 'Gas Pocket';
       case TileType.bedrock:
         return 'Bedrock';
+    }
+  }
+
+  /// Minimum depth where this tile can spawn
+  int get minDepth {
+    switch (this) {
+      case TileType.coal:
+        return 0;
+      case TileType.copper:
+        return 5;
+      case TileType.silver:
+        return 12;
+      case TileType.gold:
+        return 20;
+      case TileType.sapphire:
+        return 30;
+      case TileType.emerald:
+        return 42;
+      case TileType.ruby:
+        return 55;
+      case TileType.diamond:
+        return 70;
+      case TileType.gas:
+        return 8;
+      case TileType.lava:
+        return 25;
+      default:
+        return 0;
+    }
+  }
+
+  /// Spawn chance (relative weight) at appropriate depth
+  double get spawnWeight {
+    switch (this) {
+      case TileType.coal:
+        return 0.10;
+      case TileType.copper:
+        return 0.08;
+      case TileType.silver:
+        return 0.06;
+      case TileType.gold:
+        return 0.05;
+      case TileType.sapphire:
+        return 0.04;
+      case TileType.emerald:
+        return 0.03;
+      case TileType.ruby:
+        return 0.02;
+      case TileType.diamond:
+        return 0.015;
+      case TileType.gas:
+        return 0.03;
+      case TileType.lava:
+        return 0.025;
+      default:
+        return 0;
     }
   }
 }
 
 /// Represents a single tile in the game world
 class Tile {
-  /// The type of this tile
   TileType type;
-
-  /// Whether this tile has been revealed (fog of war)
   bool isRevealed;
-
-  /// Whether this tile is currently being dug
   bool isBeingDug;
-
-  /// Progress of current dig operation (0.0 to 1.0)
   double digProgress;
-
-  /// Grid position X
   final int x;
-
-  /// Grid position Y
   final int y;
 
   Tile({
@@ -189,28 +344,23 @@ class Tile {
     this.digProgress = 0.0,
   });
 
-  /// Check if this tile is adjacent to given coordinates
   bool isAdjacentTo(int otherX, int otherY) {
     final dx = (x - otherX).abs();
     final dy = (y - otherY).abs();
-    // Adjacent means exactly 1 tile away in cardinal direction
     return (dx == 1 && dy == 0) || (dx == 0 && dy == 1);
   }
 
-  /// Reset dig progress (e.g., when player moves away)
   void resetDig() {
     isBeingDug = false;
     digProgress = 0.0;
   }
 
-  /// Complete the dig - convert to empty tile
   void completeDig() {
     type = TileType.empty;
     isBeingDug = false;
     digProgress = 0.0;
   }
 
-  /// Create a copy of this tile
   Tile copy() {
     return Tile(
       type: type,

@@ -1,5 +1,17 @@
 # diggle
 
+## TODO
+- MainMenu
+- wallet test
+- add more ore types copper, silver, gold, 
+- hazard blocks
+- add hp bar
+- fall damage
+- camera needs to follow better
+- new game assets
+- more store items
+
+
 A new Flutter project.
 
 ## Getting Started

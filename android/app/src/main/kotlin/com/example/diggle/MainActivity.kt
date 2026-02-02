@@ -4,9 +4,6 @@
 // This file handles the platform channel bridge between Flutter and
 // the native Solana Mobile Wallet Adapter SDK.
 //
-// Place this file at:
-// android/app/src/main/kotlin/com/example/diggle/MainActivity.kt
-//
 // Dependencies needed in android/app/build.gradle:
 // implementation("com.solanamobile:mobile-wallet-adapter-clientlib-ktx:2.0.0")
 // implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")

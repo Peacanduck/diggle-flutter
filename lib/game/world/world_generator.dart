@@ -6,25 +6,18 @@
 /// - Consistent gameplay across restarts
 /// - Future: shareable world seeds
 /// - Future: daily challenge worlds
+/// world_generator.dart
+/// Procedural world generation using seeded random.
 
 import 'dart:math';
 import 'tile.dart';
 
 /// Configuration for world generation
 class WorldConfig {
-  /// Width of the world in tiles
   final int width;
-
-  /// Height of the world in tiles
   final int height;
-
-  /// Number of surface rows (empty space above ground)
   final int surfaceRows;
-
-  /// Random seed for deterministic generation
   final int seed;
-
-  /// Depth at which bedrock starts appearing
   final int bedrockStartDepth;
 
   const WorldConfig({
@@ -46,30 +39,26 @@ class WorldGenerator {
   }
 
   /// Generate the complete tile grid
-  /// Returns a 2D list where [x][y] gives the tile at that position
   List<List<Tile>> generate() {
-    // Initialize empty grid
     final grid = List.generate(
       config.width,
-      (x) => List.generate(
+          (x) => List.generate(
         config.height,
-        (y) => Tile(type: TileType.empty, x: x, y: y),
+            (y) => Tile(type: TileType.empty, x: x, y: y),
       ),
     );
 
-    // Generate each column
     for (int x = 0; x < config.width; x++) {
       for (int y = 0; y < config.height; y++) {
         grid[x][y] = Tile(
           type: _getTileTypeAt(x, y),
           x: x,
           y: y,
-          isRevealed: y < config.surfaceRows, // Surface is always visible
+          isRevealed: y < config.surfaceRows,
         );
       }
     }
 
-    // Reveal starting area around player spawn
     _revealArea(grid, config.width ~/ 2, config.surfaceRows, radius: 2);
 
     return grid;
@@ -77,87 +66,104 @@ class WorldGenerator {
 
   /// Determine tile type at given coordinates
   TileType _getTileTypeAt(int x, int y) {
-    // Surface rows are empty (sky/air)
+    // Surface rows are empty
     if (y < config.surfaceRows) {
       return TileType.empty;
     }
 
-    // First row below surface is always dirt (spawn platform)
+    // First row below surface is always dirt
     if (y == config.surfaceRows) {
       return TileType.dirt;
     }
 
     // Bedrock layer at bottom
     if (y >= config.bedrockStartDepth) {
-      // Mix of bedrock and some tough rock near bottom
       if (y >= config.height - 3) {
         return TileType.bedrock;
       }
-      // Transition zone
       if (_random.nextDouble() < 0.5) {
         return TileType.bedrock;
       }
       return TileType.rock;
     }
 
-    // Calculate depth (0 = just below surface, increases downward)
+    // Calculate depth
     final depth = y - config.surfaceRows;
-    final normalizedDepth = depth / (config.bedrockStartDepth - config.surfaceRows);
 
-    // Generate terrain based on depth
-    return _generateTerrainTile(normalizedDepth);
+    return _generateTerrainTile(depth);
   }
 
-  /// Generate terrain tile based on normalized depth (0.0 to 1.0)
-  TileType _generateTerrainTile(double normalizedDepth) {
+  /// Generate terrain tile based on depth
+  TileType _generateTerrainTile(int depth) {
     final roll = _random.nextDouble();
 
-    // Ore probability increases with depth
-    final oreChance = _getOreChance(normalizedDepth);
-    
-    if (roll < oreChance) {
-      return _selectOreType(normalizedDepth);
+    // Check for special tiles (ores and hazards) based on depth
+    final specialTile = _trySpawnSpecial(depth, roll);
+    if (specialTile != null) {
+      return specialTile;
     }
 
     // Rock probability increases with depth
-    final rockChance = _getRockChance(normalizedDepth);
-    
-    if (roll < oreChance + rockChance) {
+    final rockChance = 0.10 + (depth / 120.0) * 0.45;
+    if (_random.nextDouble() < rockChance) {
       return TileType.rock;
     }
 
-    // Default to dirt
     return TileType.dirt;
   }
 
-  /// Get ore spawn chance based on depth
-  double _getOreChance(double normalizedDepth) {
-    // Start at 5% near surface, increase to 20% at depth
-    return 0.05 + (normalizedDepth * 0.15);
-  }
+  /// Try to spawn an ore or hazard tile
+  TileType? _trySpawnSpecial(int depth, double roll) {
+    // List of spawnable types at this depth with their weights
+    final spawnables = <TileType, double>{};
 
-  /// Get rock spawn chance based on depth
-  double _getRockChance(double normalizedDepth) {
-    // Start at 10% near surface, increase to 50% at depth
-    return 0.10 + (normalizedDepth * 0.40);
-  }
-
-  /// Select which ore type to spawn based on depth
-  TileType _selectOreType(double normalizedDepth) {
-    final roll = _random.nextDouble();
-
-    // Gold only appears deep (below 60% depth)
-    if (normalizedDepth > 0.6 && roll < 0.15) {
-      return TileType.gold;
+    // Check each ore type
+    for (final oreType in [
+      TileType.coal,
+      TileType.copper,
+      TileType.silver,
+      TileType.gold,
+      TileType.sapphire,
+      TileType.emerald,
+      TileType.ruby,
+      TileType.diamond,
+    ]) {
+      if (depth >= oreType.minDepth) {
+        // Increase spawn rate slightly as you go deeper past min depth
+        final depthBonus = (depth - oreType.minDepth) / 100.0;
+        spawnables[oreType] = oreType.spawnWeight + (depthBonus * 0.01);
+      }
     }
 
-    // Copper appears from 30% depth
-    if (normalizedDepth > 0.3 && roll < 0.40) {
-      return TileType.copper;
+    // Check hazards
+    for (final hazardType in [TileType.lava, TileType.gas]) {
+      if (depth >= hazardType.minDepth) {
+        final depthBonus = (depth - hazardType.minDepth) / 100.0;
+        spawnables[hazardType] = hazardType.spawnWeight + (depthBonus * 0.005);
+      }
     }
 
-    // Coal is common everywhere
-    return TileType.coal;
+    if (spawnables.isEmpty) return null;
+
+    // Calculate total weight
+    double totalWeight = 0;
+    for (final weight in spawnables.values) {
+      totalWeight += weight;
+    }
+
+    // Roll for spawn
+    if (roll > totalWeight) return null;
+
+    // Select which type to spawn
+    double cumulative = 0;
+    for (final entry in spawnables.entries) {
+      cumulative += entry.value;
+      if (roll < cumulative) {
+        return entry.key;
+      }
+    }
+
+    return null;
   }
 
   /// Reveal tiles in a radius around a point
@@ -166,7 +172,7 @@ class WorldGenerator {
       for (int dy = -radius; dy <= radius; dy++) {
         final x = centerX + dx;
         final y = centerY + dy;
-        
+
         if (_isInBounds(x, y)) {
           grid[x][y].isRevealed = true;
         }
@@ -174,7 +180,6 @@ class WorldGenerator {
     }
   }
 
-  /// Check if coordinates are within world bounds
   bool _isInBounds(int x, int y) {
     return x >= 0 && x < config.width && y >= 0 && y < config.height;
   }
@@ -182,17 +187,14 @@ class WorldGenerator {
 
 /// Utility class for world-related calculations
 class WorldUtils {
-  /// Convert grid coordinates to world pixel position
   static double gridToWorld(int gridPos, double tileSize) {
     return gridPos * tileSize;
   }
 
-  /// Convert world pixel position to grid coordinates
   static int worldToGrid(double worldPos, double tileSize) {
     return (worldPos / tileSize).floor();
   }
 
-  /// Get the center position of a tile in world coordinates
   static double getTileCenter(int gridPos, double tileSize) {
     return (gridPos * tileSize) + (tileSize / 2);
   }
