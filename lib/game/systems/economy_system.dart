@@ -1,6 +1,6 @@
 /// economy_system.dart
 /// Manages the game's economy: cash, cargo/inventory, and transactions.
-/// 
+///
 /// Core mechanics:
 /// - Ore is collected into cargo (limited capacity)
 /// - Ore is sold at surface for cash
@@ -65,7 +65,7 @@ class EconomySystem extends ChangeNotifier {
   int _maxDepthReached = 0;
 
   EconomySystem({
-    int initialCash = 50000,
+    int initialCash = 50,
     CargoLevel cargoLevel = CargoLevel.level1,
   })  : _cash = initialCash,
         _cargoLevel = cargoLevel;
@@ -77,7 +77,7 @@ class EconomySystem extends ChangeNotifier {
   int get cash => _cash;
   CargoLevel get cargoLevel => _cargoLevel;
   int get maxCapacity => _cargoLevel.maxCapacity;
-  
+
   /// Current cargo count (sum of all ore)
   int get cargoCount {
     return _cargo.values.fold(0, (sum, count) => sum + count);
@@ -160,7 +160,7 @@ class EconomySystem extends ChangeNotifier {
   bool spend(int amount) {
     if (amount <= 0) return true;
     if (_cash < amount) return false;
-    
+
     _cash -= amount;
     notifyListeners();
     return true;
@@ -207,6 +207,15 @@ class EconomySystem extends ChangeNotifier {
     return true;
   }
 
+  /// Force cargo upgrade (for premium purchases, no cost)
+  bool forceUpgradeCargo() {
+    final nextLevel = _cargoLevel.nextLevel;
+    if (nextLevel == null) return false;
+    _cargoLevel = nextLevel;
+    notifyListeners();
+    return true;
+  }
+
   // ============================================================
   // STATISTICS
   // ============================================================
@@ -229,11 +238,11 @@ class EconomySystem extends ChangeNotifier {
     _totalOreCollected = 0;
     _totalCashEarned = 0;
     _maxDepthReached = 0;
-    
+
     if (!keepUpgrades) {
       _cargoLevel = CargoLevel.level1;
     }
-    
+
     notifyListeners();
   }
 

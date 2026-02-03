@@ -1,226 +1,430 @@
 /// wallet_service.dart
-/// High-level wallet service for Solana Mobile integration.
-/// 
-/// This service wraps the platform channel and provides:
-/// - State management for wallet connection
-/// - Automatic reconnection handling
-/// - Connection status tracking
-/// - Error handling with user-friendly messages
-/// 
-/// The wallet is completely optional - game is fully playable without it.
-/// Future features could include:
-/// - NFT cosmetics for the drill
-/// - On-chain leaderboards
-/// - Achievement NFTs
+/// Solana wallet integration using solana_mobile_client plugin.
+///
+/// API pattern:
+/// 1. scenario = await LocalAssociationScenario.create()
+/// 2. client = await scenario.start()  // start() returns the client!
+/// 3. result = await client.authorize(...)
+/// 4. await scenario.close()  // ALWAYS close!
+
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
-import 'wallet_channel.dart';
+import 'package:solana/solana.dart';
+import 'package:solana_mobile_client/solana_mobile_client.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Wallet connection state
-enum WalletConnectionState {
-  /// No wallet connected, not attempting connection
+enum WalletState {
   disconnected,
-  
-  /// Currently attempting to connect
   connecting,
-  
-  /// Successfully connected to wallet
   connected,
-  
-  /// Connection failed
   error,
 }
 
-/// High-level wallet service with state management
+/// Service for Solana wallet operations
 class WalletService extends ChangeNotifier {
-  /// Current connection state
-  WalletConnectionState _state = WalletConnectionState.disconnected;
-
-  /// Connected wallet's public key (base58)
-  String? _publicKey;
-
-  /// Connected wallet app name
-  String? _walletName;
-
-  /// Last error message
+  WalletState _state = WalletState.disconnected;
   String? _errorMessage;
 
-  /// Whether Solana Mobile is available on this device
+  // Stored wallet state (persisted)
+  String? _authToken;
+  String? _publicKey;
+  String? _walletName;
+  Uri? _walletUriBase;
+
+  // Balance (fetched from RPC)
+  double _solBalance = 0.0;
+
+  // Network configuration
+  bool _isMainnet = false;
+
+  // Availability flag
   bool _isAvailable = false;
+
+  // RPC endpoints
+  static const String _devnetRpc = 'https://api.devnet.solana.com';
+  static const String _mainnetRpc = 'https://api.mainnet-beta.solana.com';
+
+  // Treasury wallet for receiving payments (REPLACE WITH YOUR WALLET)
+  static const String treasuryWallet = 'EZ2k7zj48yq4rr5ui5EVPMZeZWJXkFp214jTTxbbThim';
+
+  // App identity
+  static const String _appName = 'Diggle';
+  static const String _appUri = 'https://diggle.app';
+
+  // Storage keys
+  static const String _keyAuthToken = 'wallet_auth_token';
+  static const String _keyPublicKey = 'wallet_public_key';
+  static const String _keyWalletName = 'wallet_name';
+  static const String _keyWalletUri = 'wallet_uri_base';
+  static const String _keyIsMainnet = 'wallet_is_mainnet';
 
   // ============================================================
   // GETTERS
   // ============================================================
 
-  /// Current connection state
-  WalletConnectionState get state => _state;
-
-  /// Whether wallet is connected
-  bool get isConnected => _state == WalletConnectionState.connected;
-
-  /// Whether currently connecting
-  bool get isConnecting => _state == WalletConnectionState.connecting;
-
-  /// The connected public key (null if not connected)
+  WalletState get state => _state;
+  bool get isConnected => _state == WalletState.connected && _authToken != null;
+  bool get isConnecting => _state == WalletState.connecting;
   String? get publicKey => _publicKey;
+  String? get walletName => _walletName;
+  double get solBalance => _solBalance;
+  String? get errorMessage => _errorMessage;
+  bool get isMainnet => _isMainnet;
+  bool get isAvailable => _isAvailable;
+  String? get walletAddress => _publicKey;
 
-  /// Shortened public key for display (first 4...last 4)
-  String? get shortPublicKey {
-    if (_publicKey == null || _publicKey!.length < 12) return _publicKey;
-    return '${_publicKey!.substring(0, 4)}...${_publicKey!.substring(_publicKey!.length - 4)}';
+  String get shortAddress {
+    if (_publicKey == null || _publicKey!.length < 12) return _publicKey ?? '';
+    return '${_publicKey!.substring(0, 6)}...${_publicKey!.substring(_publicKey!.length - 4)}';
   }
 
-  /// Connected wallet app name
-  String? get walletName => _walletName;
+  String? get shortPublicKey => _publicKey != null ? shortAddress : null;
 
-  /// Last error message
-  String? get errorMessage => _errorMessage;
-
-  /// Whether Solana Mobile is available
-  bool get isAvailable => _isAvailable;
+  String get _rpcUrl => _isMainnet ? _mainnetRpc : _devnetRpc;
+  String get cluster => _isMainnet ? 'mainnet-beta' : 'devnet';
 
   // ============================================================
   // INITIALIZATION
   // ============================================================
 
-  /// Initialize the service - check availability
   Future<void> initialize() async {
     try {
-      _isAvailable = await WalletChannel.isAvailable();
-      
-      // Check for existing connection
-      if (_isAvailable) {
-        final existingKey = await WalletChannel.getPublicKey();
-        if (existingKey != null) {
-          _publicKey = existingKey;
-          _walletName = await WalletChannel.getWalletName();
-          _state = WalletConnectionState.connected;
-        }
+      _isAvailable = await _checkWalletAvailable();
+
+      final prefs = await SharedPreferences.getInstance();
+      _authToken = prefs.getString(_keyAuthToken);
+      _publicKey = prefs.getString(_keyPublicKey);
+      _walletName = prefs.getString(_keyWalletName);
+      _isMainnet = prefs.getBool(_keyIsMainnet) ?? false;
+
+      final uriString = prefs.getString(_keyWalletUri);
+      if (uriString != null) {
+        _walletUriBase = Uri.tryParse(uriString);
       }
+
+      if (_authToken != null && _publicKey != null) {
+        _state = WalletState.connected;
+        await _fetchBalance();
+      }
+
+      debugPrint('WalletService initialized: $this');
     } catch (e) {
-      debugPrint('WalletService initialization error: $e');
-      _isAvailable = false;
+      debugPrint('WalletService init error: $e');
+    }
+    notifyListeners();
+  }
+
+  Future<bool> _checkWalletAvailable() async {
+    try {
+      final scenario = await LocalAssociationScenario.create();
+      await scenario.close();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<void> _saveState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_authToken != null) {
+        await prefs.setString(_keyAuthToken, _authToken!);
+      } else {
+        await prefs.remove(_keyAuthToken);
+      }
+      if (_publicKey != null) {
+        await prefs.setString(_keyPublicKey, _publicKey!);
+      } else {
+        await prefs.remove(_keyPublicKey);
+      }
+      if (_walletName != null) {
+        await prefs.setString(_keyWalletName, _walletName!);
+      } else {
+        await prefs.remove(_keyWalletName);
+      }
+      if (_walletUriBase != null) {
+        await prefs.setString(_keyWalletUri, _walletUriBase.toString());
+      } else {
+        await prefs.remove(_keyWalletUri);
+      }
+      await prefs.setBool(_keyIsMainnet, _isMainnet);
+    } catch (e) {
+      debugPrint('Error saving state: $e');
+    }
+  }
+
+  Future<void> _clearState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_keyAuthToken);
+      await prefs.remove(_keyPublicKey);
+      await prefs.remove(_keyWalletName);
+      await prefs.remove(_keyWalletUri);
+    } catch (e) {
+      debugPrint('Error clearing state: $e');
+    }
+  }
+
+  // ============================================================
+  // NETWORK
+  // ============================================================
+
+  void setMainnet(bool mainnet) {
+    _isMainnet = mainnet;
+    _saveState();
+    if (isConnected) {
+      _fetchBalance();
     }
     notifyListeners();
   }
 
   // ============================================================
-  // CONNECTION MANAGEMENT
+  // CONNECTION
   // ============================================================
 
-  /// Connect to a Solana wallet
-  /// 
-  /// Opens the wallet app for authorization.
-  /// Returns true on success, false on failure.
   Future<bool> connect() async {
-    if (_state == WalletConnectionState.connecting) {
-      return false; // Already connecting
-    }
+    if (_state == WalletState.connecting) return false;
 
-    if (!_isAvailable) {
-      _errorMessage = 'No Solana wallet app installed';
-      _state = WalletConnectionState.error;
-      notifyListeners();
-      return false;
-    }
-
-    _state = WalletConnectionState.connecting;
+    _state = WalletState.connecting;
     _errorMessage = null;
     notifyListeners();
 
+    LocalAssociationScenario? scenario;
+
     try {
-      _publicKey = await WalletChannel.connect();
-      _walletName = await WalletChannel.getWalletName();
-      _state = WalletConnectionState.connected;
-      notifyListeners();
-      return true;
-    } on WalletException catch (e) {
-      _errorMessage = _getUserFriendlyError(e);
-      _state = WalletConnectionState.error;
-      notifyListeners();
-      return false;
+      // Create scenario
+      scenario = await LocalAssociationScenario.create();
+
+      // start() returns the MobileWalletAdapterClient
+      final client = await scenario.start();
+
+      // Authorize
+      final result = await client.authorize(
+        identityUri: Uri.parse(_appUri),
+        identityName: _appName,
+        cluster: cluster,
+      );
+
+      // ALWAYS close
+      await scenario.close();
+      scenario = null;
+
+      if (result != null && result.accountLabel != null) {
+        _authToken = result.authToken;
+        _publicKey = result.publicKey as String?;
+        _walletName = result.accountLabel ?? 'Wallet';
+        _walletUriBase = result.walletUriBase;
+        _state = WalletState.connected;
+
+        await _saveState();
+        await _fetchBalance();
+
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = 'Authorization denied';
+        _state = WalletState.error;
+        notifyListeners();
+        return false;
+      }
     } catch (e) {
+      if (scenario != null) {
+        try { await scenario.close(); } catch (_) {}
+      }
       _errorMessage = 'Connection failed: $e';
-      _state = WalletConnectionState.error;
+      _state = WalletState.error;
       notifyListeners();
       return false;
     }
   }
 
-  /// Disconnect from the current wallet
   Future<void> disconnect() async {
-    if (_state == WalletConnectionState.disconnected) {
+    if (!isConnected || _authToken == null) {
+      _resetState();
       return;
     }
 
+    LocalAssociationScenario? scenario;
+
     try {
-      await WalletChannel.disconnect();
+      scenario = await LocalAssociationScenario.create();
+      final client = await scenario.start();
+      await client.deauthorize(authToken: _authToken!);
     } catch (e) {
-      debugPrint('Disconnect error (ignored): $e');
+      debugPrint('Deauthorize error: $e');
+    } finally {
+      if (scenario != null) {
+        try { await scenario.close(); } catch (_) {}
+      }
     }
 
+    _resetState();
+  }
+
+  void _resetState() {
+    _authToken = null;
     _publicKey = null;
     _walletName = null;
+    _walletUriBase = null;
+    _solBalance = 0.0;
     _errorMessage = null;
-    _state = WalletConnectionState.disconnected;
+    _state = WalletState.disconnected;
+    _clearState();
     notifyListeners();
   }
 
-  /// Clear error state
   void clearError() {
-    if (_state == WalletConnectionState.error) {
+    if (_state == WalletState.error) {
       _errorMessage = null;
-      _state = WalletConnectionState.disconnected;
+      _state = WalletState.disconnected;
       notifyListeners();
     }
   }
 
   // ============================================================
-  // ERROR HANDLING
+  // BALANCE
   // ============================================================
 
-  /// Convert WalletException to user-friendly message
-  String _getUserFriendlyError(WalletException e) {
-    switch (e.code) {
-      case 'NOT_AUTHORIZED':
-        return 'Wallet authorization was denied';
-      case 'NOT_SIGNED':
-        return 'Transaction signing was cancelled';
-      case 'NO_WALLET':
-        return 'No Solana wallet app found';
-      case 'TIMEOUT':
-        return 'Wallet connection timed out';
-      default:
-        return e.message;
+  Future<void> _fetchBalance() async {
+    if (_publicKey == null) return;
+
+    try {
+      final client = RpcClient(_rpcUrl);
+      final balance = await client.getBalance(_publicKey!);
+      _solBalance = balance.value / lamportsPerSol;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error fetching balance: $e');
+      _solBalance = 0.0;
     }
   }
 
-  // ============================================================
-  // FUTURE FEATURES (Stubbed)
-  // ============================================================
-
-  /// Sign a transaction (NOT IMPLEMENTED)
-  /// Reserved for future NFT minting, etc.
-  Future<String?> signTransaction(String transactionBase64) async {
-    if (!isConnected) return null;
-    // TODO: Implement when needed
-    throw UnimplementedError('Transaction signing not available in MVP');
-  }
-
-  /// Get SOL balance (NOT IMPLEMENTED)
-  /// Would need RPC connection to Solana network
-  Future<double?> getBalance() async {
-    if (!isConnected) return null;
-    // TODO: Implement with Solana RPC
-    throw UnimplementedError('Balance check not available in MVP');
+  Future<void> refreshBalance() async {
+    await _fetchBalance();
   }
 
   // ============================================================
-  // DEBUG
+  // TRANSACTIONS
   // ============================================================
+
+  Future<bool> purchaseItem(String itemName, double priceSol) async {
+    if (!isConnected || _publicKey == null || _authToken == null) {
+      _errorMessage = 'Wallet not connected';
+      notifyListeners();
+      return false;
+    }
+
+    if (_solBalance < priceSol) {
+      _errorMessage = 'Insufficient balance';
+      notifyListeners();
+      return false;
+    }
+
+    LocalAssociationScenario? scenario;
+
+    try {
+      final rpcClient = RpcClient(_rpcUrl);
+      final recentBlockhash = await rpcClient.getLatestBlockhash();
+
+      final fromPubkey = Ed25519HDPublicKey.fromBase58(_publicKey!);
+      final toPubkey = Ed25519HDPublicKey.fromBase58(treasuryWallet);
+      final lamports = (priceSol * lamportsPerSol).toInt();
+
+      final transferInstruction = SystemInstruction.transfer(
+        fundingAccount: fromPubkey,
+        recipientAccount: toPubkey,
+        lamports: lamports,
+      );
+
+      final message = Message.only(transferInstruction);
+      final compiledMessage = message.compile(
+        recentBlockhash: recentBlockhash.value.blockhash,
+        feePayer: fromPubkey,
+      );
+
+      final txBytes = compiledMessage.toByteArray();
+
+      // Start wallet session
+      scenario = await LocalAssociationScenario.create();
+      final client = await scenario.start();
+
+      // Reauthorize
+      final reauth = await client.reauthorize(
+        identityUri: Uri.parse(_appUri),
+        identityName: _appName,
+        authToken: _authToken!,
+      );
+
+      if (reauth == null) {
+        await scenario.close();
+        scenario = null;
+        _errorMessage = 'Reauthorization failed';
+        _resetState();
+        return false;
+      }
+
+      _authToken = reauth.authToken;
+      await _saveState();
+
+      // Sign and send
+      final signatures = await client.signAndSendTransactions(
+        transactions: [Uint8List.fromList(txBytes as List<int>)],
+      );
+
+      await scenario.close();
+      scenario = null;
+
+      if (signatures.signatures.isNotEmpty) {
+        debugPrint('Transaction sent!');
+        await Future.delayed(const Duration(seconds: 2));
+        await _fetchBalance();
+        return true;
+      } else {
+        _errorMessage = 'Transaction rejected';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'Transaction failed: $e';
+      notifyListeners();
+      return false;
+    } finally {
+      if (scenario != null) {
+        try { await scenario.close(); } catch (_) {}
+      }
+    }
+  }
+
+  Future<bool> requestAirdrop({double amount = 1.0}) async {
+    if (!isConnected || _publicKey == null) return false;
+    if (_isMainnet) {
+      _errorMessage = 'Airdrop only on devnet';
+      notifyListeners();
+      return false;
+    }
+
+    try {
+      final client = RpcClient(_rpcUrl);
+      final lamports = (amount * lamportsPerSol).toInt();
+
+      await client.requestAirdrop(
+        _publicKey!,
+        lamports,
+        commitment: Commitment.confirmed,
+      );
+
+      await Future.delayed(const Duration(seconds: 2));
+      await _fetchBalance();
+      return true;
+    } catch (e) {
+      _errorMessage = 'Airdrop failed: $e';
+      notifyListeners();
+      return false;
+    }
+  }
 
   @override
-  String toString() {
-    return 'WalletService(state: $_state, pubkey: $shortPublicKey)';
-  }
+  String toString() => 'WalletService($_state, $shortAddress, $_solBalance SOL)';
 }

@@ -46,6 +46,17 @@ class _HudOverlayState extends State<HudOverlay> {
             child: _buildTopBar(),
           ),
 
+          // Pause button
+          Positioned(
+            top: 8,
+            right: 8,
+            child: IconButton(
+              onPressed: () => widget.game.pause(),
+              icon: const Icon(Icons.pause_circle_filled, size: 36),
+              color: Colors.white.withOpacity(0.7),
+            ),
+          ),
+
           // Item bar (below stats)
           Positioned(
             top: 90,
