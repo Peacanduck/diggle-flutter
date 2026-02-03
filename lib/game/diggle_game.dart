@@ -13,6 +13,7 @@ import 'player/drill_component.dart';
 import 'systems/fuel_system.dart';
 import 'systems/economy_system.dart';
 import 'systems/hull_system.dart';
+import 'systems/item_system.dart';
 
 enum GameState { playing, shopping, gameOver, paused }
 
@@ -22,6 +23,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   late FuelSystem fuelSystem;
   late EconomySystem economySystem;
   late HullSystem hullSystem;
+  late ItemSystem itemSystem;
 
   GameState _state = GameState.playing;
   final WorldConfig worldConfig;
@@ -43,6 +45,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     fuelSystem = FuelSystem();
     economySystem = EconomySystem();
     hullSystem = HullSystem();
+    itemSystem = ItemSystem();
 
     // Create tile map
     tileMap = TileMapComponent(config: worldConfig);
@@ -61,11 +64,11 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     world.add(tileMap);
     world.add(drill);
 
-    // Camera setup - FAST follow for responsive feel
+    // Camera setup
     camera.viewfinder.anchor = Anchor.center;
     camera.follow(
       drill,
-      maxSpeed: 500, // Much faster camera to keep up with flying
+      maxSpeed: 500,
       horizontalOnly: false,
     );
     camera.viewfinder.zoom = 1.5;
@@ -118,6 +121,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     fuelSystem.reset();
     economySystem.reset();
     hullSystem.reset();
+    itemSystem.reset();
     tileMap.reset();
     drill.reset();
     _state = GameState.playing;
@@ -190,5 +194,44 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
       return true;
     }
     return false;
+  }
+
+  // Item shop
+  bool buyItem(ItemType type) {
+    if (!itemSystem.canAddItem(type)) return false;
+    if (!economySystem.spend(type.price)) return false;
+    itemSystem.addItem(type);
+    return true;
+  }
+
+  // Item usage
+  bool useItem(ItemType type) {
+    if (!itemSystem.hasItem(type)) return false;
+    if (_state != GameState.playing) return false;
+
+    switch (type) {
+      case ItemType.backupFuel:
+        fuelSystem.add(type.fuelAmount);
+        break;
+
+      case ItemType.repairBot:
+        hullSystem.repair(type.repairAmount);
+        break;
+
+      case ItemType.dynamite:
+        tileMap.explode(drill.gridX, drill.gridY, type.explosionRadius);
+        break;
+
+      case ItemType.c4:
+        tileMap.explode(drill.gridX, drill.gridY, type.explosionRadius);
+        break;
+
+      case ItemType.spaceRift:
+        drill.teleportToSurface();
+        break;
+    }
+
+    itemSystem.useItem(type);
+    return true;
   }
 }

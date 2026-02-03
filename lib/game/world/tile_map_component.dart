@@ -1,11 +1,11 @@
 /// tile_map_component.dart
 /// Flame component responsible for rendering the tile-based world.
-/// 
+///
 /// Key optimizations:
 /// - Only renders tiles within camera viewport + buffer
 /// - Culls tiles outside visible area
 /// - Uses simple colored rectangles (can be upgraded to sprites)
-/// 
+///
 /// The TileMapComponent owns the world grid and provides methods
 /// for tile queries and modifications.
 
@@ -197,8 +197,9 @@ class TileMapComponent extends PositionComponent with HasGameRef {
     return x >= 0 && x < config.width && y >= 0 && y < config.height;
   }
 
-  /// Get the player spawn position (center of surface)
+  /// Get the player spawn position (center of surface, above ground)
   Vector2 getSpawnPosition() {
+    // Spawn in the last empty row (surfaceRows - 1), not in the dirt
     return Vector2(
       (config.width / 2) * tileSize + (tileSize / 2),
       (config.surfaceRows - 1) * tileSize + (tileSize / 2),
@@ -215,7 +216,7 @@ class TileMapComponent extends PositionComponent with HasGameRef {
       for (int dy = -radius; dy <= radius; dy++) {
         final x = centerX + dx;
         final y = centerY + dy;
-        
+
         if (_isInBounds(x, y)) {
           _grid[x][y].isRevealed = true;
         }
@@ -236,7 +237,7 @@ class TileMapComponent extends PositionComponent with HasGameRef {
   /// Returns the tile type if dig completed, null otherwise
   TileType? updateDig(int x, int y, double deltaProgress) {
     if (!_isInBounds(x, y)) return null;
-    
+
     final tile = _grid[x][y];
     if (!tile.isBeingDug) return null;
 
@@ -260,6 +261,41 @@ class TileMapComponent extends PositionComponent with HasGameRef {
   /// Check if a position is at the surface (shop area)
   bool isAtSurface(int gridY) {
     return gridY <= config.surfaceRows;
+  }
+
+  /// Explode tiles in a radius around a point (except bedrock)
+  /// Returns list of ore types that were destroyed
+  List<TileType> explode(int centerX, int centerY, int radius) {
+    final destroyedOres = <TileType>[];
+
+    for (int dx = -radius; dx <= radius; dx++) {
+      for (int dy = -radius; dy <= radius; dy++) {
+        final x = centerX + dx;
+        final y = centerY + dy;
+
+        if (!_isInBounds(x, y)) continue;
+
+        final tile = _grid[x][y];
+
+        // Skip bedrock and empty tiles
+        if (tile.type == TileType.bedrock || tile.type == TileType.empty) continue;
+
+        // Track ores that get destroyed (no collection)
+        if (tile.type.isOre) {
+          destroyedOres.add(tile.type);
+        }
+
+        // Destroy the tile
+        tile.type = TileType.empty;
+        tile.isRevealed = true;
+        tile.resetDig();
+      }
+    }
+
+    // Reveal area around explosion
+    revealAround(centerX, centerY, radius: radius + 1);
+
+    return destroyedOres;
   }
 
   /// Reset the world (for game restart)

@@ -359,4 +359,15 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     heldDirection = MoveDirection.none;
     tileMap.revealAround(gridX, gridY);
   }
+
+  /// Teleport to surface (Space Rift item)
+  void teleportToSurface() {
+    position = tileMap.getSpawnPosition();
+    _target = position.clone();
+    _digging = false;
+    _isFalling = false;
+    _fallStartY = 0;
+    _currentFallY = 0;
+    tileMap.revealAround(gridX, gridY);
+  }
 }

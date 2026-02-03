@@ -1,10 +1,11 @@
 /// hud_overlay.dart
-/// In-game HUD with HP bar, fuel, cargo, and controls
+/// In-game HUD with HP bar, fuel, cargo, item bar, and controls
 
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../game/diggle_game.dart';
 import '../game/player/drill_component.dart';
+import '../game/systems/item_system.dart';
 
 class HudOverlay extends StatefulWidget {
   final DiggleGame game;
@@ -45,6 +46,14 @@ class _HudOverlayState extends State<HudOverlay> {
             child: _buildTopBar(),
           ),
 
+          // Item bar (below stats)
+          Positioned(
+            top: 90,
+            left: 0,
+            right: 0,
+            child: _buildItemBar(),
+          ),
+
           // Controls at bottom
           Positioned(
             bottom: 30,
@@ -56,7 +65,7 @@ class _HudOverlayState extends State<HudOverlay> {
           // Shop button when at surface
           if (widget.game.drill.isAtSurface)
             Positioned(
-              top: 100,
+              top: 150,
               right: 16,
               child: ElevatedButton.icon(
                 onPressed: () => widget.game.openShop(),
@@ -228,6 +237,85 @@ class _HudOverlayState extends State<HudOverlay> {
     );
   }
 
+  Widget _buildItemBar() {
+    final items = widget.game.itemSystem;
+    final slots = items.itemSlots;
+
+    if (slots.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            'ITEMS: ',
+            style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+          ),
+          ...slots.map((type) => _buildItemSlot(type, items.getQuantity(type))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemSlot(ItemType type, int quantity) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: GestureDetector(
+        onTap: () {
+          widget.game.useItem(type);
+        },
+        child: Container(
+          width: 50,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade800,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade600),
+          ),
+          child: Stack(
+            children: [
+              // Item icon
+              Center(
+                child: Text(
+                  type.icon,
+                  style: const TextStyle(fontSize: 20),
+                ),
+              ),
+              // Quantity badge
+              Positioned(
+                right: 2,
+                bottom: 2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade700,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'x$quantity',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildControls() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -344,7 +432,7 @@ class GameOverOverlay extends StatelessWidget {
 
     String deathReason = 'You were destroyed!';
     if (hull.isDestroyed) {
-      deathReason = 'Hull destroyed from fall damage!';
+      deathReason = 'Hull destroyed!';
     } else if (fuel.isEmpty) {
       deathReason = 'You ran out of fuel!';
     }

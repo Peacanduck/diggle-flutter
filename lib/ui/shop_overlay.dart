@@ -11,6 +11,7 @@ import '../game/diggle_game.dart';
 import '../game/systems/fuel_system.dart';
 import '../game/systems/economy_system.dart';
 import '../game/systems/hull_system.dart';
+import '../game/systems/item_system.dart';
 import '../game/world/tile.dart';
 
 /// Shop overlay widget
@@ -65,6 +66,11 @@ class _ShopOverlayState extends State<ShopOverlay> {
 
                     // Upgrades section
                     _buildUpgradesSection(),
+
+                    const SizedBox(height: 20),
+
+                    // Items section
+                    _buildItemsSection(),
 
                     // Action message
                     if (_message != null) ...[
@@ -570,6 +576,115 @@ class _ShopOverlayState extends State<ShopOverlay> {
     );
   }
 
+  /// Items section
+  Widget _buildItemsSection() {
+    return _buildSection(
+      title: 'ITEMS',
+      icon: Icons.backpack,
+      child: Column(
+        children: [
+          // Current inventory
+          ListenableBuilder(
+            listenable: widget.game.itemSystem,
+            builder: (context, _) {
+              final items = widget.game.itemSystem;
+              return Container(
+                padding: const EdgeInsets.all(8),
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade800,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Inventory: ${items.usedSlots}/${ItemSystem.maxSlots} slots',
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          // Item purchase buttons
+          ...ItemType.values.map((type) => _buildItemPurchaseRow(type)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemPurchaseRow(ItemType type) {
+    return ListenableBuilder(
+      listenable: widget.game.itemSystem,
+      builder: (context, _) {
+        final items = widget.game.itemSystem;
+        final owned = items.getQuantity(type);
+        final canBuy = items.canAddItem(type) &&
+            widget.game.economySystem.canAfford(type.price);
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade800,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              // Icon
+              Text(type.icon, style: const TextStyle(fontSize: 24)),
+              const SizedBox(width: 12),
+              // Name and description
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      type.displayName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      type.description,
+                      style: const TextStyle(color: Colors.white54, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              // Owned count
+              if (owned > 0)
+                Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade700,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'x$owned',
+                    style: const TextStyle(color: Colors.white, fontSize: 11),
+                  ),
+                ),
+              // Buy button
+              ElevatedButton(
+                onPressed: canBuy ? () => _buyItem(type) : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade700,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                child: Text('\$${type.price}'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   /// Section wrapper
   Widget _buildSection({
     required String title,
@@ -699,6 +814,15 @@ class _ShopOverlayState extends State<ShopOverlay> {
     if (widget.game.upgradeHull()) {
       setState(() {
         _message = 'Hull armor upgraded!';
+      });
+      _clearMessageAfterDelay();
+    }
+  }
+
+  void _buyItem(ItemType type) {
+    if (widget.game.buyItem(type)) {
+      setState(() {
+        _message = 'Purchased ${type.displayName}!';
       });
       _clearMessageAfterDelay();
     }
