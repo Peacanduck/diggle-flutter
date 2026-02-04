@@ -54,6 +54,27 @@ class _HudOverlayState extends State<HudOverlay> {
             child: _buildItemBar(),
           ),
 
+          // Pause button
+          Positioned(
+            top: 8,
+            right: 8,
+            child: IconButton(
+              onPressed: () => widget.game.pause(),
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.pause,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+            ),
+          ),
+
           // Controls at bottom
           Positioned(
             bottom: 30,
@@ -90,7 +111,7 @@ class _HudOverlayState extends State<HudOverlay> {
     final depth = widget.game.drill.depth;
 
     return Container(
-      margin: const EdgeInsets.all(8),
+      margin: const EdgeInsets.only(left: 8, right: 60, top: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.75),
@@ -414,64 +435,6 @@ class _DirectionButtonState extends State<_DirectionButton> {
           widget.icon,
           color: Colors.white,
           size: 36,
-        ),
-      ),
-    );
-  }
-}
-
-class GameOverOverlay extends StatelessWidget {
-  final DiggleGame game;
-
-  const GameOverOverlay({super.key, required this.game});
-
-  @override
-  Widget build(BuildContext context) {
-    final hull = game.hullSystem;
-    final fuel = game.fuelSystem;
-
-    String deathReason = 'You were destroyed!';
-    if (hull.isDestroyed) {
-      deathReason = 'Hull destroyed!';
-    } else if (fuel.isEmpty) {
-      deathReason = 'You ran out of fuel!';
-    }
-
-    return Container(
-      color: Colors.black.withOpacity(0.85),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 80),
-            const SizedBox(height: 20),
-            const Text(
-              'GAME OVER',
-              style: TextStyle(color: Colors.red, fontSize: 42, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              deathReason,
-              style: const TextStyle(color: Colors.white70, fontSize: 18),
-            ),
-            const SizedBox(height: 24),
-            Text('Max Depth: ${game.economySystem.maxDepthReached}m',
-                style: const TextStyle(color: Colors.white, fontSize: 16)),
-            Text('Ore Collected: ${game.economySystem.totalOreCollected}',
-                style: const TextStyle(color: Colors.white, fontSize: 16)),
-            Text('Cash Earned: \$${game.economySystem.totalCashEarned}',
-                style: const TextStyle(color: Colors.amber, fontSize: 16)),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: () => game.restart(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-              ),
-              child: const Text('TRY AGAIN',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            ),
-          ],
         ),
       ),
     );

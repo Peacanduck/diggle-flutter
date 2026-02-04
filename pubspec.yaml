@@ -1,5 +1,5 @@
 name: diggle
-description: "A new Flutter project."
+description: "A mining game built with flutter"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -44,6 +44,10 @@ dependencies:
 
   # Utilities
   collection: ^1.18.0
+
+  # Solana Mobile Wallet Integration
+  solana_mobile_client: ^0.1.2
+  solana: ^0.31.0
 
 dev_dependencies:
   flutter_test:
