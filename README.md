@@ -2,8 +2,7 @@
 A mining game built with flutter and flame 
 
 ## TODO
-- MainMenu
-- wallet test
+- wallet shop
 - new game assets
 - add drill bit levels
 - more terrain rocks harder to dig
