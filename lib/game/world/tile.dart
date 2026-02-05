@@ -1,10 +1,11 @@
 /// tile.dart
 /// Defines tile types, properties, and state for the game world.
-/// 
+///
 /// Each tile has:
 /// - A type (dirt, rock, ore, bedrock, empty)
 /// - Dig time (how long to excavate)
 /// - Value (for ore tiles)
+/// - Hardness (determines which drillbit can mine it)
 /// - Visibility state (fog of war)
 
 import 'dart:ui';
@@ -34,7 +35,7 @@ enum TileType {
 
 /// Extension to add properties and behavior to TileType
 extension TileTypeExtension on TileType {
-  /// Time in seconds to dig this tile type
+  /// Time in seconds to dig this tile type (base time, modified by drillbit)
   double get digTime {
     switch (this) {
       case TileType.empty:
@@ -68,6 +69,42 @@ extension TileTypeExtension on TileType {
     }
   }
 
+  /// Hardness level - determines which drillbit can mine this
+  /// 1 = soft (basic bit), 2 = medium (reinforced), 3 = hard (titanium), 4 = very hard (diamond)
+  /// 99 = unbreakable (bedrock)
+  int get hardness {
+    switch (this) {
+      case TileType.empty:
+        return 0;
+      case TileType.dirt:
+        return 1;
+      case TileType.coal:
+        return 1;
+      case TileType.rock:
+        return 2;
+      case TileType.copper:
+        return 2;
+      case TileType.silver:
+        return 2;
+      case TileType.gold:
+        return 3;
+      case TileType.sapphire:
+        return 3;
+      case TileType.emerald:
+        return 3;
+      case TileType.ruby:
+        return 4;
+      case TileType.diamond:
+        return 4;
+      case TileType.lava:
+        return 1;
+      case TileType.gas:
+        return 1;
+      case TileType.bedrock:
+        return 99;
+    }
+  }
+
   /// Value when sold at surface (0 for non-ore)
   int get value {
     switch (this) {
@@ -92,7 +129,7 @@ extension TileTypeExtension on TileType {
     }
   }
 
-  /// Fuel cost to dig/move through this tile
+  /// Fuel cost to dig/move through this tile (base cost, modified by cooling)
   double get fuelCost {
     switch (this) {
       case TileType.empty:
@@ -162,7 +199,7 @@ extension TileTypeExtension on TileType {
     }
   }
 
-  /// Whether this tile can be dug
+  /// Whether this tile can be dug (assuming proper drillbit)
   bool get isDiggable {
     return this != TileType.bedrock && this != TileType.empty;
   }
@@ -266,6 +303,24 @@ extension TileTypeExtension on TileType {
         return 'Gas Pocket';
       case TileType.bedrock:
         return 'Bedrock';
+    }
+  }
+
+  /// Hardness name for display
+  String get hardnessName {
+    switch (hardness) {
+      case 1:
+        return 'Soft';
+      case 2:
+        return 'Medium';
+      case 3:
+        return 'Hard';
+      case 4:
+        return 'Very Hard';
+      case 99:
+        return 'Unbreakable';
+      default:
+        return 'None';
     }
   }
 

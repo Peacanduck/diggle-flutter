@@ -1,5 +1,6 @@
 /// drill_component.dart
-/// Smooth movement drill with fall damage (no fuel loss while falling)
+/// Smooth movement drill with fall damage
+/// Uses drillbit, engine, and cooling systems for upgrades
 
 import 'dart:ui';
 import 'package:flame/components.dart';
@@ -9,6 +10,9 @@ import '../world/tile.dart';
 import '../systems/fuel_system.dart';
 import '../systems/economy_system.dart';
 import '../systems/hull_system.dart';
+import '../systems/drillbit_system.dart';
+import '../systems/engine_system.dart';
+import '../systems/cooling_system.dart';
 import '../diggle_game.dart';
 
 enum MoveDirection { left, right, down, up, none }
@@ -18,6 +22,9 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
   final FuelSystem fuelSystem;
   final EconomySystem economySystem;
   final HullSystem hullSystem;
+  final DrillbitSystem drillbitSystem;
+  final EngineSystem engineSystem;
+  final CoolingSystem coolingSystem;
 
   MoveDirection heldDirection = MoveDirection.none;
 
@@ -34,11 +41,11 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
   int _fallStartY = 0;
   int _currentFallY = 0;
 
-  // Speeds
-  static const double normalSpeed = 200.0;
-  static const double flySpeed = 320.0;
-  static const double fallSpeed = 280.0;
-  static const double digSpeed = 4.0;
+  // Base speeds (modified by engine system)
+  static const double baseNormalSpeed = 200.0;
+  static const double baseFlySpeed = 320.0;
+  static const double baseFallSpeed = 280.0;
+  static const double baseDigSpeed = 4.0;
 
   // Fall damage settings
   static const int safeFallDistance = 3;
@@ -52,6 +59,9 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     required this.fuelSystem,
     required this.economySystem,
     required this.hullSystem,
+    required this.drillbitSystem,
+    required this.engineSystem,
+    required this.coolingSystem,
     this.onGameOver,
     this.onReachSurface,
   }) : super(
@@ -63,6 +73,14 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
   int get gridY => (position.y / TileMapComponent.tileSize).floor();
   int get depth => (gridY - tileMap.config.surfaceRows).clamp(0, 999);
   bool get isAtSurface => gridY <= tileMap.config.surfaceRows;
+
+  // Get effective speeds from engine system
+  double get normalSpeed => engineSystem.getEffectiveSpeed(baseNormalSpeed);
+  double get flySpeed => engineSystem.getEffectiveFlySpeed(baseFlySpeed);
+  double get fallSpeed => baseFallSpeed; // Fall speed not affected by engine
+
+  // Get effective dig speed from drillbit system
+  double get digSpeed => baseDigSpeed * drillbitSystem.digSpeedMultiplier;
 
   Vector2 _tileCenter(int x, int y) => Vector2(
     x * TileMapComponent.tileSize + TileMapComponent.tileSize / 2,
@@ -168,10 +186,9 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
           _fallStartY = 0;
           _currentFallY = 0;
           _target = _tileCenter(nx, ny);
-          fuelSystem.consume(0.4);
+          _consumeFuel(0.4);
         } else {
           // Can't fly through solid - but pressing UP still cancels fall damage
-          // (you're trying to save yourself, just blocked by ceiling)
           _isFalling = false;
           _fallStartY = 0;
           _currentFallY = 0;
@@ -186,8 +203,8 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
           _fallStartY = 0;
           _currentFallY = 0;
           _target = _tileCenter(nx, ny);
-          fuelSystem.consume(0.5);
-        } else if (tile.type != TileType.bedrock) {
+          _consumeFuel(0.5);
+        } else if (_canMineTile(tile)) {
           // Digging sideways while falling - take damage first
           if (_isFalling) {
             _land();
@@ -196,8 +213,12 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
           _digX = nx;
           _digY = ny;
           tileMap.startDig(nx, ny);
-        } else {
+        } else if (tile.type == TileType.bedrock) {
           // Bedrock - check for fall
+          if (canFall) _continueFalling(gx, gy);
+        } else {
+          // Can't mine this tile (drillbit not strong enough)
+          // Could add visual/audio feedback here
           if (canFall) _continueFalling(gx, gy);
         }
       } else if (heldDirection == MoveDirection.down) {
@@ -209,7 +230,7 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
           }
           _target = _tileCenter(nx, ny);
           // NO fuel consumption while falling!
-        } else if (tile.type != TileType.bedrock) {
+        } else if (_canMineTile(tile)) {
           // Digging down into solid - take fall damage!
           if (_isFalling) {
             _land();
@@ -219,7 +240,7 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
           _digY = ny;
           tileMap.startDig(nx, ny);
         }
-        // Bedrock below = can't move, already on ground
+        // Bedrock or unmineble below = can't move, already on ground
       }
     } else {
       // Not holding direction - check for falling
@@ -230,6 +251,19 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
         _land();
       }
     }
+  }
+
+  /// Check if the drillbit can mine this tile
+  bool _canMineTile(Tile tile) {
+    if (tile.type == TileType.bedrock) return false;
+    if (tile.type == TileType.empty) return false;
+    return drillbitSystem.canMine(tile.type.hardness);
+  }
+
+  /// Consume fuel with cooling system efficiency
+  void _consumeFuel(double baseCost) {
+    final effectiveCost = coolingSystem.getEffectiveFuelCost(baseCost);
+    fuelSystem.consume(effectiveCost);
   }
 
   void _startFalling(int startY) {
@@ -268,7 +302,15 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
       return;
     }
 
-    final progress = (dt * digSpeed) / tile.type.digTime;
+    // Check if we can still mine this tile (in case of future drillbit damage mechanic)
+    if (!_canMineTile(tile)) {
+      _digging = false;
+      return;
+    }
+
+    // Calculate dig progress using drillbit speed multiplier
+    final effectiveDigTime = drillbitSystem.getEffectiveDigTime(tile.type.digTime);
+    final progress = dt / effectiveDigTime;
     final result = tileMap.updateDig(_digX, _digY, progress);
 
     if (result != null) {
@@ -285,7 +327,9 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
         hullSystem.takeDamage(result.hazardDamage);
       }
 
-      fuelSystem.consume(result.fuelCost);
+      // Consume fuel with cooling efficiency
+      _consumeFuel(result.fuelCost);
+
       if (result.isOre) {
         economySystem.collectOre(result);
       }
@@ -335,13 +379,29 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
       Paint()..color = Colors.lightBlue.shade300,
     );
 
-    // Drill bit
+    // Drill bit - color based on drillbit level
+    Color drillColor;
+    switch (drillbitSystem.level) {
+      case DrillbitLevel.basic:
+        drillColor = Colors.grey.shade400;
+        break;
+      case DrillbitLevel.reinforced:
+        drillColor = Colors.grey.shade600;
+        break;
+      case DrillbitLevel.titanium:
+        drillColor = Colors.blueGrey.shade400;
+        break;
+      case DrillbitLevel.diamond:
+        drillColor = Colors.cyan.shade200;
+        break;
+    }
+
     final drill = Path()
       ..moveTo(size.x / 2 - 6, size.y * 0.75)
       ..lineTo(size.x / 2, size.y)
       ..lineTo(size.x / 2 + 6, size.y * 0.75)
       ..close();
-    canvas.drawPath(drill, Paint()..color = Colors.grey.shade400);
+    canvas.drawPath(drill, Paint()..color = drillColor);
 
     // Treads
     final tread = Paint()..color = Colors.grey.shade800;

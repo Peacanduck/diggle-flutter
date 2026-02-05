@@ -14,16 +14,26 @@ import 'systems/fuel_system.dart';
 import 'systems/economy_system.dart';
 import 'systems/hull_system.dart';
 import 'systems/item_system.dart';
+import 'systems/drillbit_system.dart';
+import 'systems/engine_system.dart';
+import 'systems/cooling_system.dart';
 
 enum GameState { playing, shopping, gameOver, paused }
 
 class DiggleGame extends FlameGame with HasCollisionDetection {
   late TileMapComponent tileMap;
   late DrillComponent drill;
+
+  // Core systems
   late FuelSystem fuelSystem;
   late EconomySystem economySystem;
   late HullSystem hullSystem;
   late ItemSystem itemSystem;
+
+  // New upgrade systems
+  late DrillbitSystem drillbitSystem;
+  late EngineSystem engineSystem;
+  late CoolingSystem coolingSystem;
 
   GameState _state = GameState.playing;
   final WorldConfig worldConfig;
@@ -41,11 +51,16 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
 
   @override
   Future<void> onLoad() async {
-    // Initialize systems
+    // Initialize core systems
     fuelSystem = FuelSystem();
     economySystem = EconomySystem();
     hullSystem = HullSystem();
     itemSystem = ItemSystem();
+
+    // Initialize new systems
+    drillbitSystem = DrillbitSystem();
+    engineSystem = EngineSystem();
+    coolingSystem = CoolingSystem();
 
     // Create tile map
     tileMap = TileMapComponent(config: worldConfig);
@@ -56,6 +71,9 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
       fuelSystem: fuelSystem,
       economySystem: economySystem,
       hullSystem: hullSystem,
+      drillbitSystem: drillbitSystem,
+      engineSystem: engineSystem,
+      coolingSystem: coolingSystem,
       onGameOver: _handleGameOver,
       onReachSurface: _handleReachSurface,
     );
@@ -118,10 +136,15 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   }
 
   void restart() {
+    // Reset all systems
     fuelSystem.reset();
     economySystem.reset();
     hullSystem.reset();
     itemSystem.reset();
+    drillbitSystem.reset();
+    engineSystem.reset();
+    coolingSystem.reset();
+
     tileMap.reset();
     drill.reset();
     _state = GameState.playing;
@@ -155,7 +178,10 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     drill.heldDirection = MoveDirection.none;
   }
 
-  // Shop transactions
+  // ============================================================
+  // SHOP TRANSACTIONS
+  // ============================================================
+
   int sellOre() => economySystem.sellAllOre();
 
   bool refuel() {
@@ -167,6 +193,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     return false;
   }
 
+  // Fuel tank upgrade
   bool upgradeFuelTank() {
     final cost = fuelSystem.getUpgradeCost();
     if (cost > 0 && economySystem.spend(cost)) {
@@ -176,8 +203,10 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     return false;
   }
 
+  // Cargo upgrade
   bool upgradeCargo() => economySystem.upgradeCargo();
 
+  // Hull repair
   bool repairHull() {
     final cost = hullSystem.getRepairCost();
     if (cost > 0 && economySystem.spend(cost)) {
@@ -187,6 +216,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     return false;
   }
 
+  // Hull upgrade
   bool upgradeHull() {
     final cost = hullSystem.getUpgradeCost();
     if (cost > 0 && economySystem.spend(cost)) {
@@ -196,7 +226,40 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     return false;
   }
 
-  // Item shop
+  // Drillbit upgrade
+  bool upgradeDrillbit() {
+    final cost = drillbitSystem.getUpgradeCost();
+    if (cost > 0 && economySystem.spend(cost)) {
+      drillbitSystem.upgrade();
+      return true;
+    }
+    return false;
+  }
+
+  // Engine upgrade
+  bool upgradeEngine() {
+    final cost = engineSystem.getUpgradeCost();
+    if (cost > 0 && economySystem.spend(cost)) {
+      engineSystem.upgrade();
+      return true;
+    }
+    return false;
+  }
+
+  // Cooling upgrade
+  bool upgradeCooling() {
+    final cost = coolingSystem.getUpgradeCost();
+    if (cost > 0 && economySystem.spend(cost)) {
+      coolingSystem.upgrade();
+      return true;
+    }
+    return false;
+  }
+
+  // ============================================================
+  // ITEM SHOP
+  // ============================================================
+
   bool buyItem(ItemType type) {
     if (!itemSystem.canAddItem(type)) return false;
     if (!economySystem.spend(type.price)) return false;
