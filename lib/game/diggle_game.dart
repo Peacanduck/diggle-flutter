@@ -44,8 +44,8 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     WorldConfig? config,
   }) : worldConfig = config ?? WorldConfig(
     width: 64,
-    height: 128,
-    surfaceRows: 3,
+    height: 524,
+    surfaceRows: 30,
     seed: seed,
   );
 
@@ -149,9 +149,14 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     drill.reset();
     _state = GameState.playing;
     fuelSystem.resume();
+    // Clear all overlays and restore HUD
     overlays.remove('gameOver');
     overlays.remove('shop');
-    overlays.add('hud');
+    overlays.remove('pause');
+    overlays.remove('settings');
+    if (!overlays.isActive('hud')) {
+      overlays.add('hud');
+    }
   }
 
   void pause() {

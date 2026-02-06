@@ -65,7 +65,7 @@ class EconomySystem extends ChangeNotifier {
   int _maxDepthReached = 0;
 
   EconomySystem({
-    int initialCash = 500000,
+    int initialCash = 50000,
     CargoLevel cargoLevel = CargoLevel.level1,
   })  : _cash = initialCash,
         _cargoLevel = cargoLevel;

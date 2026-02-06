@@ -21,11 +21,11 @@ class WorldConfig {
   final int bedrockStartDepth;
 
   const WorldConfig({
-    this.width = 640,
-    this.height = 1280,
+    this.width = 128, //64
+    this.height = 512, //128
     this.surfaceRows = 3,
     this.seed = 42,
-    this.bedrockStartDepth = 1200,
+    this.bedrockStartDepth = 480, // 120
   });
 }
 
