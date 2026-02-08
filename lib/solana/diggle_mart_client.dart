@@ -533,6 +533,9 @@ class DiggleMartClient {
   // ============================================================
 
   /// Build and serialize a transaction with a single instruction.
+  /// Produces the standard Solana wire format:
+  /// [compact-u16 sig_count] [64-byte placeholder sigs...] [message bytes]
+  /// The wallet will replace placeholder signatures with real ones.
   Future<Uint8List> _buildSerializedTransaction(
       Instruction instruction,
       Ed25519HDPublicKey feePayer,
@@ -541,6 +544,8 @@ class DiggleMartClient {
     final blockhashResult =
     await rpcClient.rpcClient.getLatestBlockhash();
     final blockhash = blockhashResult.value.blockhash;
+
+    debugPrint('Building tx with blockhash: $blockhash');
 
     // Compile message
     final message = Message(
@@ -552,18 +557,57 @@ class DiggleMartClient {
       feePayer: feePayer,
     );
 
-    // Create unsigned transaction
+
+    final numSignatures = compiledMessage.requiredSignatureCount;
+    debugPrint('Compiled message: $numSignatures required sigs, '
+        '${compiledMessage.accountKeys.length} accounts');
+    /* Build wire format manually for maximum compatibility
+    final buffer = BytesBuilder();
+    // 1. Compact-u16: number of signatures
+    _writeCompactU16(buffer, numSignatures);
+
+    // 2. Placeholder signatures (64 zero bytes each)
+    for (int i = 0; i < numSignatures; i++) {
+      buffer.add(Uint8List(64)); // 64 zero bytes
+    }
+    // 3. Serialized message bytes
+    // CompiledMessage.data returns ByteArray with the serialized message
+    final messageBytes = compiledMessage.toList();
+    buffer.add(messageBytes);
+
+    final txBytes = Uint8List.fromList(buffer.toBytes());
+    debugPrint('Serialized tx: ${txBytes.length} bytes '
+        '(sigs: ${numSignatures * 64 + 1}, msg: ${messageBytes.length})');
+    return txBytes;*/
+
+    // Build wire format using SignedTx with placeholder signatures
     final tx = SignedTx(
       compiledMessage: compiledMessage,
       signatures: List.filled(
-        compiledMessage.requiredSignatureCount,
+        numSignatures,
         Signature(List.filled(64, 0), publicKey: feePayer),
       ),
     );
-
-    return Uint8List.fromList(tx.toByteArray().toList());
+    final txBytes = Uint8List.fromList(tx.toByteArray().toList());
+    debugPrint('Serialized tx: ${txBytes.length} bytes');
+    return txBytes;
   }
 
+/* /// Write a compact-u16 value to a BytesBuilder.
+  /// Solana uses a variable-length encoding for small integers.
+  void _writeCompactU16(BytesBuilder buffer, int value) {
+    if (value < 0x80) {
+      buffer.addByte(value);
+    } else if (value < 0x4000) {
+      buffer.addByte((value & 0x7F) | 0x80);
+      buffer.addByte(value >> 7);
+    } else {
+      buffer.addByte((value & 0x7F) | 0x80);
+      buffer.addByte(((value >> 7) & 0x7F) | 0x80);
+      buffer.addByte(value >> 14);
+    }
+  }
+*/
   /// Confirm a transaction signature
   Future<bool> confirmTransaction(String signature,
       {Duration timeout = const Duration(seconds: 30)}) async {

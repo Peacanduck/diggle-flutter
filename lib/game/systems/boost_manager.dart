@@ -433,7 +433,7 @@ class BoostManager extends ChangeNotifier {
 // Update premium store item prices from on-chain config
   // (StoreItem is const, so we just use getPremiumItemPrice() for display)
   /// Fetch store config from on-chain
-  Future<void> _fetchStoreConfig() async {
+  Future<void> _fetchStoreConfig({bool silent = false}) async {
     _initMartClient();
     if (_martClient == null) {
       debugPrint('Cannot fetch store config: mart client not initialized (solanaClient null?)');
@@ -446,7 +446,7 @@ class BoostManager extends ChangeNotifier {
         debugPrint(
             'Store config loaded: active=${_storeData!.config.isActive}, '
                 'totalSold=${_storeData!.totalBoostersSold}');
-        notifyListeners();
+       if(!silent) notifyListeners();
       } else {
         debugPrint('Store account returned null - has the store been initialized on-chain?');
 
@@ -575,7 +575,7 @@ class BoostManager extends ChangeNotifier {
 
     try {
       // Refresh store data to get current totalBoostersSold for PDA derivation
-      await _fetchStoreConfig();
+      await _fetchStoreConfig(silent: true);
 
       Uint8List txBytes;
       bool isPointsPack = item.onChainPackType != null;

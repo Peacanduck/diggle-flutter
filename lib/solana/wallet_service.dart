@@ -13,6 +13,7 @@
 /// NOTE: Devnet support varies by wallet. Phantom has good devnet support,
 /// but some other wallets may not fully support devnet through MWA.
 
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:solana/solana.dart';
@@ -322,6 +323,12 @@ class WalletService extends ChangeNotifier {
   ///
   /// Returns the transaction signature (base58) on success, null on failure.
   /// Sets [errorMessage] on failure.
+  /// Sign a transaction via MWA, then submit it via RPC.
+  ///
+  /// Includes retry logic because Android may temporarily lose network
+  /// connectivity when switching back from the wallet app.
+  ///
+  /// Returns the transaction signature (base58) on success, or null on failure.
   Future<String?> signAndSendTransaction(
       Uint8List serializedTransaction) async {
     if (!isConnected || _authToken == null) {
@@ -330,84 +337,49 @@ class WalletService extends ChangeNotifier {
       return null;
     }
 
-    LocalAssociationScenario? session;
+    // Step 1: Sign via MWA
+    final signedTxBytes = await signTransaction(serializedTransaction);
+    if (signedTxBytes == null) {
+      return null;
+    }
 
-    try {
-      debugPrint('Opening MWA session for transaction signing...');
-      session = await LocalAssociationScenario.create();
+    // Step 2: Submit via RPC with retries
+    // After MWA app switch, Android may need a moment to restore network
+    final encodedTx = base64Encode(signedTxBytes);
+    const maxRetries = 3;
 
-      // Start activity and session concurrently
-      // ignore: unawaited_futures
-      session.startActivityForResult(null);
-      final client = await session.start();
-
-      // Reauthorize with stored auth token
-      debugPrint('Reauthorizing...');
-      final reauth = await client.reauthorize(
-        identityUri: Uri.parse('https://diggle.app'),
-        iconUri: Uri.parse('favicon.ico'),
-        identityName: 'Diggle',
-        authToken: _authToken!,
-      );
-
-      if (reauth == null) {
-        debugPrint('Reauthorization failed, attempting fresh authorization...');
-        // Auth token expired, try fresh authorization
-        final freshAuth = await client.authorize(
-          identityUri: Uri.parse('https://diggle.app'),
-          iconUri: Uri.parse('favicon.ico'),
-          identityName: 'Diggle',
-          cluster: _cluster.value,
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        if (attempt > 1) {
+          debugPrint('Retry $attempt/$maxRetries - waiting for network...');
+          await Future.delayed(Duration(seconds: attempt));
+        }
+        debugPrint('Submitting signed transaction via RPC (${signedTxBytes.length} bytes)...');
+        final signatureBase58 = await _solanaClient!.rpcClient.sendTransaction(
+          encodedTx,
+          preflightCommitment: Commitment.confirmed,
         );
+        debugPrint('Transaction submitted! Signature: $signatureBase58');
+        return signatureBase58;
+      } catch (e) {
+        debugPrint('RPC sendTransaction error (attempt $attempt): $e');
+        final isNetworkError = e.toString().contains('SocketException') ||
+            e.toString().contains('host lookup') ||
+            e.toString().contains('Connection refused') ||
+            e.toString().contains('Network is unreachable');
 
-        if (freshAuth == null) {
-          _errorMessage = 'Authorization failed';
+        if (!isNetworkError || attempt == maxRetries) {
+          debugPrint('Signed tx first 4 bytes: ${signedTxBytes.take(4).toList()}');
+          debugPrint('Signed tx length: ${signedTxBytes.length}');
+          _errorMessage = isNetworkError
+              ? 'Network unavailable after wallet switch. Please try again.'
+              : 'Failed to submit transaction: ${e.toString()}';
           notifyListeners();
           return null;
         }
-
-        // Update stored credentials
-        _publicKeyBytes = freshAuth.publicKey;
-        _authToken = freshAuth.authToken;
-      } else {
-        // Update auth token (it may have been refreshed)
-        _authToken = reauth.authToken;
-      }
-
-      // Sign and send the transaction
-      debugPrint('Signing and sending transaction...');
-      final result = await client.signAndSendTransactions(
-        transactions: [serializedTransaction],
-      );
-
-      if (result != null && result.signatures.isNotEmpty) {
-        final signatureBytes = result.signatures.first;
-        if (signatureBytes != null) {
-          final signature = _bytesToBase58(signatureBytes);
-          debugPrint('Transaction sent! Signature: $signature');
-          notifyListeners();
-          return signature;
-        }
-      }
-
-      _errorMessage = 'Transaction signing was cancelled or failed';
-      notifyListeners();
-      return null;
-    } catch (e, stackTrace) {
-      debugPrint('Transaction signing error: $e');
-      debugPrint('Stack trace: $stackTrace');
-      _errorMessage = _getTransactionError(e);
-      notifyListeners();
-      return null;
-    } finally {
-      if (session != null) {
-        try {
-          await session.close();
-        } catch (e) {
-          debugPrint('Error closing MWA session: $e');
-        }
       }
     }
+    return null;
   }
 
   /// Sign a transaction without sending (for multi-signer flows like NFT minting).
@@ -458,7 +430,8 @@ class WalletService extends ChangeNotifier {
       }
 
       // Sign only (don't send)
-      debugPrint('Signing transaction...');
+      debugPrint('Signing transaction (${serializedTransaction.length} bytes)...');
+      debugPrint('First 8 bytes: ${serializedTransaction.take(8).toList()}');
       final result = await client.signTransactions(
         transactions: [serializedTransaction],
       );
