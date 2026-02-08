@@ -5,13 +5,10 @@
 /// - State management for wallet connection
 /// - Connection status tracking
 /// - Cluster switching (devnet/mainnet)
+/// - Transaction signing and sending via MWA
 /// - Error handling with user-friendly messages
 ///
 /// The wallet is completely optional - game is fully playable without it.
-/// Future features could include:
-/// - NFT cosmetics for the drill
-/// - On-chain leaderboards
-/// - Achievement NFTs
 ///
 /// NOTE: Devnet support varies by wallet. Phantom has good devnet support,
 /// but some other wallets may not fully support devnet through MWA.
@@ -38,8 +35,10 @@ enum WalletConnectionState {
 
 /// Supported Solana clusters
 enum SolanaCluster {
-  devnet('devnet', 'Devnet', 'https://api.devnet.solana.com', 'wss://api.devnet.solana.com'),
-  mainnet('mainnet-beta', 'Mainnet', 'https://api.mainnet-beta.solana.com', 'wss://api.mainnet-beta.solana.com');
+  devnet('devnet', 'Devnet', 'https://api.devnet.solana.com',
+      'wss://api.devnet.solana.com'),
+  mainnet('mainnet-beta', 'Mainnet', 'https://api.mainnet-beta.solana.com',
+      'wss://api.mainnet-beta.solana.com');
 
   final String value;
   final String displayName;
@@ -57,7 +56,7 @@ class WalletService extends ChangeNotifier {
   /// Connected wallet's public key (bytes)
   Uint8List? _publicKeyBytes;
 
-  /// Auth token from wallet (kept for potential future use with reauthorize)
+  /// Auth token from wallet (used for reauthorization in signing sessions)
   String? _authToken;
 
   /// Connected wallet app name
@@ -72,23 +71,17 @@ class WalletService extends ChangeNotifier {
   /// Current cluster
   SolanaCluster _cluster = SolanaCluster.devnet;
 
-  /// Solana client for RPC calls (optional, for future balance checks etc.)
+  /// Solana client for RPC calls
   SolanaClient? _solanaClient;
 
   // ============================================================
   // GETTERS
   // ============================================================
 
-  /// Current connection state
   WalletConnectionState get state => _state;
-
-  /// Whether wallet is connected
   bool get isConnected => _state == WalletConnectionState.connected;
-
-  /// Whether currently connecting
   bool get isConnecting => _state == WalletConnectionState.connecting;
 
-  /// The connected public key as base58 string (null if not connected)
   String? get publicKey {
     if (_publicKeyBytes == null) return null;
     try {
@@ -98,45 +91,45 @@ class WalletService extends ChangeNotifier {
     }
   }
 
-  /// Shortened public key for display (first 4...last 4)
+  /// Get public key as Ed25519HDPublicKey (for transaction building)
+  Ed25519HDPublicKey? get publicKeyObject {
+    if (_publicKeyBytes == null) return null;
+    try {
+      return Ed25519HDPublicKey(_publicKeyBytes!);
+    } catch (e) {
+      return null;
+    }
+  }
+
   String? get shortPublicKey {
     final pk = publicKey;
     if (pk == null || pk.length < 12) return pk;
     return '${pk.substring(0, 4)}...${pk.substring(pk.length - 4)}';
   }
 
-  /// Connected wallet app name
   String? get walletName => _walletName;
-
-  /// Last error message
   String? get errorMessage => _errorMessage;
-
-  /// Whether Solana Mobile is available
   bool get isAvailable => _isAvailable;
-
-  /// Current cluster
   SolanaCluster get cluster => _cluster;
-
-  /// Whether on devnet
   bool get isDevnet => _cluster == SolanaCluster.devnet;
-
-  /// Whether on mainnet
   bool get isMainnet => _cluster == SolanaCluster.mainnet;
+
+  /// Get the Solana RPC client (for direct RPC calls from other services)
+  SolanaClient? get solanaClient => _solanaClient;
+
+  /// Get the auth token (needed by other services for MWA reauth)
+  String? get authToken => _authToken;
 
   // ============================================================
   // INITIALIZATION
   // ============================================================
 
-  /// Initialize the service - check availability
   Future<void> initialize() async {
     try {
-      // Check if any wallet apps are installed
       _isAvailable = await _checkWalletAvailability();
-
-      // Initialize Solana client for future RPC calls
       _setupSolanaClient();
-
-      debugPrint('WalletService initialized - available: $_isAvailable, cluster: ${_cluster.displayName}');
+      debugPrint(
+          'WalletService initialized - available: $_isAvailable, cluster: ${_cluster.displayName}');
     } catch (e) {
       debugPrint('WalletService initialization error: $e');
       _isAvailable = false;
@@ -144,18 +137,14 @@ class WalletService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Check if wallet is available by attempting to query
   Future<bool> _checkWalletAvailability() async {
     try {
-      // On Android, we assume available and let connection fail gracefully
-      // The actual check happens when we try to connect
       return true;
     } catch (e) {
       return false;
     }
   }
 
-  /// Setup Solana RPC client
   void _setupSolanaClient() {
     _solanaClient = SolanaClient(
       rpcUrl: Uri.parse(_cluster.rpcUrl),
@@ -167,23 +156,17 @@ class WalletService extends ChangeNotifier {
   // CLUSTER MANAGEMENT
   // ============================================================
 
-  /// Switch cluster - disconnects wallet if connected
   Future<void> setCluster(SolanaCluster cluster) async {
     if (_cluster == cluster) return;
-
-    // Disconnect if connected since auth token is cluster-specific
     if (isConnected) {
       await disconnect();
     }
-
     _cluster = cluster;
     _setupSolanaClient();
-
     debugPrint('Cluster switched to: ${_cluster.displayName}');
     notifyListeners();
   }
 
-  /// Toggle between devnet and mainnet
   Future<void> toggleCluster() async {
     if (_cluster == SolanaCluster.devnet) {
       await setCluster(SolanaCluster.mainnet);
@@ -196,13 +179,9 @@ class WalletService extends ChangeNotifier {
   // CONNECTION MANAGEMENT
   // ============================================================
 
-  /// Connect to a Solana wallet
-  ///
-  /// Opens the wallet app for authorization.
-  /// Returns true on success, false on failure.
   Future<bool> connect() async {
     if (_state == WalletConnectionState.connecting) {
-      return false; // Already connecting
+      return false;
     }
 
     _state = WalletConnectionState.connecting;
@@ -213,25 +192,16 @@ class WalletService extends ChangeNotifier {
 
     try {
       debugPrint('Creating LocalAssociationScenario...');
-
-      // Create a new session
       session = await LocalAssociationScenario.create();
 
-      debugPrint('Session created, starting activity and session concurrently...');
-
-      // IMPORTANT: Don't await startActivityForResult before start()
-      // They need to run concurrently - startActivityForResult opens the wallet,
-      // and start() establishes the connection
+      debugPrint(
+          'Session created, starting activity and session concurrently...');
       // ignore: unawaited_futures
       session.startActivityForResult(null);
-
-      // Start the session to get the client
-      // This will wait for the wallet to respond
       final client = await session.start();
 
       debugPrint('Client obtained, authorizing on ${_cluster.displayName}...');
 
-      // Authorize with the wallet
       final result = await client.authorize(
         identityUri: Uri.parse('https://diggle.app'),
         iconUri: Uri.parse('favicon.ico'),
@@ -248,7 +218,8 @@ class WalletService extends ChangeNotifier {
         _state = WalletConnectionState.connected;
         _isAvailable = true;
 
-        debugPrint('Wallet connected on ${_cluster.displayName}: $shortPublicKey');
+        debugPrint(
+            'Wallet connected on ${_cluster.displayName}: $shortPublicKey');
         notifyListeners();
         return true;
       } else {
@@ -265,7 +236,6 @@ class WalletService extends ChangeNotifier {
       notifyListeners();
       return false;
     } finally {
-      // Always close the session
       if (session != null) {
         try {
           debugPrint('Closing session...');
@@ -278,34 +248,21 @@ class WalletService extends ChangeNotifier {
     }
   }
 
-  /// Disconnect from the current wallet
-  ///
-  /// This just clears local state - it doesn't call deauthorize on the wallet
-  /// because that would require opening the wallet app again which is bad UX.
-  /// The wallet will still show the app as authorized, but that's fine -
-  /// the user can revoke access from within their wallet app if they want.
   Future<void> disconnect() async {
     if (_state == WalletConnectionState.disconnected) {
       return;
     }
 
     debugPrint('Disconnecting wallet (clearing local state)...');
-
-    // Just clear local state - no need to call the wallet
     _publicKeyBytes = null;
     _authToken = null;
     _walletName = null;
     _errorMessage = null;
     _state = WalletConnectionState.disconnected;
-
     debugPrint('Wallet disconnected');
     notifyListeners();
   }
 
-  /// Full disconnect with deauthorization
-  ///
-  /// This actually calls deauthorize on the wallet, which requires opening
-  /// the wallet app. Only use this if you really need to revoke access.
   Future<void> disconnectAndDeauthorize() async {
     if (_state == WalletConnectionState.disconnected) {
       return;
@@ -316,17 +273,11 @@ class WalletService extends ChangeNotifier {
     try {
       if (_authToken != null) {
         debugPrint('Deauthorizing wallet...');
-
-        // Create session to deauthorize
         session = await LocalAssociationScenario.create();
-
-        // Start activity without awaiting, then start session
         // ignore: unawaited_futures
         session.startActivityForResult(null);
         final client = await session.start();
-
         await client.deauthorize(authToken: _authToken!);
-
         debugPrint('Wallet deauthorized');
       }
     } catch (e) {
@@ -341,7 +292,6 @@ class WalletService extends ChangeNotifier {
       }
     }
 
-    // Clear local state
     _publicKeyBytes = null;
     _authToken = null;
     _walletName = null;
@@ -350,7 +300,6 @@ class WalletService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Clear error state
   void clearError() {
     if (_state == WalletConnectionState.error) {
       _errorMessage = null;
@@ -360,10 +309,192 @@ class WalletService extends ChangeNotifier {
   }
 
   // ============================================================
+  // TRANSACTION SIGNING & SENDING
+  // ============================================================
+
+  /// Sign and send a serialized transaction via MWA.
+  ///
+  /// Opens the wallet app for the user to approve the transaction,
+  /// then sends it to the network.
+  ///
+  /// [serializedTransaction] - the compiled, unsigned transaction bytes
+  /// (as produced by DiggleMartClient.build*Tx methods)
+  ///
+  /// Returns the transaction signature (base58) on success, null on failure.
+  /// Sets [errorMessage] on failure.
+  Future<String?> signAndSendTransaction(
+      Uint8List serializedTransaction) async {
+    if (!isConnected || _authToken == null) {
+      _errorMessage = 'Wallet not connected';
+      notifyListeners();
+      return null;
+    }
+
+    LocalAssociationScenario? session;
+
+    try {
+      debugPrint('Opening MWA session for transaction signing...');
+      session = await LocalAssociationScenario.create();
+
+      // Start activity and session concurrently
+      // ignore: unawaited_futures
+      session.startActivityForResult(null);
+      final client = await session.start();
+
+      // Reauthorize with stored auth token
+      debugPrint('Reauthorizing...');
+      final reauth = await client.reauthorize(
+        identityUri: Uri.parse('https://diggle.app'),
+        iconUri: Uri.parse('favicon.ico'),
+        identityName: 'Diggle',
+        authToken: _authToken!,
+      );
+
+      if (reauth == null) {
+        debugPrint('Reauthorization failed, attempting fresh authorization...');
+        // Auth token expired, try fresh authorization
+        final freshAuth = await client.authorize(
+          identityUri: Uri.parse('https://diggle.app'),
+          iconUri: Uri.parse('favicon.ico'),
+          identityName: 'Diggle',
+          cluster: _cluster.value,
+        );
+
+        if (freshAuth == null) {
+          _errorMessage = 'Authorization failed';
+          notifyListeners();
+          return null;
+        }
+
+        // Update stored credentials
+        _publicKeyBytes = freshAuth.publicKey;
+        _authToken = freshAuth.authToken;
+      } else {
+        // Update auth token (it may have been refreshed)
+        _authToken = reauth.authToken;
+      }
+
+      // Sign and send the transaction
+      debugPrint('Signing and sending transaction...');
+      final result = await client.signAndSendTransactions(
+        transactions: [serializedTransaction],
+      );
+
+      if (result != null && result.signatures.isNotEmpty) {
+        final signatureBytes = result.signatures.first;
+        if (signatureBytes != null) {
+          final signature = _bytesToBase58(signatureBytes);
+          debugPrint('Transaction sent! Signature: $signature');
+          notifyListeners();
+          return signature;
+        }
+      }
+
+      _errorMessage = 'Transaction signing was cancelled or failed';
+      notifyListeners();
+      return null;
+    } catch (e, stackTrace) {
+      debugPrint('Transaction signing error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      _errorMessage = _getTransactionError(e);
+      notifyListeners();
+      return null;
+    } finally {
+      if (session != null) {
+        try {
+          await session.close();
+        } catch (e) {
+          debugPrint('Error closing MWA session: $e');
+        }
+      }
+    }
+  }
+
+  /// Sign a transaction without sending (for multi-signer flows like NFT minting).
+  ///
+  /// Returns the signed transaction bytes, or null on failure.
+  Future<Uint8List?> signTransaction(Uint8List serializedTransaction) async {
+    if (!isConnected || _authToken == null) {
+      _errorMessage = 'Wallet not connected';
+      notifyListeners();
+      return null;
+    }
+
+    LocalAssociationScenario? session;
+
+    try {
+      debugPrint('Opening MWA session for transaction signing...');
+      session = await LocalAssociationScenario.create();
+
+      // ignore: unawaited_futures
+      session.startActivityForResult(null);
+      final client = await session.start();
+
+      // Reauthorize
+      debugPrint('Reauthorizing...');
+      final reauth = await client.reauthorize(
+        identityUri: Uri.parse('https://diggle.app'),
+        iconUri: Uri.parse('favicon.ico'),
+        identityName: 'Diggle',
+        authToken: _authToken!,
+      );
+
+      if (reauth == null) {
+        final freshAuth = await client.authorize(
+          identityUri: Uri.parse('https://diggle.app'),
+          iconUri: Uri.parse('favicon.ico'),
+          identityName: 'Diggle',
+          cluster: _cluster.value,
+        );
+        if (freshAuth == null) {
+          _errorMessage = 'Authorization failed';
+          notifyListeners();
+          return null;
+        }
+        _publicKeyBytes = freshAuth.publicKey;
+        _authToken = freshAuth.authToken;
+      } else {
+        _authToken = reauth.authToken;
+      }
+
+      // Sign only (don't send)
+      debugPrint('Signing transaction...');
+      final result = await client.signTransactions(
+        transactions: [serializedTransaction],
+      );
+
+      if (result != null && result.signedPayloads.isNotEmpty) {
+        final signedTx = result.signedPayloads.first;
+        if (signedTx != null) {
+          debugPrint('Transaction signed successfully');
+          return Uint8List.fromList(signedTx);
+        }
+      }
+
+      _errorMessage = 'Transaction signing was cancelled';
+      notifyListeners();
+      return null;
+    } catch (e, stackTrace) {
+      debugPrint('Transaction signing error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      _errorMessage = _getTransactionError(e);
+      notifyListeners();
+      return null;
+    } finally {
+      if (session != null) {
+        try {
+          await session.close();
+        } catch (e) {
+          debugPrint('Error closing MWA session: $e');
+        }
+      }
+    }
+  }
+
+  // ============================================================
   // ERROR HANDLING
   // ============================================================
 
-  /// Convert exception to user-friendly message
   String _getUserFriendlyError(dynamic e) {
     final message = e.toString().toLowerCase();
 
@@ -389,15 +520,39 @@ class WalletService extends ChangeNotifier {
       return 'Network not supported by this wallet. Try Phantom for devnet support.';
     }
 
-    // Default message
     return 'Failed to connect: ${e.toString().length > 100 ? '${e.toString().substring(0, 100)}...' : e.toString()}';
   }
 
+  /// Transaction-specific error messages
+  String _getTransactionError(dynamic e) {
+    final message = e.toString().toLowerCase();
+
+    if (message.contains('cancelled') || message.contains('canceled')) {
+      return 'Transaction was cancelled by user';
+    }
+    if (message.contains('insufficient') || message.contains('not enough')) {
+      return 'Insufficient SOL balance for this transaction';
+    }
+    if (message.contains('rejected') || message.contains('denied')) {
+      return 'Transaction was rejected';
+    }
+    if (message.contains('timeout')) {
+      return 'Transaction timed out. Please try again.';
+    }
+    if (message.contains('blockhash')) {
+      return 'Transaction expired. Please try again.';
+    }
+    if (message.contains('reauthorize') || message.contains('auth')) {
+      return 'Wallet session expired. Please reconnect.';
+    }
+
+    return 'Transaction failed: ${e.toString().length > 100 ? '${e.toString().substring(0, 100)}...' : e.toString()}';
+  }
+
   // ============================================================
-  // BALANCE & AIRDROP (for future use)
+  // BALANCE & AIRDROP
   // ============================================================
 
-  /// Get SOL balance
   Future<double?> getBalance() async {
     if (!isConnected || _publicKeyBytes == null || _solanaClient == null) {
       return null;
@@ -405,8 +560,8 @@ class WalletService extends ChangeNotifier {
 
     try {
       final pubKey = Ed25519HDPublicKey(_publicKeyBytes!);
-      final balance = await _solanaClient!.rpcClient.getBalance(pubKey.toBase58());
-      // Convert lamports to SOL
+      final balance =
+      await _solanaClient!.rpcClient.getBalance(pubKey.toBase58());
       return balance.value / 1000000000;
     } catch (e) {
       debugPrint('Error getting balance: $e');
@@ -414,7 +569,6 @@ class WalletService extends ChangeNotifier {
     }
   }
 
-  /// Request airdrop (devnet only)
   Future<bool> requestAirdrop({int lamports = 1000000000}) async {
     if (!isConnected || _publicKeyBytes == null || _solanaClient == null) {
       return false;
@@ -434,6 +588,40 @@ class WalletService extends ChangeNotifier {
       debugPrint('Airdrop error: $e');
       return false;
     }
+  }
+
+  // ============================================================
+  // BASE58 HELPER
+  // ============================================================
+
+  /// Convert raw signature bytes to base58 string
+  String _bytesToBase58(Uint8List bytes) {
+    const alphabet =
+        '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+
+    if (bytes.isEmpty) return '';
+
+    var value = BigInt.zero;
+    for (final byte in bytes) {
+      value = (value << 8) | BigInt.from(byte);
+    }
+
+    final result = StringBuffer();
+    while (value > BigInt.zero) {
+      final remainder = (value % BigInt.from(58)).toInt();
+      value = value ~/ BigInt.from(58);
+      result.write(alphabet[remainder]);
+    }
+
+    for (final byte in bytes) {
+      if (byte == 0) {
+        result.write(alphabet[0]);
+      } else {
+        break;
+      }
+    }
+
+    return result.toString().split('').reversed.join();
   }
 
   // ============================================================

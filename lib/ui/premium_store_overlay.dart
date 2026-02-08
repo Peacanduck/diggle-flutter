@@ -3,7 +3,7 @@
 ///
 /// Three sections:
 /// 1. Points Store - buy boosters with earned points (no wallet needed)
-/// 2. Premium Store - buy boosters/points with SOL (wallet required)
+/// 2. Premium Store - buy boosters/points with SOL (wallet required, on-chain)
 /// 3. NFT Collection - mint limited edition reward-boosting NFTs
 
 import 'package:flutter/material.dart';
@@ -91,14 +91,59 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
         children: [
           const Icon(Icons.storefront, color: Colors.purple, size: 32),
           const SizedBox(width: 12),
-          const Text(
-            'PREMIUM STORE',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 2,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'PREMIUM STORE',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                ),
+              ),
+              // On-chain status indicator
+              ListenableBuilder(
+                listenable: widget.boostManager,
+                builder: (context, _) {
+                  final isOnChain = widget.boostManager.isStoreLoaded;
+                  return Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: isOnChain ? Colors.green : Colors.orange,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isOnChain ? 'On-chain prices loaded' : 'Using default prices',
+                        style: TextStyle(
+                          color: isOnChain
+                              ? Colors.green.shade300
+                              : Colors.orange.shade300,
+                          fontSize: 10,
+                        ),
+                      ),
+                      if (!isOnChain) ...[
+                        const SizedBox(width: 4),
+                        GestureDetector(
+                          onTap: () => widget.boostManager.refreshStoreConfig(),
+                          child: Icon(
+                            Icons.refresh,
+                            color: Colors.orange.shade300,
+                            size: 14,
+                          ),
+                        ),
+                      ],
+                    ],
+                  );
+                },
+              ),
+            ],
           ),
           const Spacer(),
           IconButton(
@@ -192,14 +237,17 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
                     _BoostChip(
                       icon: '🏆',
                       label:
-                      'NFT: ${BoostManager.nftCollection.xpMultiplier}x',
+                      'NFT: ${widget.boostManager.nftCollection.xpMultiplier}x',
                       color: Colors.amber,
                       timeRemaining: 'Permanent',
                     ),
                   ...boosters.map((b) => _BoostChip(
                     icon: b.type.icon,
-                    label: '${b.type.displayName}: ${b.multiplierDisplay}',
-                    color: Colors.green,
+                    label:
+                    '${b.type.displayName}: ${b.multiplierDisplay}',
+                    color: b.onChainAddress != null
+                        ? Colors.cyan
+                        : Colors.green,
                     timeRemaining: b.timeRemainingDisplay,
                   )),
                 ],
@@ -266,7 +314,7 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
     );
   }
 
-  /// Premium SOL store
+  /// Premium SOL store - on-chain purchases
   Widget _buildPremiumStore() {
     return Consumer<WalletService>(
       builder: (context, wallet, _) {
@@ -274,43 +322,57 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
           return _buildWalletPrompt();
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(12),
-          itemCount: BoostManager.premiumStoreItems.length,
-          itemBuilder: (context, index) {
-            final item = BoostManager.premiumStoreItems[index];
-            return _buildStoreItemCard(
-              item: item,
-              priceWidget: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.network(
-                    'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
-                    width: 18,
-                    height: 18,
-                    errorBuilder: (_, __, ___) =>
-                    const Text('◎', style: TextStyle(fontSize: 16)),
+        return ListenableBuilder(
+          listenable: widget.boostManager,
+          builder: (context, _) {
+            return ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: BoostManager.premiumStoreItems.length,
+              itemBuilder: (context, index) {
+                final item = BoostManager.premiumStoreItems[index];
+                // Use on-chain price if available, fallback to default
+                final price =
+                widget.boostManager.getPremiumItemPrice(item);
+
+                return _buildStoreItemCard(
+                  item: item,
+                  priceWidget: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image.network(
+                        'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
+                        width: 18,
+                        height: 18,
+                        errorBuilder: (_, __, ___) => const Text('◎',
+                            style: TextStyle(fontSize: 16)),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${price.toStringAsFixed(price < 0.01 ? 4 : 3)} SOL',
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${item.priceInSOL} SOL',
-                    style: const TextStyle(
-                      color: Colors.green,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
-              canAfford: true, // Would check SOL balance in production
-              onPurchase: () async {
-                final sig = await widget.boostManager.purchaseWithSOL(item);
-                if (sig != null) {
-                  _showMessage('${item.name} purchased!', true);
-                } else {
-                  _showMessage(
-                      widget.boostManager.error ?? 'Purchase failed', false);
-                }
+                  canAfford: true, // SOL balance check could be added
+                  isLoading: widget.boostManager.isLoading,
+                  onPurchase: () async {
+                    final sig =
+                    await widget.boostManager.purchaseWithSOL(item);
+                    if (sig != null) {
+                      _showMessage(
+                          '${item.name} purchased! TX: ${sig.substring(0, 8)}...',
+                          true);
+                    } else {
+                      _showMessage(
+                          widget.boostManager.error ?? 'Purchase failed',
+                          false);
+                    }
+                  },
+                );
               },
             );
           },
@@ -323,200 +385,245 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
   Widget _buildNFTSection() {
     return Consumer<WalletService>(
       builder: (context, wallet, _) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // NFT showcase
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Colors.amber.shade900.withOpacity(0.3),
-                      Colors.purple.shade900.withOpacity(0.3),
-                    ],
+        return ListenableBuilder(
+          listenable: widget.boostManager,
+          builder: (context, _) {
+            final nft = widget.boostManager.nftCollection;
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.amber.shade900.withOpacity(0.3),
+                          Colors.purple.shade900.withOpacity(0.3),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.amber.shade700),
+                    ),
+                    child: Column(
+                      children: [
+                        // NFT Image placeholder
+                        Container(
+                          width: 160,
+                          height: 160,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade800,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: Colors.amber.shade600, width: 2),
+                          ),
+                          child: const Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('💎',
+                                    style: TextStyle(fontSize: 48)),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Diamond Drill',
+                                  style: TextStyle(
+                                    color: Colors.amber,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        Text(
+                          nft.name,
+                          style: const TextStyle(
+                            color: Colors.amber,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        Text(
+                          'Limited Edition Reward Booster',
+                          style: TextStyle(color: Colors.white.withOpacity(0.7)),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Benefits
+                        _buildNFTBenefit(
+                          '⚡',
+                          'XP Boost',
+                          '+${((nft.xpMultiplier - 1) * 100).toInt()}% XP permanently',
+                        ),
+                        _buildNFTBenefit(
+                          '💎',
+                          'Points Boost',
+                          '+${((nft.pointsMultiplier - 1) * 100).toInt()}% points permanently',
+                        ),
+                        _buildNFTBenefit(
+                          '🏆',
+                          'Supply',
+                          '${nft.currentSupply}/${nft.maxSupply} minted',
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // NFT status
+                        if (widget.boostManager.hasNFT)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color:
+                              Colors.green.shade900.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.green),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment:
+                              MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.check_circle,
+                                    color: Colors.green),
+                                SizedBox(width: 8),
+                                Text(
+                                  'NFT Detected! Boosts Active',
+                                  style: TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else if (!wallet.isConnected)
+                          Column(
+                            children: [
+                              const Text(
+                                'Connect your wallet to mint or detect existing NFTs',
+                                style: TextStyle(color: Colors.white54),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 12),
+                              ElevatedButton.icon(
+                                onPressed: () => wallet.connect(),
+                                icon: const Icon(
+                                    Icons.account_balance_wallet),
+                                label: const Text('CONNECT WALLET'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.purple,
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          Column(
+                            children: [
+                              if (nft.isSoldOut)
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade900
+                                        .withOpacity(0.5),
+                                    borderRadius:
+                                    BorderRadius.circular(8),
+                                  ),
+                                  child: const Text(
+                                    'SOLD OUT',
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                )
+                              else ...[
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 52,
+                                  child: ElevatedButton.icon(
+                                    onPressed:
+                                    widget.boostManager.isLoading
+                                        ? null
+                                        : () async {
+                                      final mint =
+                                      await widget
+                                          .boostManager
+                                          .mintNFT();
+                                      if (mint != null) {
+                                        _showMessage(
+                                            'NFT Minted! 🎉 Mint: ${mint.substring(0, 8)}...',
+                                            true);
+                                      } else {
+                                        _showMessage(
+                                          widget.boostManager
+                                              .error ??
+                                              'Mint failed',
+                                          false,
+                                        );
+                                      }
+                                    },
+                                    icon: widget
+                                        .boostManager.isLoading
+                                        ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child:
+                                      CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                        : const Text('💎',
+                                        style: TextStyle(
+                                            fontSize: 20)),
+                                    label: Text(
+                                      'MINT FOR ${nft.mintPriceSOL} SOL',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor:
+                                      Colors.amber.shade700,
+                                      foregroundColor: Colors.black,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                        BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                TextButton(
+                                  onPressed: () =>
+                                      widget.boostManager.checkForNFT(),
+                                  child: const Text(
+                                    'Already own one? Tap to detect',
+                                    style:
+                                    TextStyle(color: Colors.white54),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                      ],
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.amber.shade700),
-                ),
-                child: Column(
-                  children: [
-                    // NFT Image placeholder
-                    Container(
-                      width: 160,
-                      height: 160,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade800,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.amber.shade600, width: 2),
-                      ),
-                      child: const Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('💎', style: TextStyle(fontSize: 48)),
-                            SizedBox(height: 8),
-                            Text(
-                              'Diamond Drill',
-                              style: TextStyle(
-                                color: Colors.amber,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    Text(
-                      BoostManager.nftCollection.name,
-                      style: const TextStyle(
-                        color: Colors.amber,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    const Text(
-                      'Limited Edition Reward Booster',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Benefits
-                    _buildNFTBenefit(
-                      '⚡',
-                      'XP Boost',
-                      '+${((BoostManager.nftCollection.xpMultiplier - 1) * 100).toInt()}% XP permanently',
-                    ),
-                    _buildNFTBenefit(
-                      '💎',
-                      'Points Boost',
-                      '+${((BoostManager.nftCollection.pointsMultiplier - 1) * 100).toInt()}% points permanently',
-                    ),
-                    _buildNFTBenefit(
-                      '🏆',
-                      'Supply',
-                      '${BoostManager.nftCollection.maxSupply} total',
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // NFT status
-                    if (widget.boostManager.hasNFT)
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade900.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.check_circle, color: Colors.green),
-                            SizedBox(width: 8),
-                            Text(
-                              'NFT Detected! Boosts Active',
-                              style: TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    else if (!wallet.isConnected)
-                      Column(
-                        children: [
-                          const Text(
-                            'Connect your wallet to mint or detect existing NFTs',
-                            style: TextStyle(color: Colors.white54),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 12),
-                          ElevatedButton.icon(
-                            onPressed: () => wallet.connect(),
-                            icon: const Icon(Icons.account_balance_wallet),
-                            label: const Text('CONNECT WALLET'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.purple,
-                            ),
-                          ),
-                        ],
-                      )
-                    else
-                      Column(
-                        children: [
-                          SizedBox(
-                            width: double.infinity,
-                            height: 52,
-                            child: ElevatedButton.icon(
-                              onPressed: widget.boostManager.isLoading
-                                  ? null
-                                  : () async {
-                                final mint =
-                                await widget.boostManager.mintNFT();
-                                if (mint != null) {
-                                  _showMessage('NFT Minted! 🎉', true);
-                                } else {
-                                  _showMessage(
-                                    widget.boostManager.error ??
-                                        'Mint failed',
-                                    false,
-                                  );
-                                }
-                              },
-                              icon: widget.boostManager.isLoading
-                                  ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                                  : const Text('💎', style: TextStyle(fontSize: 20)),
-                              label: Text(
-                                'MINT FOR ${BoostManager.nftCollection.mintPriceSOL} SOL',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.amber.shade700,
-                                foregroundColor: Colors.black,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextButton(
-                            onPressed: () =>
-                                widget.boostManager.checkForNFT(),
-                            child: const Text(
-                              'Already own one? Tap to detect',
-                              style: TextStyle(color: Colors.white54),
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -566,7 +673,7 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
             ),
             const SizedBox(height: 8),
             const Text(
-              'Connect your Solana wallet to access premium items and SOL purchases.',
+              'Connect your Solana wallet to access premium items.\nAll purchases are on-chain transactions.',
               style: TextStyle(color: Colors.white54),
               textAlign: TextAlign.center,
             ),
@@ -580,7 +687,8 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
                       ? const SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child:
+                    CircularProgressIndicator(strokeWidth: 2),
                   )
                       : const Icon(Icons.account_balance_wallet),
                   label: Text(wallet.isConnecting
@@ -605,6 +713,7 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
     required Widget priceWidget,
     required bool canAfford,
     required VoidCallback onPurchase,
+    bool isLoading = false,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -612,7 +721,11 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
       decoration: BoxDecoration(
         color: Colors.grey.shade900,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade700),
+        border: Border.all(
+          color: item.requiresWallet
+              ? Colors.cyan.shade800
+              : Colors.grey.shade700,
+        ),
       ),
       child: Row(
         children: [
@@ -636,18 +749,27 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      item.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    if (item.requiresWallet) ...[
+                      const SizedBox(width: 4),
+                      Icon(Icons.link, color: Colors.cyan.shade400, size: 14),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Text(
                   item.description,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  style: const TextStyle(
+                      color: Colors.white54, fontSize: 12),
                 ),
               ],
             ),
@@ -662,15 +784,25 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
               SizedBox(
                 height: 32,
                 child: ElevatedButton(
-                  onPressed: canAfford ? onPurchase : null,
+                  onPressed:
+                  (canAfford && !isLoading) ? onPurchase : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.purple.shade700,
                     foregroundColor: Colors.white,
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 4),
                     textStyle: const TextStyle(fontSize: 12),
                   ),
-                  child: const Text('BUY'),
+                  child: isLoading
+                      ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                      : const Text('BUY'),
                 ),
               ),
             ],
@@ -758,7 +890,9 @@ class _StatChip extends StatelessWidget {
     return Column(
       children: [
         Text(icon, style: const TextStyle(fontSize: 18)),
-        Text(label, style: TextStyle(color: color.withOpacity(0.7), fontSize: 10)),
+        Text(label,
+            style:
+            TextStyle(color: color.withOpacity(0.7), fontSize: 10)),
         Text(
           value,
           style: TextStyle(
@@ -801,12 +935,16 @@ class _BoostChip extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.bold),
           ),
           const SizedBox(width: 4),
           Text(
             timeRemaining,
-            style: TextStyle(color: color.withOpacity(0.7), fontSize: 10),
+            style:
+            TextStyle(color: color.withOpacity(0.7), fontSize: 10),
           ),
         ],
       ),

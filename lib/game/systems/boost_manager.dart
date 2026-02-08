@@ -2,27 +2,19 @@
 /// Manages active boosts from on-chain purchases and NFT holdings.
 ///
 /// Responsibilities:
-/// - Fetches active boosters from on-chain accounts
+/// - Fetches store config and active boosters from on-chain accounts
+/// - Builds and sends purchase transactions via MWA
 /// - Detects NFTs in connected wallet for permanent boosts
 /// - Manages timed boost expiry
 /// - Syncs boost multipliers to XPPointsSystem
-///
-/// On-chain booster account structure (from Anchor program):
-/// {
-///   owner: Pubkey,
-///   booster_type: u8,      // 0=XP, 1=Points, 2=Both
-///   multiplier: u16,       // e.g., 200 = 2.0x
-///   expires_at: i64,       // Unix timestamp (0 = permanent/NFT)
-///   is_active: bool,
-/// }
 
 import 'dart:async';
-import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
+import 'package:solana/dto.dart';
 import 'package:solana/solana.dart';
-import '../systems/xp_points_system.dart';
+import './xp_points_system.dart';
 import '../../solana/wallet_service.dart';
+import '../../solana/diggle_mart_client.dart';
 
 /// Types of boosters available
 enum BoosterType {
@@ -66,7 +58,7 @@ class Booster {
   });
 
   bool get isExpired {
-    if (isFromNFT) return false; // NFT boosts never expire
+    if (isFromNFT) return false;
     if (expiresAt == null) return true;
     return DateTime.now().isAfter(expiresAt!);
   }
@@ -87,6 +79,26 @@ class Booster {
   }
 
   String get multiplierDisplay => '${multiplier}x';
+
+  /// Create a Booster from on-chain data
+  factory Booster.fromOnChain(OnChainBooster onChain) {
+    final type = BoosterType.fromValue(onChain.boosterType);
+    final expiresAt = DateTime.fromMillisecondsSinceEpoch(
+      onChain.expiresAt * 1000,
+    );
+    final purchasedAt = DateTime.fromMillisecondsSinceEpoch(
+      onChain.purchasedAt * 1000,
+    );
+
+    return Booster(
+      type: type,
+      multiplier: onChain.multiplierDouble,
+      duration: expiresAt.difference(purchasedAt),
+      expiresAt: expiresAt,
+      isActive: onChain.isActive && !onChain.isExpired,
+      onChainAddress: onChain.address,
+    );
+  }
 }
 
 /// Store items available for purchase
@@ -102,6 +114,15 @@ class StoreItem {
   final double priceInSOL; // 0 if points-only
   final bool requiresWallet;
 
+  /// For on-chain purchase: booster type as u8
+  final int? onChainBoosterType;
+
+  /// For on-chain purchase: duration in seconds
+  final int? onChainDurationSeconds;
+
+  /// For on-chain purchase: points pack type (0=small, 1=large)
+  final int? onChainPackType;
+
   const StoreItem({
     required this.id,
     required this.name,
@@ -113,26 +134,37 @@ class StoreItem {
     this.priceInPoints = 0,
     this.priceInSOL = 0,
     this.requiresWallet = false,
+    this.onChainBoosterType,
+    this.onChainDurationSeconds,
+    this.onChainPackType,
   });
 }
 
 /// NFT collection info for reward-boosting NFTs
 class NFTCollectionInfo {
-  final String collectionMint;
   final String name;
   final double xpMultiplier;
   final double pointsMultiplier;
   final int maxSupply;
   final double mintPriceSOL;
+  // Fetched from chain
+  final int currentSupply;
+  final bool isActive;
+  final String? collectionMint;
 
   const NFTCollectionInfo({
-    required this.collectionMint,
     required this.name,
     required this.xpMultiplier,
     required this.pointsMultiplier,
     required this.maxSupply,
     required this.mintPriceSOL,
+    this.currentSupply = 0,
+    this.isActive = false,
+    this.collectionMint,
   });
+
+  int get remainingSupply => maxSupply - currentSupply;
+  bool get isSoldOut => currentSupply >= maxSupply;
 }
 
 /// Manages all boosts and store interactions
@@ -140,7 +172,10 @@ class BoostManager extends ChangeNotifier {
   final XPPointsSystem xpSystem;
   final WalletService walletService;
 
-  /// Active boosters
+  /// Diggle Mart on-chain client
+  DiggleMartClient? _martClient;
+
+  /// Active boosters (from chain + local points purchases)
   final List<Booster> _activeBoosters = [];
 
   /// Whether NFT boost is detected
@@ -149,6 +184,12 @@ class BoostManager extends ChangeNotifier {
   /// NFT metadata if detected
   String? _nftName;
   String? _nftImageUri;
+
+  /// On-chain store data
+  OnChainStore? _storeData;
+
+  /// NFT collection data from chain
+  OnChainNftCollection? _nftCollectionData;
 
   /// Expiry check timer
   Timer? _expiryTimer;
@@ -205,64 +246,71 @@ class BoostManager extends ChangeNotifier {
     ),
   ];
 
-  /// Premium store items (SOL-based, requires wallet)
+  /// Premium store items (SOL-based, requires wallet + on-chain tx)
+  /// Prices here are defaults; actual prices come from on-chain store config
   static const List<StoreItem> premiumStoreItems = [
     StoreItem(
       id: 'xp_boost_mega',
       name: 'Mega XP Boost (24hr)',
-      description: '2x XP for 24 hours',
+      description: '2x XP for 24 hours (on-chain)',
       icon: '🌟',
       boosterType: BoosterType.xpBoost,
       multiplier: 2.0,
       duration: Duration(hours: 24),
       priceInSOL: 0.01,
       requiresWallet: true,
+      onChainBoosterType: 0, // XP boost
+      onChainDurationSeconds: 86400, // 24 hours
     ),
     StoreItem(
       id: 'combo_boost_mega',
       name: 'Mega Combo Boost (24hr)',
-      description: '2x XP + 2x points for 24 hours',
+      description: '2x XP + 2x points for 24 hours (on-chain)',
       icon: '💥',
       boosterType: BoosterType.comboBoost,
       multiplier: 2.0,
       duration: Duration(hours: 24),
       priceInSOL: 0.02,
       requiresWallet: true,
+      onChainBoosterType: 2, // Combo boost
+      onChainDurationSeconds: 86400,
     ),
     StoreItem(
       id: 'points_pack_500',
       name: '500 Points Pack',
-      description: 'Instantly receive 500 points',
+      description: 'Instantly receive 500 points (on-chain)',
       icon: '💰',
       boosterType: BoosterType.pointsBoost,
       multiplier: 1.0,
       duration: Duration.zero,
       priceInSOL: 0.005,
       requiresWallet: true,
+      onChainPackType: 0, // Small pack
     ),
     StoreItem(
       id: 'points_pack_2000',
       name: '2000 Points Pack',
-      description: 'Instantly receive 2000 points (20% bonus)',
+      description: 'Instantly receive 2000 points (on-chain)',
       icon: '💰',
       boosterType: BoosterType.pointsBoost,
       multiplier: 1.0,
       duration: Duration.zero,
       priceInSOL: 0.015,
       requiresWallet: true,
+      onChainPackType: 1, // Large pack
     ),
   ];
 
-  /// Limited edition NFT info
-  /// Update collectionMint after deploying your NFT collection
-  static const NFTCollectionInfo nftCollection = NFTCollectionInfo(
-    collectionMint: 'YOUR_COLLECTION_MINT_ADDRESS_HERE',
+  /// NFT collection info - defaults, updated from chain
+  NFTCollectionInfo _nftCollection = const NFTCollectionInfo(
     name: 'Diggle Diamond Drill',
     xpMultiplier: 1.25,
     pointsMultiplier: 1.25,
     maxSupply: 1000,
     mintPriceSOL: 0.1,
   );
+
+  NFTCollectionInfo get nftCollection => _nftCollection;
 
   // ============================================================
   // CONSTRUCTOR
@@ -272,14 +320,20 @@ class BoostManager extends ChangeNotifier {
     required this.xpSystem,
     required this.walletService,
   }) {
+    // Initialize the on-chain client if wallet service has a Solana client
+    _initMartClient();
+
     // Start expiry check timer
     _expiryTimer = Timer.periodic(
       const Duration(seconds: 30),
           (_) => _checkExpiredBoosters(),
     );
 
-    // Listen for wallet changes to re-check NFT
+    // Listen for wallet changes
     walletService.addListener(_onWalletChanged);
+
+    // Fetch store config on init
+    _fetchStoreConfig();
   }
 
   @override
@@ -287,6 +341,14 @@ class BoostManager extends ChangeNotifier {
     _expiryTimer?.cancel();
     walletService.removeListener(_onWalletChanged);
     super.dispose();
+  }
+
+  /// Initialize the DiggleMartClient with the current RPC client
+  void _initMartClient() {
+    final solanaClient = walletService.solanaClient;
+    if (solanaClient != null) {
+      _martClient = DiggleMartClient(rpcClient: solanaClient);
+    }
   }
 
   // ============================================================
@@ -301,8 +363,14 @@ class BoostManager extends ChangeNotifier {
   String? get nftImageUri => _nftImageUri;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  OnChainStore? get storeData => _storeData;
+  bool get isStoreLoaded => _storeData != null;
 
-  /// Total active XP multiplier
+  /// Manually refresh store config from on-chain
+  Future<void> refreshStoreConfig() async {
+    await _fetchStoreConfig();
+  }
+
   double get totalXPMultiplier {
     double mult = 1.0;
     for (final b in activeBoosters) {
@@ -310,11 +378,10 @@ class BoostManager extends ChangeNotifier {
         mult *= b.multiplier;
       }
     }
-    if (_hasNFT) mult *= nftCollection.xpMultiplier;
+    if (_hasNFT) mult *= _nftCollection.xpMultiplier;
     return mult;
   }
 
-  /// Total active points multiplier
   double get totalPointsMultiplier {
     double mult = 1.0;
     for (final b in activeBoosters) {
@@ -323,24 +390,136 @@ class BoostManager extends ChangeNotifier {
         mult *= b.multiplier;
       }
     }
-    if (_hasNFT) mult *= nftCollection.pointsMultiplier;
+    if (_hasNFT) mult *= _nftCollection.pointsMultiplier;
     return mult;
+  }
+
+  /// Get the on-chain price for a premium store item (in SOL)
+  /// Falls back to the hardcoded default if store not loaded
+  double getPremiumItemPrice(StoreItem item) {
+    if (_storeData == null) return item.priceInSOL;
+
+    final config = _storeData!.config;
+
+    // Points packs
+    if (item.onChainPackType != null) {
+      if (item.onChainPackType == 0) {
+        return config.pointsPackSmallPriceSOL;
+      } else {
+        return config.pointsPackLargePriceSOL;
+      }
+    }
+
+    // Boosters: price = pricePerHour * (durationSeconds / 3600)
+    if (item.onChainBoosterType != null &&
+        item.onChainDurationSeconds != null) {
+      final hours = item.onChainDurationSeconds! / 3600.0;
+      switch (item.onChainBoosterType) {
+        case 0:
+          return config.xpBoostPriceSOLPerHour * hours;
+        case 1:
+          return config.pointsBoostPriceSOLPerHour * hours;
+        case 2:
+          return config.comboBoostPriceSOLPerHour * hours;
+      }
+    }
+
+    return item.priceInSOL;
+  }
+
+  // ============================================================
+  // FETCH ON-CHAIN DATA
+  // ============================================================
+// Update premium store item prices from on-chain config
+  // (StoreItem is const, so we just use getPremiumItemPrice() for display)
+  /// Fetch store config from on-chain
+  Future<void> _fetchStoreConfig() async {
+    _initMartClient();
+    if (_martClient == null) {
+      debugPrint('Cannot fetch store config: mart client not initialized (solanaClient null?)');
+      return;
+    }
+
+    try {
+      _storeData = await _martClient!.fetchStore();
+      if (_storeData != null) {
+        debugPrint(
+            'Store config loaded: active=${_storeData!.config.isActive}, '
+                'totalSold=${_storeData!.totalBoostersSold}');
+        notifyListeners();
+      } else {
+        debugPrint('Store account returned null - has the store been initialized on-chain?');
+
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch store config: $e');
+    }
+  }
+
+  /// Fetch active boosters for the connected wallet
+  Future<void> fetchOnChainBoosters() async {
+    if (_martClient == null || !walletService.isConnected) return;
+
+    final pubkey = walletService.publicKey;
+    if (pubkey == null) return;
+
+    try {
+      debugPrint('Fetching on-chain boosters for $pubkey...');
+      final onChainBoosters =
+      await _martClient!.fetchActiveBoosters(pubkey);
+
+      // Remove existing on-chain boosters and replace with fresh data
+      _activeBoosters
+          .removeWhere((b) => b.onChainAddress != null && !b.isFromNFT);
+
+      for (final onChain in onChainBoosters) {
+        _activeBoosters.add(Booster.fromOnChain(onChain));
+      }
+
+      debugPrint(
+          'Found ${onChainBoosters.length} active on-chain boosters');
+
+      _syncMultipliers();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error fetching on-chain boosters: $e');
+    }
+  }
+
+  /// Fetch NFT collection info from chain
+  Future<void> fetchNftCollectionInfo() async {
+    if (_martClient == null) return;
+
+    try {
+      _nftCollectionData = await _martClient!.fetchNftCollection();
+      if (_nftCollectionData != null) {
+        _nftCollection = NFTCollectionInfo(
+          name: _nftCollectionData!.name,
+          xpMultiplier: _nftCollection.xpMultiplier,
+          pointsMultiplier: _nftCollection.pointsMultiplier,
+          maxSupply: _nftCollectionData!.maxSupply,
+          mintPriceSOL: _nftCollectionData!.mintPriceSOL,
+          currentSupply: _nftCollectionData!.currentSupply,
+          isActive: _nftCollectionData!.isActive,
+          collectionMint: _nftCollectionData!.collectionMint,
+        );
+        debugPrint('NFT collection loaded: ${_nftCollection.name}, '
+            'supply: ${_nftCollection.currentSupply}/${_nftCollection.maxSupply}');
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch NFT collection: $e');
+    }
   }
 
   // ============================================================
   // POINTS-BASED PURCHASES (offline, no wallet needed)
   // ============================================================
 
-  /// Purchase a booster with points
   bool purchaseWithPoints(StoreItem item) {
     if (item.priceInPoints <= 0) return false;
     if (!xpSystem.canAffordPoints(item.priceInPoints)) return false;
-
-    // Special case: points pack (just add points)
-    if (item.id.startsWith('points_pack')) {
-      // Not applicable for points-bought items
-      return false;
-    }
+    if (item.id.startsWith('points_pack')) return false;
 
     xpSystem.spendPoints(item.priceInPoints);
 
@@ -359,15 +538,33 @@ class BoostManager extends ChangeNotifier {
   }
 
   // ============================================================
-  // SOL-BASED PURCHASES (requires wallet + on-chain tx)
+  // SOL-BASED PURCHASES (on-chain via MWA)
   // ============================================================
 
-  /// Purchase a premium booster with SOL
-  /// Returns transaction signature on success, null on failure
+  /// Purchase a premium booster with SOL via on-chain transaction.
+  ///
+  /// Builds the transaction, sends to wallet for signing via MWA,
+  /// then confirms on-chain.
+  ///
+  /// Returns transaction signature on success, null on failure.
   Future<String?> purchaseWithSOL(StoreItem item) async {
     if (!item.requiresWallet) return null;
     if (!walletService.isConnected) {
       _error = 'Wallet not connected';
+      notifyListeners();
+      return null;
+    }
+
+    final buyerPubkey = walletService.publicKeyObject;
+    if (buyerPubkey == null) {
+      _error = 'Invalid wallet public key';
+      notifyListeners();
+      return null;
+    }
+
+    _initMartClient();
+    if (_martClient == null) {
+      _error = 'RPC client not available';
       notifyListeners();
       return null;
     }
@@ -377,55 +574,109 @@ class BoostManager extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // ============================================================
-      // ON-CHAIN TRANSACTION
-      // ============================================================
-      // This is where you'd build and send the Anchor instruction:
-      //
-      // 1. Build the PurchaseBooster instruction
-      // 2. Sign via MWA (Mobile Wallet Adapter)
-      // 3. Send and confirm transaction
-      //
-      // For now, we simulate the purchase. Replace with actual
-      // Anchor client calls when your program is deployed.
-      //
-      // Example flow:
-      //
-      // final instruction = await _buildPurchaseInstruction(item);
-      // final signature = await _signAndSend(instruction);
-      // if (signature != null) {
-      //   // Fetch the created booster account
-      //   final boosterAccount = await _fetchBoosterAccount(signature);
-      //   _activeBoosters.add(boosterAccount);
-      // }
+      // Refresh store data to get current totalBoostersSold for PDA derivation
+      await _fetchStoreConfig();
 
-      // Special case: points pack
-      if (item.id.startsWith('points_pack')) {
-        final pointsAmount = int.tryParse(
-            item.id.replaceAll('points_pack_', '')) ?? 0;
-        xpSystem.addPoints(pointsAmount);
+      Uint8List txBytes;
+      bool isPointsPack = item.onChainPackType != null;
 
+      if (isPointsPack) {
+        // ============================================================
+        // POINTS PACK PURCHASE
+        // ============================================================
+        debugPrint(
+            'Building purchasePointsPack tx (packType: ${item.onChainPackType})...');
+
+        txBytes = await _martClient!.buildPurchasePointsPackTx(
+          buyer: buyerPubkey,
+          packType: item.onChainPackType!,
+        );
+      } else if (item.onChainBoosterType != null &&
+          item.onChainDurationSeconds != null) {
+        // ============================================================
+        // BOOSTER PURCHASE
+        // ============================================================
+        debugPrint(
+            'Building purchaseBooster tx (type: ${item.onChainBoosterType}, '
+                'duration: ${item.onChainDurationSeconds}s, '
+                'totalSold: ${_storeData?.totalBoostersSold ?? 0})...');
+
+        txBytes = await _martClient!.buildPurchaseBoosterTx(
+          buyer: buyerPubkey,
+          boosterType: item.onChainBoosterType!,
+          durationSeconds: item.onChainDurationSeconds!,
+          totalBoostersSold: _storeData?.totalBoostersSold ?? 0,
+        );
+      } else {
+        _error = 'Invalid store item configuration';
         _isLoading = false;
         notifyListeners();
-        return 'simulated_tx_${DateTime.now().millisecondsSinceEpoch}';
+        return null;
       }
 
-      // Timed booster
-      final booster = Booster(
-        type: item.boosterType,
-        multiplier: item.multiplier,
-        duration: item.duration,
-        expiresAt: DateTime.now().add(item.duration),
-        isActive: true,
-      );
+      // Send to wallet for signing and submission
+      debugPrint('Sending transaction to wallet for approval...');
+      final signature =
+      await walletService.signAndSendTransaction(txBytes);
 
-      _activeBoosters.add(booster);
-      _syncMultipliers();
+      if (signature == null) {
+        _error = walletService.errorMessage ?? 'Transaction failed';
+        _isLoading = false;
+        notifyListeners();
+        return null;
+      }
+
+      debugPrint('Transaction submitted: $signature');
+
+      // Confirm the transaction
+      debugPrint('Confirming transaction...');
+      final confirmed = await _martClient!.confirmTransaction(signature);
+
+      if (!confirmed) {
+        _error = 'Transaction failed to confirm. Check your wallet for details.';
+        _isLoading = false;
+        notifyListeners();
+        return null;
+      }
+
+      debugPrint('Transaction confirmed!');
+
+      // Apply the effects locally
+      if (isPointsPack) {
+        // Award points locally
+        final config = _storeData?.config;
+        int pointsAmount;
+        if (item.onChainPackType == 0) {
+          pointsAmount = config?.pointsPackSmallAmount ?? 500;
+        } else {
+          pointsAmount = config?.pointsPackLargeAmount ?? 2000;
+        }
+        xpSystem.addPoints(pointsAmount);
+        debugPrint('Awarded $pointsAmount points from pack purchase');
+      } else {
+        // Add the booster locally (also fetch from chain to get exact data)
+        final booster = Booster(
+          type: item.boosterType,
+          multiplier: item.multiplier,
+          duration: item.duration,
+          expiresAt: DateTime.now().add(item.duration),
+          isActive: true,
+          onChainAddress: signature, // Use signature as temp identifier
+        );
+        _activeBoosters.add(booster);
+        _syncMultipliers();
+
+        // Fetch fresh data from chain in the background
+        Future.delayed(const Duration(seconds: 2), () {
+          fetchOnChainBoosters();
+        });
+      }
 
       _isLoading = false;
       notifyListeners();
-      return 'simulated_tx_${DateTime.now().millisecondsSinceEpoch}';
+      return signature;
     } catch (e) {
+      debugPrint('Purchase error: $e');
       _error = 'Purchase failed: ${e.toString()}';
       _isLoading = false;
       notifyListeners();
@@ -437,7 +688,7 @@ class BoostManager extends ChangeNotifier {
   // NFT DETECTION
   // ============================================================
 
-  /// Check connected wallet for Diggle NFT
+  /// Check connected wallet for Diggle NFT by looking at token accounts
   Future<void> checkForNFT() async {
     if (!walletService.isConnected) {
       _hasNFT = false;
@@ -450,49 +701,122 @@ class BoostManager extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // ============================================================
-      // NFT DETECTION LOGIC
-      // ============================================================
-      // When deployed, this would:
-      // 1. Fetch all token accounts for the connected wallet
-      // 2. Filter for NFTs (amount=1, decimals=0)
-      // 3. Fetch metadata for each NFT
-      // 4. Check if any belong to your collection (by collection mint)
-      //
-      // Using Metaplex:
-      //
-      // final pubkey = walletService.publicKey;
-      // final tokenAccounts = await solanaClient.rpcClient
-      //     .getTokenAccountsByOwner(pubkey, ...);
-      //
-      // for (final account in tokenAccounts) {
-      //   final metadata = await fetchMetadata(account.mint);
-      //   if (metadata.collection?.key == nftCollection.collectionMint) {
-      //     _hasNFT = true;
-      //     _nftName = metadata.name;
-      //     _nftImageUri = metadata.uri;
-      //     break;
-      //   }
-      // }
+      // Fetch NFT collection info from chain first
+      await fetchNftCollectionInfo();
 
-      // For now, NFT detection is disabled until collection is deployed
-      _hasNFT = false;
+      final collectionMint = _nftCollectionData?.collectionMint;
+      if (collectionMint == null ||
+          collectionMint == 'YOUR_COLLECTION_MINT_ADDRESS_HERE') {
+        debugPrint('NFT collection not yet deployed');
+        _hasNFT = false;
+        _isLoading = false;
+        _syncMultipliers();
+        notifyListeners();
+        return;
+      }
+
+      // Check if wallet holds any tokens from this collection
+      // This requires checking token accounts with Metaplex metadata
+      final pubkey = walletService.publicKey;
+      final solanaClient = walletService.solanaClient;
+
+      if (pubkey == null || solanaClient == null) {
+        _hasNFT = false;
+        _isLoading = false;
+        _syncMultipliers();
+        notifyListeners();
+        return;
+      }
+
+      // Fetch token accounts for this wallet
+      // Look for NFTs (amount=1, decimals=0) whose collection matches
+      try {
+         final tokenAccounts =
+       await solanaClient.rpcClient.getTokenAccountsByOwner(
+          pubkey,
+          TokenAccountsFilter.byProgramId(tokenProgramId),
+          encoding: Encoding.jsonParsed,
+        );
+
+        // For each token with amount=1, check if it's from our collection
+        // In a full implementation, you'd fetch Metaplex metadata for each mint
+        // and check the collection field. For now, we do a basic check.
+        for (final account in tokenAccounts.value) {
+          try {
+            final parsed = account.account.data;
+           if (parsed is ParsedAccountData) {
+             final parsedData = parsed.parsed as Map<String, dynamic>;
+              final info = parsedData['info'] as Map<String, dynamic>?;
+              if (info != null) {
+                final tokenAmount = info['tokenAmount'];
+                if (tokenAmount != null &&
+                    tokenAmount['decimals'] == 0 &&
+                    tokenAmount['uiAmount'] == 1) {
+                  // This is an NFT. In production, verify collection via Metaplex.
+                  // For now, we log it for debugging.
+                  debugPrint(
+                      'Found potential NFT: ${info['mint']}');
+                }
+              }
+            }
+    } catch (e) {
+            // Skip malformed accounts
+          }
+        }
+
+        // Until full Metaplex integration, NFT detection relies on
+        // the collection being properly set up and verified
+        _hasNFT = false; // Will be true once collection is deployed and verified
+      } catch (e) {
+        debugPrint('Error scanning token accounts: $e');
+        _hasNFT = false;
+      }
 
       _syncMultipliers();
       _isLoading = false;
       notifyListeners();
     } catch (e) {
       debugPrint('NFT check error: $e');
+      _hasNFT = false;
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  /// Mint a limited edition NFT
-  /// Returns mint address on success
+  /// Mint a limited edition NFT from the on-chain collection
   Future<String?> mintNFT() async {
     if (!walletService.isConnected) {
       _error = 'Wallet not connected';
+      notifyListeners();
+      return null;
+    }
+
+    final minterPubkey = walletService.publicKeyObject;
+    if (minterPubkey == null) {
+      _error = 'Invalid wallet public key';
+      notifyListeners();
+      return null;
+    }
+
+    _initMartClient();
+    if (_martClient == null) {
+      _error = 'RPC client not available';
+      notifyListeners();
+      return null;
+    }
+
+    // Check if collection is deployed and active
+    await fetchNftCollectionInfo();
+    if (_nftCollectionData == null || !_nftCollectionData!.isActive) {
+      _error = 'NFT collection not yet deployed or inactive. Coming soon!';
+      _isLoading = false;
+      notifyListeners();
+      return null;
+    }
+
+    if (_nftCollectionData!.isSoldOut) {
+      _error = 'NFT collection is sold out!';
+      _isLoading = false;
       notifyListeners();
       return null;
     }
@@ -502,29 +826,64 @@ class BoostManager extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // ============================================================
-      // NFT MINTING
-      // ============================================================
-      // When deployed, this would:
-      // 1. Call your Anchor program's mint_nft instruction
-      // 2. The program checks supply < maxSupply
-      // 3. Creates the NFT via CPI to Metaplex Token Metadata
-      // 4. Transfers SOL mint price to treasury
-      // 5. Returns the new mint address
+      // For NFT minting, we need a new mint keypair.
+      // The mint account must be created in the same transaction.
+      // This requires the client to generate a keypair, pre-sign with it,
+      // then have the wallet sign as the minter.
       //
-      // final instruction = await _buildMintNFTInstruction();
-      // final signature = await _signAndSend(instruction);
-      // final mintAddress = await _extractMintFromTx(signature);
+      // NOTE: This is a simplified flow. A production implementation
+      // would need to:
+      // 1. Generate a mint keypair
+      // 2. Build create_account + initialize_mint instructions
+      // 3. Append the mint_nft instruction
+      // 4. Partially sign with the mint keypair
+      // 5. Send to MWA for wallet signature
       //
-      // _hasNFT = true;
-      // _nftName = nftCollection.name;
-      // _syncMultipliers();
+      // For now, we build the mint_nft instruction assuming the mint
+      // is created by the Anchor program (if your program handles it).
 
-      _error = 'NFT collection not yet deployed. Coming soon!';
+      // Generate a temporary mint keypair
+      final mintKeypair = await Ed25519HDKeyPair.random();
+      final nftMintPubkey = mintKeypair.publicKey;
+
+      debugPrint('Building mintNft tx (mint: ${nftMintPubkey.toBase58()})...');
+
+      final txBytes = await _martClient!.buildMintNftTx(
+        minter: minterPubkey,
+        nftMintPubkey: nftMintPubkey,
+      );
+
+      // Send to wallet for signing
+      debugPrint('Sending mint transaction to wallet...');
+      final signature =
+      await walletService.signAndSendTransaction(txBytes);
+
+      if (signature == null) {
+        _error = walletService.errorMessage ?? 'Mint transaction failed';
+        _isLoading = false;
+        notifyListeners();
+        return null;
+      }
+
+      // Confirm
+      final confirmed = await _martClient!.confirmTransaction(signature);
+      if (!confirmed) {
+        _error = 'Mint transaction failed to confirm';
+        _isLoading = false;
+        notifyListeners();
+        return null;
+      }
+
+      // NFT minted successfully!
+      _hasNFT = true;
+      _nftName = _nftCollection.name;
+      _syncMultipliers();
+
       _isLoading = false;
       notifyListeners();
-      return null;
+      return nftMintPubkey.toBase58();
     } catch (e) {
+      debugPrint('NFT mint error: $e');
       _error = 'Mint failed: ${e.toString()}';
       _isLoading = false;
       notifyListeners();
@@ -537,12 +896,20 @@ class BoostManager extends ChangeNotifier {
   // ============================================================
 
   void _onWalletChanged() {
+    // Re-initialize mart client with potentially new RPC endpoint
+    _initMartClient();
+
     if (walletService.isConnected) {
+      // Fetch data when wallet connects
+     // _fetchStoreConfig();
+      fetchOnChainBoosters();
       checkForNFT();
     } else {
       _hasNFT = false;
       _nftName = null;
       _nftImageUri = null;
+      // Remove on-chain boosters, keep local ones
+      _activeBoosters.removeWhere((b) => b.onChainAddress != null);
       _syncMultipliers();
       notifyListeners();
     }
@@ -565,8 +932,8 @@ class BoostManager extends ChangeNotifier {
     xpSystem.setPointsBoost(totalPointsMultiplier);
 
     if (_hasNFT) {
-      xpSystem.setNFTXPMultiplier(nftCollection.xpMultiplier);
-      xpSystem.setNFTPointsMultiplier(nftCollection.pointsMultiplier);
+      xpSystem.setNFTXPMultiplier(_nftCollection.xpMultiplier);
+      xpSystem.setNFTPointsMultiplier(_nftCollection.pointsMultiplier);
     } else {
       xpSystem.setNFTXPMultiplier(1.0);
       xpSystem.setNFTPointsMultiplier(1.0);
