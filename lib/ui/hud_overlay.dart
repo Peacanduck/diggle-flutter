@@ -2,6 +2,7 @@
 /// In-game HUD with HP bar, fuel, cargo, item bar, and controls
 
 import 'dart:async';
+import 'package:diggle/ui/xp_hud_widget.dart';
 import 'package:flutter/material.dart';
 import '../game/diggle_game.dart';
 import '../game/player/drill_component.dart';
@@ -45,6 +46,17 @@ class _HudOverlayState extends State<HudOverlay> {
             right: 0,
             child: _buildTopBar(),
           ),
+          // XP bar
+          Positioned(
+            top: 90, // Below existing top bar (adjust based on your layout)
+            left: 0,
+            right: 0,
+            child: XPHudWidget(
+              xpSystem: widget.game.xpPointsSystem,
+              boostManager: widget.game.boostManager!,
+              onTapStore: () => widget.game.openPremiumStore(),
+            ),
+          ),
 
           // Item bar (below stats)
           Positioned(
@@ -81,6 +93,19 @@ class _HudOverlayState extends State<HudOverlay> {
             left: 0,
             right: 0,
             child: _buildControls(),
+          ),
+          // premium shop
+          Positioned(
+            top: 150,
+            left: 16,
+            child: ElevatedButton.icon(
+              onPressed: () => widget.game.openPremiumStore(),
+              icon: const Text('💎', style: TextStyle(fontSize: 16)),
+              label: const Text('STORE'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purple.shade700,
+              ),
+            ),
           ),
 
           // Shop button when at surface

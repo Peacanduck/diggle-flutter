@@ -332,6 +332,7 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
 
       if (result.isOre) {
         economySystem.collectOre(result);
+        gameRef.xpPointsSystem.awardForMining(result, depth);
       }
       tileMap.revealAround(_digX, _digY);
       _target = _tileCenter(_digX, _digY);

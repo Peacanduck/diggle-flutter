@@ -17,6 +17,8 @@ import 'systems/item_system.dart';
 import 'systems/drillbit_system.dart';
 import 'systems/engine_system.dart';
 import 'systems/cooling_system.dart';
+import 'systems/xp_points_system.dart';
+import 'systems/boost_manager.dart';
 
 enum GameState { playing, shopping, gameOver, paused }
 
@@ -35,6 +37,12 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   late EngineSystem engineSystem;
   late CoolingSystem coolingSystem;
 
+  // NEW: XP and Points system
+  late XPPointsSystem xpPointsSystem;
+
+  // NOTE: BoostManager is initialized in main.dart since it needs WalletService
+  BoostManager? boostManager;
+
   GameState _state = GameState.playing;
   final WorldConfig worldConfig;
   final int seed;
@@ -47,7 +55,10 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     height: 524,
     surfaceRows: 30,
     seed: seed,
-  );
+  ){
+    xpPointsSystem = XPPointsSystem();
+  }
+
 
   @override
   Future<void> onLoad() async {
@@ -61,6 +72,8 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     drillbitSystem = DrillbitSystem();
     engineSystem = EngineSystem();
     coolingSystem = CoolingSystem();
+
+
 
     // Create tile map
     tileMap = TileMapComponent(config: worldConfig);
@@ -104,6 +117,9 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     super.update(dt);
     if (_state != GameState.playing) return;
     economySystem.updateMaxDepth(drill.depth);
+    // NEW: Check depth milestones
+    xpPointsSystem.updateDepth(drill.depth);
+    xpPointsSystem.checkDepthMilestone(drill.depth);
   }
 
   @override
@@ -129,6 +145,10 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     overlays.add('shop');
   }
 
+  void openPremiumStore() {
+    overlays.add('premiumStore');
+  }
+
   void closeShop() {
     _state = GameState.playing;
     fuelSystem.resume();
@@ -144,6 +164,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     drillbitSystem.reset();
     engineSystem.reset();
     coolingSystem.reset();
+    xpPointsSystem.resetSession();
 
     tileMap.reset();
     drill.reset();
@@ -187,119 +208,126 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   // SHOP TRANSACTIONS
   // ============================================================
 
-  int sellOre() => economySystem.sellAllOre();
+  int sellOre() {
+    final earned = economySystem.sellAllOre();
+    if (earned > 0) {
+      xpPointsSystem.awardForSale(earned, economySystem.totalOreCollected);
+    }
+    return earned;
+  }
+//  int sellOre() => economySystem.sellAllOre();
 
-  bool refuel() {
-    final cost = fuelSystem.getRefillCost();
-    if (economySystem.spend(cost)) {
-      fuelSystem.refill();
+    bool refuel() {
+      final cost = fuelSystem.getRefillCost();
+      if (economySystem.spend(cost)) {
+        fuelSystem.refill();
+        return true;
+      }
+      return false;
+    }
+
+    // Fuel tank upgrade
+    bool upgradeFuelTank() {
+      final cost = fuelSystem.getUpgradeCost();
+      if (cost > 0 && economySystem.spend(cost)) {
+        fuelSystem.upgrade();
+        return true;
+      }
+      return false;
+    }
+
+    // Cargo upgrade
+    bool upgradeCargo() => economySystem.upgradeCargo();
+
+    // Hull repair
+    bool repairHull() {
+      final cost = hullSystem.getRepairCost();
+      if (cost > 0 && economySystem.spend(cost)) {
+        hullSystem.fullRepair();
+        return true;
+      }
+      return false;
+    }
+
+    // Hull upgrade
+    bool upgradeHull() {
+      final cost = hullSystem.getUpgradeCost();
+      if (cost > 0 && economySystem.spend(cost)) {
+        hullSystem.upgrade();
+        return true;
+      }
+      return false;
+    }
+
+    // Drillbit upgrade
+    bool upgradeDrillbit() {
+      final cost = drillbitSystem.getUpgradeCost();
+      if (cost > 0 && economySystem.spend(cost)) {
+        drillbitSystem.upgrade();
+        return true;
+      }
+      return false;
+    }
+
+    // Engine upgrade
+    bool upgradeEngine() {
+      final cost = engineSystem.getUpgradeCost();
+      if (cost > 0 && economySystem.spend(cost)) {
+        engineSystem.upgrade();
+        return true;
+      }
+      return false;
+    }
+
+    // Cooling upgrade
+    bool upgradeCooling() {
+      final cost = coolingSystem.getUpgradeCost();
+      if (cost > 0 && economySystem.spend(cost)) {
+        coolingSystem.upgrade();
+        return true;
+      }
+      return false;
+    }
+
+    // ============================================================
+    // ITEM SHOP
+    // ============================================================
+
+    bool buyItem(ItemType type) {
+      if (!itemSystem.canAddItem(type)) return false;
+      if (!economySystem.spend(type.price)) return false;
+      itemSystem.addItem(type);
       return true;
     }
-    return false;
-  }
 
-  // Fuel tank upgrade
-  bool upgradeFuelTank() {
-    final cost = fuelSystem.getUpgradeCost();
-    if (cost > 0 && economySystem.spend(cost)) {
-      fuelSystem.upgrade();
+    // Item usage
+    bool useItem(ItemType type) {
+      if (!itemSystem.hasItem(type)) return false;
+      if (_state != GameState.playing) return false;
+
+      switch (type) {
+        case ItemType.backupFuel:
+          fuelSystem.add(type.fuelAmount);
+          break;
+
+        case ItemType.repairBot:
+          hullSystem.repair(type.repairAmount);
+          break;
+
+        case ItemType.dynamite:
+          tileMap.explode(drill.gridX, drill.gridY, type.explosionRadius);
+          break;
+
+        case ItemType.c4:
+          tileMap.explode(drill.gridX, drill.gridY, type.explosionRadius);
+          break;
+
+        case ItemType.spaceRift:
+          drill.teleportToSurface();
+          break;
+      }
+
+      itemSystem.useItem(type);
       return true;
     }
-    return false;
   }
-
-  // Cargo upgrade
-  bool upgradeCargo() => economySystem.upgradeCargo();
-
-  // Hull repair
-  bool repairHull() {
-    final cost = hullSystem.getRepairCost();
-    if (cost > 0 && economySystem.spend(cost)) {
-      hullSystem.fullRepair();
-      return true;
-    }
-    return false;
-  }
-
-  // Hull upgrade
-  bool upgradeHull() {
-    final cost = hullSystem.getUpgradeCost();
-    if (cost > 0 && economySystem.spend(cost)) {
-      hullSystem.upgrade();
-      return true;
-    }
-    return false;
-  }
-
-  // Drillbit upgrade
-  bool upgradeDrillbit() {
-    final cost = drillbitSystem.getUpgradeCost();
-    if (cost > 0 && economySystem.spend(cost)) {
-      drillbitSystem.upgrade();
-      return true;
-    }
-    return false;
-  }
-
-  // Engine upgrade
-  bool upgradeEngine() {
-    final cost = engineSystem.getUpgradeCost();
-    if (cost > 0 && economySystem.spend(cost)) {
-      engineSystem.upgrade();
-      return true;
-    }
-    return false;
-  }
-
-  // Cooling upgrade
-  bool upgradeCooling() {
-    final cost = coolingSystem.getUpgradeCost();
-    if (cost > 0 && economySystem.spend(cost)) {
-      coolingSystem.upgrade();
-      return true;
-    }
-    return false;
-  }
-
-  // ============================================================
-  // ITEM SHOP
-  // ============================================================
-
-  bool buyItem(ItemType type) {
-    if (!itemSystem.canAddItem(type)) return false;
-    if (!economySystem.spend(type.price)) return false;
-    itemSystem.addItem(type);
-    return true;
-  }
-
-  // Item usage
-  bool useItem(ItemType type) {
-    if (!itemSystem.hasItem(type)) return false;
-    if (_state != GameState.playing) return false;
-
-    switch (type) {
-      case ItemType.backupFuel:
-        fuelSystem.add(type.fuelAmount);
-        break;
-
-      case ItemType.repairBot:
-        hullSystem.repair(type.repairAmount);
-        break;
-
-      case ItemType.dynamite:
-        tileMap.explode(drill.gridX, drill.gridY, type.explosionRadius);
-        break;
-
-      case ItemType.c4:
-        tileMap.explode(drill.gridX, drill.gridY, type.explosionRadius);
-        break;
-
-      case ItemType.spaceRift:
-        drill.teleportToSurface();
-        break;
-    }
-
-    itemSystem.useItem(type);
-    return true;
-  }
-}
