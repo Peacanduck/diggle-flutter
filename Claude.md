@@ -49,7 +49,9 @@ lib/
 │   ├── player_service.dart           # Player profile CRUD, wallet linking
 │   ├── stats_service.dart            # XP/points persistence, server-validated awards
 │   ├── world_save_service.dart       # World state save/load with compression
-│   └── points_ledger_service.dart    # Auditable points transaction log
+│   ├── points_ledger_service.dart    # Auditable points transaction log
+│   ├── xp_stats_bridge.dart          # Bridge: XPPointsSystem ↔ StatsService
+│   └── game_lifecycle_manager.dart   # Coordinates auth, wallet linking, sync, saves
 └── ui/
     ├── main_menu.dart                # Title screen with wallet connect
     ├── hud_overlay.dart              # In-game HUD (fuel, cash, depth)
@@ -455,6 +457,34 @@ SUPABASE_ANON_KEY=eyJ...                    # Public anon key (safe in client)
 SUPABASE_SERVICE_KEY=eyJ...                  # Server-only (Edge Functions)
 TREASURY_KEYPAIR=<base58-encoded>            # For SPL minting (Edge Functions only)
 ```
+
+### Wiring Architecture
+
+The `XPStatsBridge` sits between game systems and Supabase:
+
+```
+Game Code (drill, shop, boost_manager)
+  ↓ calls bridge methods
+XPStatsBridge
+  ├→ XPPointsSystem (instant local UI update)
+  └→ StatsService (queued for batch sync)
+       ├→ addLocalXP/addLocalPoints (local delta tracking)
+       └→ (every 30s or on pause) syncToServer()
+            ├→ _flushLedger() → award_points RPC (atomic)
+            └→ _syncStats() → player_stats UPDATE
+```
+
+**Key design decision:** The bridge is optional. If `statsBridge` is null (Supabase failed to init), the game falls back to direct `XPPointsSystem` calls. The game is always playable offline.
+
+**Provider registration order** in main.dart:
+1. `WalletService` — ChangeNotifierProvider (UI listens)
+2. `StatsService` — Provider (service, not UI-reactive)
+3. `WorldSaveService` — Provider
+4. `PlayerService` — Provider
+5. `PointsLedgerService` — Provider
+6. `GameLifecycleManager` — Provider (orchestrator)
+
+`BoostManager` is NOT in Provider — it's created by the game or the screen that needs it, and receives `XPStatsBridge` via `attachStatsBridge()`.
 
 ### SPL Token Redemption (Future Roadmap)
 

@@ -7,11 +7,14 @@
 /// - Detects NFTs in connected wallet for permanent boosts
 /// - Manages timed boost expiry
 /// - Syncs boost multipliers to XPPointsSystem
+/// - Logs purchases to Supabase via XPStatsBridge
+
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:solana/dto.dart';
 import 'package:solana/solana.dart';
+import '../../services/xp_stats_bridge.dart';
 import './xp_points_system.dart';
 import '../../solana/wallet_service.dart';
 import '../../solana/diggle_mart_client.dart';
@@ -171,6 +174,10 @@ class NFTCollectionInfo {
 class BoostManager extends ChangeNotifier {
   final XPPointsSystem xpSystem;
   final WalletService walletService;
+
+  /// Optional bridge for Supabase persistence.
+  /// Set after construction via [attachStatsBridge].
+  XPStatsBridge? _statsBridge;
 
   /// Diggle Mart on-chain client
   DiggleMartClient? _martClient;
@@ -334,6 +341,13 @@ class BoostManager extends ChangeNotifier {
 
     // Fetch store config on init
     _fetchStoreConfig();
+  }
+
+  /// Attach the Supabase stats bridge for persistence.
+  /// Call this after constructing BoostManager in your Provider setup.
+  void attachStatsBridge(XPStatsBridge bridge) {
+    _statsBridge = bridge;
+    debugPrint('BoostManager: stats bridge attached');
   }
 
   @override
@@ -521,7 +535,17 @@ class BoostManager extends ChangeNotifier {
     if (!xpSystem.canAffordPoints(item.priceInPoints)) return false;
     if (item.id.startsWith('points_pack')) return false;
 
-    xpSystem.spendPoints(item.priceInPoints);
+    // Use bridge if available for ledger tracking, otherwise direct
+    if (_statsBridge != null) {
+      final success = _statsBridge!.spendPoints(
+        item.priceInPoints,
+        itemName: item.name,
+      );
+      if (!success) return false;
+    } else {
+      xpSystem.spendPoints(item.priceInPoints);
+    }
+
 
     final booster = Booster(
       type: item.boosterType,
@@ -641,7 +665,7 @@ class BoostManager extends ChangeNotifier {
 
       debugPrint('Transaction confirmed!');
 
-      // Apply the effects locally
+      // Apply the effects locally + log to Supabase
       if (isPointsPack) {
         // Award points locally
         final config = _storeData?.config;
@@ -651,7 +675,16 @@ class BoostManager extends ChangeNotifier {
         } else {
           pointsAmount = config?.pointsPackLargeAmount ?? 2000;
         }
-        xpSystem.addPoints(pointsAmount);
+        // Use bridge for tracked award, fallback to direct
+        if (_statsBridge != null) {
+          _statsBridge!.awardPackPurchase(
+            pointsAmount,
+            item.onChainPackType!,
+            signature,
+          );
+        } else {
+          xpSystem.addPoints(pointsAmount);
+        }
         debugPrint('Awarded $pointsAmount points from pack purchase');
       } else {
         // Add the booster locally (also fetch from chain to get exact data)
@@ -665,6 +698,14 @@ class BoostManager extends ChangeNotifier {
         );
         _activeBoosters.add(booster);
         _syncMultipliers();
+
+        // Log booster purchase to Supabase
+        _statsBridge?.logBoosterPurchase(
+          boosterType: item.onChainBoosterType!,
+          durationSeconds: item.onChainDurationSeconds!,
+          priceSOL: getPremiumItemPrice(item),
+          txSignature: signature,
+        );
 
         // Fetch fresh data from chain in the background
         Future.delayed(const Duration(seconds: 2), () {
@@ -898,6 +939,7 @@ class BoostManager extends ChangeNotifier {
   void _onWalletChanged() {
     // Re-initialize mart client with potentially new RPC endpoint
     _initMartClient();
+    _fetchStoreConfig();
 
     if (walletService.isConnected) {
       // Fetch data when wallet connects

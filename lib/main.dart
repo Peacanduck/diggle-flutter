@@ -9,6 +9,12 @@
 /// - Initializes optional Solana wallet service
 /// - Shows main menu first
 
+import 'package:diggle/services/game_lifecycle_manager.dart';
+import 'package:diggle/services/player_service.dart';
+import 'package:diggle/services/points_ledger_service.dart';
+import 'package:diggle/services/stats_service.dart';
+import 'package:diggle/services/supabase_service.dart';
+import 'package:diggle/services/world_save_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flame/game.dart';
@@ -40,14 +46,46 @@ void main() async {
     overlays: [],
   );
 
+  // ── Initialize Supabase ──────────────────────────────────────
+  try {
+    await SupabaseService.instance.initialize();
+    debugPrint('Supabase initialized');
+  } catch (e) {
+    debugPrint('Supabase init failed (game will work offline): $e');
+  }
+
+
   // Initialize wallet service
   final walletService = WalletService();
   await walletService.initialize();
+
+  // ── Create Backend Services ──────────────────────────────────
+  final statsService = StatsService();
+  final worldSaveService = WorldSaveService();
+  final playerService = PlayerService();
+  final pointsLedgerService = PointsLedgerService();
+
+  // ── Create Lifecycle Manager ─────────────────────────────────
+  // Coordinates Supabase auth, wallet linking, and stats loading
+  final lifecycleManager = GameLifecycleManager(
+    walletService: walletService,
+    statsService: statsService,
+    worldSaveService: worldSaveService,
+    playerService: playerService,
+  );
+
+  // Bootstrap: anonymous auth + load stats (non-blocking)
+  lifecycleManager.bootstrap();
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: walletService),
+        Provider.value(value: statsService),
+        Provider.value(value: worldSaveService),
+        Provider.value(value: playerService),
+        Provider.value(value: pointsLedgerService),
+        Provider.value(value: lifecycleManager),
       ],
       child: const DiggleApp(),
     ),
@@ -86,16 +124,29 @@ class AppNavigator extends StatefulWidget {
 class _AppNavigatorState extends State<AppNavigator> {
   bool _showGame = false;
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Sync stats when app goes to background
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      final lifecycle = context.read<GameLifecycleManager>();
+      lifecycle.onAppBackground();
+    }
+  }
+
   void _startGame() {
-    setState(() {
-      _showGame = true;
-    });
+    setState(() => _showGame = true);
+    // Start periodic sync when game begins
+    final statsService = context.read<StatsService>();
+    statsService.startPeriodicSync();
   }
 
   void _returnToMenu() {
-    setState(() {
-      _showGame = false;
-    });
+    // Sync before leaving game
+    final statsService = context.read<StatsService>();
+    statsService.syncToServer();
+    statsService.stopPeriodicSync();
+    setState(() => _showGame = false);
   }
 
   @override
@@ -122,6 +173,7 @@ class _GameScreenState extends State<GameScreen> {
   /// The game instance
   late final DiggleGame _game;
   late final BoostManager _boostManager;
+  bool _servicesAttached = false;
 
   @override
   void initState() {
@@ -148,27 +200,32 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Attach services once context is available
+    if (!_servicesAttached) {
+      _game.attachServices(context);
+      _servicesAttached = true;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: GameWidget(
         game: _game,
-
         overlayBuilderMap: {
           // HUD overlay - always visible during gameplay
           'hud': (context, game) => HudOverlay(game: game as DiggleGame),
-
           // Shop overlay - shown when player accesses shop at surface
           'shop': (context, game) => ShopOverlay(game: game as DiggleGame),
-
           // Game Over overlay - shown when fuel depletes underground
           'gameOver': (context, game) => GameOverOverlay(
             game: game as DiggleGame,
             onReturnToMenu: widget.onReturnToMenu,
           ),
-
           // Pause overlay - for pause menu
           'pause': (context, game) => _buildPauseOverlay(game as DiggleGame),
-
           // Settings overlay - for wallet connection, etc.
           'settings': (context, game) => _buildSettingsOverlay(game as DiggleGame),
           // Premium store overlay - for real money purchases

@@ -6,6 +6,10 @@ import 'package:flame/events.dart';
 import 'package:flame/experimental.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/stats_service.dart';
+import '../services/xp_stats_bridge.dart';
+import '../services/game_lifecycle_manager.dart';
 
 import 'world/tile_map_component.dart';
 import 'world/world_generator.dart';
@@ -47,6 +51,12 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   final WorldConfig worldConfig;
   final int seed;
 
+  //Stats bridge for Supabase persistence
+  XPStatsBridge? statsBridge;
+
+  //Play time tracking
+  double _playTimeAccumulator = 0;
+
   DiggleGame({
     this.seed = 42,
     WorldConfig? config,
@@ -59,6 +69,33 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     xpPointsSystem = XPPointsSystem();
   }
 
+
+  /// Call this from GameScreen.initState after game is created
+  /// and BuildContext is available.
+  void attachServices(BuildContext context) {
+    final statsService = context.read<StatsService>();
+
+    // Create the bridge
+    statsBridge = XPStatsBridge(
+      xpSystem: xpPointsSystem,
+      statsService: statsService,
+    );
+
+    // Attach bridge to boost manager if it exists
+    boostManager?.attachStatsBridge(statsBridge!);
+
+    // Restore server state to local XP system
+    final stats = statsService.stats;
+    if (stats.xp > 0 || stats.points > 0) {
+      xpPointsSystem.restoreFromServer(
+        xp: stats.xp,
+        points: stats.points,
+        level: stats.level,
+      );
+    }
+
+    debugPrint('DiggleGame: services attached');
+  }
 
   @override
   Future<void> onLoad() async {
@@ -117,9 +154,18 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     super.update(dt);
     if (_state != GameState.playing) return;
     economySystem.updateMaxDepth(drill.depth);
-    // NEW: Check depth milestones
-    xpPointsSystem.updateDepth(drill.depth);
-    xpPointsSystem.checkDepthMilestone(drill.depth);
+    //xpPointsSystem.updateDepth(drill.depth);
+    //xpPointsSystem.checkDepthMilestone(drill.depth);
+    // CHANGED: Use bridge instead of xpPointsSystem directly
+    statsBridge?.checkDepthMilestone(drill.depth) ??
+        xpPointsSystem.checkDepthMilestone(drill.depth);
+
+    // ADD: Track play time (sync every 60s)
+    _playTimeAccumulator += dt;
+    if (_playTimeAccumulator >= 60.0) {
+      statsBridge?.recordPlayTime(60);
+      _playTimeAccumulator -= 60.0;
+    }
   }
 
   @override
@@ -211,7 +257,9 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   int sellOre() {
     final earned = economySystem.sellAllOre();
     if (earned > 0) {
-      xpPointsSystem.awardForSale(earned, economySystem.totalOreCollected);
+     // xpPointsSystem.awardForSale(earned, economySystem.totalOreCollected);
+      statsBridge?.awardForSale(earned, economySystem.totalOreCollected) ??
+          xpPointsSystem.awardForSale(earned, economySystem.totalOreCollected);
     }
     return earned;
   }

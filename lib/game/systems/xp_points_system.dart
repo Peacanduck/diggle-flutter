@@ -438,6 +438,22 @@ class XPPointsSystem extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Restore state from server (called by StatsService on load).
+  /// Only updates if server values are higher (anti-cheat).
+  void restoreFromServer({
+    required int xp,
+    required int points,
+    required int level,
+  }) {
+    // Take the higher value (server or local) to handle offline play
+    if (xp > _totalXP) _totalXP = xp;
+    if (points > _points) _points = points;
+    // Level is derived from XP, no need to set separately
+    notifyListeners();
+    debugPrint('XPPointsSystem: restored from server '
+        '(xp: $_totalXP, pts: $_points, lvl: $level)');
+  }
+
   // ============================================================
   // RESET
   // ============================================================
