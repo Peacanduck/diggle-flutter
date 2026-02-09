@@ -12,6 +12,11 @@ A 2D mining game inspired by Motherload, built with Flutter and Flame engine, wi
     - `solana: ^0.31.0` — Espresso Cash Solana Dart library (RPC, transaction encoding, key derivation)
     - `solana_mobile_client: ^0.1.2` — Mobile Wallet Adapter (MWA) for Android wallet interaction
 - **Target Platform:** Android first (Solana Mobile / Saga / Seeker compatible), iOS bonus
+- **Backend:** Supabase (Postgres + Edge Functions)
+    - `supabase_flutter: ^2.0.0` — Dart client for auth, database, realtime
+    - Player persistence: XP, points, world saves
+    - Server-authoritative points ledger for future SPL token redemption
+    - Edge Functions (Deno/TypeScript) for validated point awards and token minting
 
 ## Project Structure
 
@@ -39,6 +44,12 @@ lib/
 ├── solana/
 │   ├── wallet_service.dart           # MWA wallet connection, signing, cluster switching
 │   └── diggle_mart_client.dart       # On-chain program client (PDA, tx building, deserialization)
+├── services/
+│   ├── supabase_service.dart         # Supabase client init, auth, core DB operations
+│   ├── player_service.dart           # Player profile CRUD, wallet linking
+│   ├── stats_service.dart            # XP/points persistence, server-validated awards
+│   ├── world_save_service.dart       # World state save/load with compression
+│   └── points_ledger_service.dart    # Auditable points transaction log
 └── ui/
     ├── main_menu.dart                # Title screen with wallet connect
     ├── hud_overlay.dart              # In-game HUD (fuel, cash, depth)
@@ -235,6 +246,226 @@ walletService.toggleCluster(); // switches between devnet/mainnet
 - NFT detection via wallet token account scanning is basic (checks for decimals=0, amount=1)
 - Full Metaplex metadata verification (collection field check) is TODO
 - NFT mint requires pre-created mint keypair (not yet integrated into UI flow)
+
+## Supabase Backend
+
+### Why Supabase over Firebase
+
+- **Postgres** — proper transactional guarantees for points ledger (critical when points become redeemable SPL tokens)
+- **Edge Functions** — Deno/TypeScript runtime where server-side Solana signing can run for SPL token minting
+- **Row-Level Security (RLS)** — players can only read/write their own data
+- **JSONB columns** — clean storage for game system state (upgrades, inventory) without document size limits
+- **SQL foundation** — audit trail queries, anti-cheat analytics, leaderboards via simple queries
+- **Real-time subscriptions** — future leaderboards or multiplayer features
+
+### Database Schema
+
+```sql
+-- ============================================================
+-- PLAYERS
+-- ============================================================
+
+create table players (
+  id uuid primary key default gen_random_uuid(),
+  wallet_address text unique,             -- Solana pubkey (set on wallet connect)
+  device_id text unique,                  -- Anonymous play before wallet connect
+  display_name text,
+  created_at timestamptz default now(),
+  last_seen_at timestamptz default now()
+);
+
+-- Index for fast wallet lookups
+create index idx_players_wallet on players(wallet_address);
+
+-- ============================================================
+-- PLAYER STATS (XP, Points, Level)
+-- ============================================================
+
+create table player_stats (
+  player_id uuid primary key references players(id) on delete cascade,
+  xp bigint default 0,
+  points bigint default 0,
+  level int default 1,
+  total_points_earned bigint default 0,   -- lifetime total (never decreases)
+  total_points_spent bigint default 0,    -- in-game shop spending
+  total_points_redeemed bigint default 0, -- SPL token redemptions
+  total_xp_earned bigint default 0,
+  max_depth_reached int default 0,
+  total_ores_mined bigint default 0,
+  total_play_time_seconds bigint default 0,
+  updated_at timestamptz default now()
+);
+
+-- ============================================================
+-- WORLD SAVES
+-- ============================================================
+
+create table world_saves (
+  id uuid primary key default gen_random_uuid(),
+  player_id uuid references players(id) on delete cascade,
+  slot int default 0,                     -- save slot (0-2)
+  seed int not null,                      -- world generation seed
+  world_data bytea,                       -- zlib-compressed tile map
+  player_position jsonb,                  -- {x, y} tile coordinates
+  depth_reached int default 0,
+  playtime_seconds int default 0,
+  game_systems jsonb,                     -- snapshot of all system states:
+                                          -- fuel, hull, cash, inventory,
+                                          -- drillbit/engine/cooling levels,
+                                          -- active boosters
+  saved_at timestamptz default now(),
+  unique(player_id, slot)                 -- one save per slot per player
+);
+
+-- ============================================================
+-- POINTS LEDGER (Audit Trail)
+-- ============================================================
+-- Critical for future SPL token redemption. Every point earned,
+-- spent, or redeemed is logged with source and optional tx sig.
+
+create table points_ledger (
+  id uuid primary key default gen_random_uuid(),
+  player_id uuid references players(id) on delete cascade,
+  amount bigint not null,                 -- positive = earn, negative = spend/redeem
+  balance_after bigint not null,          -- snapshot for reconciliation
+  source text not null,                   -- see Point Sources below
+  metadata jsonb,                         -- source-specific data (ores, pack_type, etc.)
+  tx_signature text,                      -- Solana tx sig (for on-chain operations)
+  created_at timestamptz default now()
+);
+
+create index idx_ledger_player on points_ledger(player_id, created_at desc);
+create index idx_ledger_source on points_ledger(source);
+
+-- ============================================================
+-- ROW-LEVEL SECURITY
+-- ============================================================
+
+alter table players enable row level security;
+alter table player_stats enable row level security;
+alter table world_saves enable row level security;
+alter table points_ledger enable row level security;
+
+-- Players can read/update their own data
+create policy "players_own" on players
+  for all using (id = auth.uid());
+
+create policy "stats_own" on player_stats
+  for all using (player_id = auth.uid());
+
+create policy "saves_own" on world_saves
+  for all using (player_id = auth.uid());
+
+-- Ledger is insert-only from client (server function handles updates)
+create policy "ledger_read_own" on points_ledger
+  for select using (player_id = auth.uid());
+```
+
+### Point Sources
+
+| Source | Direction | Description |
+|---|---|---|
+| `mining` | + | Points earned from mining ores |
+| `level_up` | + | Bonus points on level up |
+| `achievement` | + | Achievement/milestone rewards |
+| `pack_purchase` | + | On-chain points pack (SOL → points) |
+| `shop_spend` | − | Spent in in-game shop |
+| `booster_purchase` | − | Spent on local booster |
+| `spl_redemption` | − | Redeemed for SPL tokens (future) |
+
+### Auth Strategy
+
+Players start anonymous (device ID) and optionally link a wallet:
+
+```
+1. First launch → Supabase anonymous auth → create player with device_id
+2. Connect wallet → link wallet_address to existing player
+3. Future launches → auth via device_id, wallet_address used for on-chain ops
+```
+
+This means the game is fully playable without a wallet. Wallet connection unlocks premium store and future SPL redemption.
+
+### Data Flow
+
+```
+Game Session:
+  Mining ores → local XP/points update (immediate feedback)
+                → batch sync to Supabase every 30s or on pause/exit
+                → stats_service.syncStats() validates and persists
+
+World Save:
+  Pause/exit → compress tile map with zlib
+             → serialize game systems to JSON
+             → world_save_service.save(slot)
+
+Points Ledger:
+  Every points change → insert ledger entry with source + metadata
+  On-chain purchases → include tx_signature in ledger entry
+
+Future SPL Redemption:
+  User requests redemption
+    → Edge Function: begin tx → verify points balance → deduct points
+    → Sign SPL mint/transfer with treasury keypair
+    → Insert ledger entry with source='spl_redemption' + tx_signature
+    → Commit (or rollback on chain failure)
+```
+
+### Server-Authoritative Validation
+
+Points will have real token value, so the server must validate earnings:
+
+- **Session reports** contain: ores mined (types + counts), depth reached, play time, active boosters
+- **Edge Function** calculates expected points from session data and compares to claimed amount
+- **Rate limits**: max points per minute based on theoretical maximum mining speed
+- **Anti-cheat flags**: impossible depth without proper drillbit level, points earned while offline, etc.
+- **Client sends both local total and session delta** — server reconciles and rejects anomalies
+
+### Compression for World Saves
+
+Tile maps (64×128+ tiles) are compressed before storage:
+
+```dart
+// Save: compress tile map
+final tileBytes = tileMap.serialize();        // custom compact binary format
+final compressed = zlib.encode(tileBytes);    // dart:io ZLibCodec
+// Store compressed in world_saves.world_data (bytea)
+
+// Load: decompress
+final decompressed = zlib.decode(compressedBytes);
+final tileMap = TileMap.deserialize(decompressed);
+```
+
+Each tile needs ~2 bytes (type + mined flag), so a 64×128 map is ~16KB raw, ~2-4KB compressed.
+
+### Supabase Edge Functions (Future)
+
+Located in `supabase/functions/`:
+
+| Function | Purpose |
+|---|---|
+| `validate-session` | Validates mining session data, awards points server-side |
+| `redeem-points` | Burns points, mints SPL tokens to player wallet |
+| `leaderboard` | Aggregated stats queries for public leaderboard |
+
+### Environment Config
+
+```
+SUPABASE_URL=https://<project-id>.supabase.co
+SUPABASE_ANON_KEY=eyJ...                    # Public anon key (safe in client)
+SUPABASE_SERVICE_KEY=eyJ...                  # Server-only (Edge Functions)
+TREASURY_KEYPAIR=<base58-encoded>            # For SPL minting (Edge Functions only)
+```
+
+### SPL Token Redemption (Future Roadmap)
+
+The points → SPL token pipeline will work as follows:
+
+1. **NFT gate** — only wallets holding a Diggle NFT can redeem points
+2. **Minimum redemption** — e.g., 1000 points minimum per redemption
+3. **Cooldown** — one redemption per 24h per wallet
+4. **Exchange rate** — configurable in Supabase (e.g., 100 points = 1 token)
+5. **Flow**: client requests → Edge Function verifies NFT ownership on-chain → deducts points atomically → mints/transfers SPL tokens → logs tx_signature in ledger
+6. **Token mint authority** lives in Edge Function env, never on client
 
 ## Common Issues
 
