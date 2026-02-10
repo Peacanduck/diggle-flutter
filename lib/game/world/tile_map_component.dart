@@ -9,6 +9,7 @@
 /// The TileMapComponent owns the world grid and provides methods
 /// for tile queries and modifications.
 
+import 'dart:typed_data';
 import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart' show Colors;
@@ -302,5 +303,50 @@ class TileMapComponent extends PositionComponent with HasGameRef {
   void reset() {
     final generator = WorldGenerator(config: config);
     _grid = generator.generate();
+  }
+
+  // ============================================================
+  // PERSISTENCE
+  // ============================================================
+
+  /// Export the tile grid as a flat byte array.
+  /// Each byte is the TileType index for that cell.
+  /// Layout: row-major order — for x in 0..width, for y in 0..height.
+  Uint8List exportBytes() {
+    final bytes = Uint8List(config.width * config.height);
+    int i = 0;
+    for (int x = 0; x < config.width; x++) {
+      for (int y = 0; y < config.height; y++) {
+        bytes[i++] = _grid[x][y].type.index;
+      }
+    }
+    return bytes;
+  }
+
+  /// Import a previously exported byte array, restoring tile types.
+  /// Revealed/dig state is reset — only terrain is restored.
+  void importBytes(Uint8List bytes) {
+    if (bytes.length != config.width * config.height) {
+      throw ArgumentError(
+        'importBytes: expected ${config.width * config.height} bytes, '
+            'got ${bytes.length}',
+      );
+    }
+
+    int i = 0;
+    for (int x = 0; x < config.width; x++) {
+      for (int y = 0; y < config.height; y++) {
+        final typeIndex = bytes[i++];
+        if (typeIndex < TileType.values.length) {
+          _grid[x][y].type = TileType.values[typeIndex];
+        }
+        // Re-reveal surface rows
+        _grid[x][y].isRevealed = y < config.surfaceRows;
+        _grid[x][y].resetDig();
+      }
+    }
+
+    // Re-reveal around spawn
+    revealAround(config.width ~/ 2, config.surfaceRows, radius: 2);
   }
 }

@@ -71,7 +71,7 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
 
   int get gridX => (position.x / TileMapComponent.tileSize).floor();
   int get gridY => (position.y / TileMapComponent.tileSize).floor();
-  int get depth => (gridY - tileMap.config.surfaceRows).clamp(0, 999);
+  int get depth => (gridY - tileMap.config.surfaceRows).clamp(0, 9999);
   bool get isAtSurface => gridY <= tileMap.config.surfaceRows;
 
   // Get effective speeds from engine system
@@ -429,6 +429,17 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
   /// Teleport to surface (Space Rift item)
   void teleportToSurface() {
     position = tileMap.getSpawnPosition();
+    _target = position.clone();
+    _digging = false;
+    _isFalling = false;
+    _fallStartY = 0;
+    _currentFallY = 0;
+    tileMap.revealAround(gridX, gridY);
+  }
+
+  /// Teleport to surface (Space Rift item)
+  void restorePosition(double x , y) {
+    position = Vector2(x, y);
     _target = position.clone();
     _digging = false;
     _isFalling = false;

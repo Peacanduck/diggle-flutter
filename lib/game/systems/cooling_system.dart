@@ -152,6 +152,16 @@ class CoolingSystem extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Restore cooling state from a saved game.
+  void restore({required int level}) {
+    if (level >= 0 && level < CoolingLevel.values.length) {
+      _level = CoolingLevel.values[level];
+    } else {
+      _level = CoolingLevel.basic;
+    }
+    notifyListeners();
+  }
+
   @override
   String toString() {
     return 'CoolingSystem(${_level.name}, efficiency: ${fuelEfficiency}x, saves: $savingsPercent%)';

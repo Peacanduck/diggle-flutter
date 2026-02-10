@@ -169,6 +169,16 @@ class DrillbitSystem extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Restore drillbit state from a saved game.
+  void restore({required int level}) {
+    if (level >= 0 && level < DrillbitLevel.values.length) {
+      _level = DrillbitLevel.values[level];
+    } else {
+      _level = DrillbitLevel.basic;
+    }
+    notifyListeners();
+  }
+
   @override
   String toString() {
     return 'DrillbitSystem(${_level.name}, speed: ${digSpeedMultiplier}x, hardness: $maxHardness)';

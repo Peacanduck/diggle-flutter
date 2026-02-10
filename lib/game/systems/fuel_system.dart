@@ -178,6 +178,28 @@ class FuelSystem extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Restore fuel state from a saved game.
+  void restore({
+    required double fuel,
+    required double maxFuel,
+    required int level,
+  }) {
+    // Find the matching tank level
+    _tankLevel = FuelTankLevel.values.firstWhere(
+          (l) => l.maxFuel == maxFuel,
+      orElse: () {
+        // Fallback: pick by index
+        if (level >= 0 && level < FuelTankLevel.values.length) {
+          return FuelTankLevel.values[level];
+        }
+        return FuelTankLevel.level1;
+      },
+    );
+    _fuel = fuel.clamp(0, _tankLevel.maxFuel);
+    _isPaused = false;
+    notifyListeners();
+  }
+
   // ============================================================
   // DEBUG
   // ============================================================

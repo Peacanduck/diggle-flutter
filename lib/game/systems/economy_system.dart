@@ -52,6 +52,23 @@ class CargoItem {
 class EconomySystem extends ChangeNotifier {
   /// Player's cash
   int _cash;
+  // --- Aliases for DiggleGame serialization ---
+  /// Alias for cash.
+  int get money => _cash;
+  /// Total cash earned.
+  int get totalEarned => _totalCashEarned;
+  /// Max depth reached.
+  int get maxDepth => _maxDepthReached;
+  /// Cargo level as int index (for serialization).
+  int get cargoLevelIndex => _cargoLevel.index;
+  /// Ore inventory as serializable map (TileType.name → quantity).
+  Map<String, dynamic> get oreInventory {
+    final map = <String, dynamic>{};
+    _cargo.forEach((type, qty) {
+      if (qty > 0) map[type.name] = qty;
+    });
+    return map;
+  }
 
   /// Current cargo upgrade level
   CargoLevel _cargoLevel;
@@ -234,6 +251,39 @@ class EconomySystem extends ChangeNotifier {
       _cargoLevel = CargoLevel.level1;
     }
     
+    notifyListeners();
+  }
+
+  /// Restore economy state from a saved game.
+  void restore({
+    required int money,
+    required int totalEarned,
+    required int maxDepth,
+    required int cargoLevel,
+    Map<String, dynamic>? ore,
+  }) {
+    _cash = money;
+    _totalCashEarned = totalEarned;
+    _maxDepthReached = maxDepth;
+
+    if (cargoLevel >= 0 && cargoLevel < CargoLevel.values.length) {
+      _cargoLevel = CargoLevel.values[cargoLevel];
+    }
+
+    _cargo.clear();
+    if (ore != null) {
+      for (final entry in ore.entries) {
+        try {
+          final tileType = TileType.values.firstWhere(
+                (t) => t.name == entry.key,
+          );
+          _cargo[tileType] = (entry.value as num).toInt();
+        } catch (_) {
+          // Skip unknown ore types
+        }
+      }
+    }
+
     notifyListeners();
   }
 

@@ -160,6 +160,16 @@ class EngineSystem extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Restore engine state from a saved game.
+  void restore({required int level}) {
+    if (level >= 0 && level < EngineLevel.values.length) {
+      _level = EngineLevel.values[level];
+    } else {
+      _level = EngineLevel.basic;
+    }
+    notifyListeners();
+  }
+
   @override
   String toString() {
     return 'EngineSystem(${_level.name}, speed: ${speedMultiplier}x, fly: ${flySpeedMultiplier}x)';

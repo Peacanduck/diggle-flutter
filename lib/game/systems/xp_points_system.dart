@@ -93,6 +93,8 @@ class XPPointsSystem extends ChangeNotifier {
 
   /// Total lifetime XP earned
   int _totalXP = 0;
+  /// Alias for totalXP (used by serialization in DiggleGame).
+  int get xp => _totalXP;
 
   /// Current points balance (spendable)
   int _points = 0;

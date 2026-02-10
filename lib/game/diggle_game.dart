@@ -1,6 +1,7 @@
 /// diggle_game.dart
 /// Main Flame game class for Diggle.
 
+import 'dart:typed_data';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/experimental.dart';
@@ -56,6 +57,10 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
 
   //Play time tracking
   double _playTimeAccumulator = 0;
+  int _totalPlaytimeSeconds = 0;
+
+  /// Total accumulated play time in seconds for this session
+  int get playtimeSeconds => _totalPlaytimeSeconds;
 
   DiggleGame({
     this.seed = 42,
@@ -160,9 +165,10 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     statsBridge?.checkDepthMilestone(drill.depth) ??
         xpPointsSystem.checkDepthMilestone(drill.depth);
 
-    // ADD: Track play time (sync every 60s)
+    // Track play time (sync every 60s)
     _playTimeAccumulator += dt;
     if (_playTimeAccumulator >= 60.0) {
+      _totalPlaytimeSeconds += 60;
       statsBridge?.recordPlayTime(60);
       _playTimeAccumulator -= 60.0;
     }
@@ -215,6 +221,8 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     tileMap.reset();
     drill.reset();
     _state = GameState.playing;
+    _totalPlaytimeSeconds = 0;
+    _playTimeAccumulator = 0;
     fuelSystem.resume();
     // Clear all overlays and restore HUD
     overlays.remove('gameOver');
@@ -251,13 +259,174 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   }
 
   // ============================================================
+  // SAVE / LOAD — Serialization helpers
+  // ============================================================
+
+  /// Export the tile map as a compressed byte array for persistence.
+  ///
+  /// Delegates to [TileMapComponent.exportBytes] which should return
+  /// a Uint8List of the raw tile IDs (or a compressed variant).
+  /// If the tile map doesn't support export yet, returns an empty list.
+  Uint8List exportTileMapBytes() {
+    try {
+      return tileMap.exportBytes();
+    } catch (e) {
+      debugPrint('DiggleGame.exportTileMapBytes: $e');
+      return Uint8List(0);
+    }
+  }
+
+  /// Export all game system states into a serializable map.
+  ///
+  /// Used by [GameLifecycleManager.saveWorld] to persist the full
+  /// game state alongside the tile map bytes.
+  Map<String, dynamic> exportGameSystems() {
+    return {
+      'fuel': {
+        'current': fuelSystem.fuel,
+        'maxFuel': fuelSystem.maxFuel,
+        'level': fuelSystem.tankLevel.index,
+      },
+      'economy': {
+        'money': economySystem.money,
+        'totalEarned': economySystem.totalEarned,
+        'maxDepth': economySystem.maxDepth,
+        'cargoLevel': economySystem.cargoLevel.index,
+        'ore': economySystem.oreInventory,
+      },
+      'hull': {
+        'current': hullSystem.hull,
+        'maxHull': hullSystem.maxHull,
+        'level': hullSystem.hullLevel.index,
+      },
+      'drillbit': {
+        'level': drillbitSystem.level.index,
+      },
+      'engine': {
+        'level': engineSystem.level.index,
+      },
+      'cooling': {
+        'level': coolingSystem.level.index,
+      },
+      'xp': {
+        'xp': xpPointsSystem.xp,
+        'points': xpPointsSystem.points,
+        'level': xpPointsSystem.level,
+      },
+      'items': {
+        'inventory': itemSystem.exportInventory(),
+      },
+      'playtime': _totalPlaytimeSeconds,
+    };
+  }
+
+  /// Import game system states from a previously saved map.
+  ///
+  /// Call this after [onLoad] completes to restore a saved game
+  /// session. The tile map should be restored separately via
+  /// [TileMapComponent.importBytes].
+  void importGameSystems(Map<String, dynamic> data) {
+    try {
+      // Fuel
+      if (data.containsKey('fuel')) {
+        final f = data['fuel'] as Map<String, dynamic>;
+        fuelSystem.restore(
+          fuel: (f['current'] as num).toDouble(),
+          maxFuel: (f['maxFuel'] as num).toDouble(),
+          level: (f['level'] as num).toInt(),
+        );
+      }
+
+      // Economy
+      if (data.containsKey('economy')) {
+        final e = data['economy'] as Map<String, dynamic>;
+        economySystem.restore(
+          money: (e['money'] as num).toInt(),
+          totalEarned: (e['totalEarned'] as num).toInt(),
+          maxDepth: (e['maxDepth'] as num).toInt(),
+          cargoLevel: (e['cargoLevel'] as num).toInt(),
+          ore: e['ore'] as Map<String, dynamic>?,
+        );
+      }
+
+      // Hull
+      if (data.containsKey('hull')) {
+        final h = data['hull'] as Map<String, dynamic>;
+        hullSystem.restore(
+          hull: (h['current'] as num).toDouble(),
+          maxHull: (h['maxHull'] as num).toDouble(),
+          level: (h['level'] as num).toInt(),
+        );
+      }
+
+      // Drillbit
+      if (data.containsKey('drillbit')) {
+        final d = data['drillbit'] as Map<String, dynamic>;
+        drillbitSystem.restore(level: (d['level'] as num).toInt());
+      }
+
+      // Engine
+      if (data.containsKey('engine')) {
+        final en = data['engine'] as Map<String, dynamic>;
+        engineSystem.restore(level: (en['level'] as num).toInt());
+      }
+
+      // Cooling
+      if (data.containsKey('cooling')) {
+        final c = data['cooling'] as Map<String, dynamic>;
+        coolingSystem.restore(level: (c['level'] as num).toInt());
+      }
+
+      // XP / Points
+      if (data.containsKey('xp')) {
+        final x = data['xp'] as Map<String, dynamic>;
+        xpPointsSystem.restoreFromServer(
+          xp: (x['xp'] as num).toInt(),
+          points: (x['points'] as num).toInt(),
+          level: (x['level'] as num).toInt(),
+        );
+      }
+
+      // Items
+      if (data.containsKey('items')) {
+        final i = data['items'] as Map<String, dynamic>;
+        if (i.containsKey('inventory')) {
+          itemSystem.importInventory(i['inventory']);
+        }
+      }
+
+      // Playtime
+      if (data.containsKey('playtime')) {
+        _totalPlaytimeSeconds = (data['playtime'] as num).toInt();
+      }
+
+      debugPrint('DiggleGame: game systems imported');
+    } catch (e) {
+      debugPrint('DiggleGame.importGameSystems error: $e');
+    }
+  }
+
+  /// Import tile map bytes from a saved state.
+  ///
+  /// Call after [onLoad] to restore the saved world terrain.
+  void importTileMapBytes(Uint8List bytes) {
+    if (bytes.isEmpty) return;
+    try {
+      tileMap.importBytes(bytes);
+      debugPrint('DiggleGame: tile map imported (${bytes.length} bytes)');
+    } catch (e) {
+      debugPrint('DiggleGame.importTileMapBytes error: $e');
+    }
+  }
+
+  // ============================================================
   // SHOP TRANSACTIONS
   // ============================================================
 
   int sellOre() {
     final earned = economySystem.sellAllOre();
     if (earned > 0) {
-     // xpPointsSystem.awardForSale(earned, economySystem.totalOreCollected);
+      // xpPointsSystem.awardForSale(earned, economySystem.totalOreCollected);
       statsBridge?.awardForSale(earned, economySystem.totalOreCollected) ??
           xpPointsSystem.awardForSale(earned, economySystem.totalOreCollected);
     }
@@ -265,117 +434,117 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   }
 //  int sellOre() => economySystem.sellAllOre();
 
-    bool refuel() {
-      final cost = fuelSystem.getRefillCost();
-      if (economySystem.spend(cost)) {
-        fuelSystem.refill();
-        return true;
-      }
-      return false;
-    }
-
-    // Fuel tank upgrade
-    bool upgradeFuelTank() {
-      final cost = fuelSystem.getUpgradeCost();
-      if (cost > 0 && economySystem.spend(cost)) {
-        fuelSystem.upgrade();
-        return true;
-      }
-      return false;
-    }
-
-    // Cargo upgrade
-    bool upgradeCargo() => economySystem.upgradeCargo();
-
-    // Hull repair
-    bool repairHull() {
-      final cost = hullSystem.getRepairCost();
-      if (cost > 0 && economySystem.spend(cost)) {
-        hullSystem.fullRepair();
-        return true;
-      }
-      return false;
-    }
-
-    // Hull upgrade
-    bool upgradeHull() {
-      final cost = hullSystem.getUpgradeCost();
-      if (cost > 0 && economySystem.spend(cost)) {
-        hullSystem.upgrade();
-        return true;
-      }
-      return false;
-    }
-
-    // Drillbit upgrade
-    bool upgradeDrillbit() {
-      final cost = drillbitSystem.getUpgradeCost();
-      if (cost > 0 && economySystem.spend(cost)) {
-        drillbitSystem.upgrade();
-        return true;
-      }
-      return false;
-    }
-
-    // Engine upgrade
-    bool upgradeEngine() {
-      final cost = engineSystem.getUpgradeCost();
-      if (cost > 0 && economySystem.spend(cost)) {
-        engineSystem.upgrade();
-        return true;
-      }
-      return false;
-    }
-
-    // Cooling upgrade
-    bool upgradeCooling() {
-      final cost = coolingSystem.getUpgradeCost();
-      if (cost > 0 && economySystem.spend(cost)) {
-        coolingSystem.upgrade();
-        return true;
-      }
-      return false;
-    }
-
-    // ============================================================
-    // ITEM SHOP
-    // ============================================================
-
-    bool buyItem(ItemType type) {
-      if (!itemSystem.canAddItem(type)) return false;
-      if (!economySystem.spend(type.price)) return false;
-      itemSystem.addItem(type);
+  bool refuel() {
+    final cost = fuelSystem.getRefillCost();
+    if (economySystem.spend(cost)) {
+      fuelSystem.refill();
       return true;
     }
-
-    // Item usage
-    bool useItem(ItemType type) {
-      if (!itemSystem.hasItem(type)) return false;
-      if (_state != GameState.playing) return false;
-
-      switch (type) {
-        case ItemType.backupFuel:
-          fuelSystem.add(type.fuelAmount);
-          break;
-
-        case ItemType.repairBot:
-          hullSystem.repair(type.repairAmount);
-          break;
-
-        case ItemType.dynamite:
-          tileMap.explode(drill.gridX, drill.gridY, type.explosionRadius);
-          break;
-
-        case ItemType.c4:
-          tileMap.explode(drill.gridX, drill.gridY, type.explosionRadius);
-          break;
-
-        case ItemType.spaceRift:
-          drill.teleportToSurface();
-          break;
-      }
-
-      itemSystem.useItem(type);
-      return true;
-    }
+    return false;
   }
+
+  // Fuel tank upgrade
+  bool upgradeFuelTank() {
+    final cost = fuelSystem.getUpgradeCost();
+    if (cost > 0 && economySystem.spend(cost)) {
+      fuelSystem.upgrade();
+      return true;
+    }
+    return false;
+  }
+
+  // Cargo upgrade
+  bool upgradeCargo() => economySystem.upgradeCargo();
+
+  // Hull repair
+  bool repairHull() {
+    final cost = hullSystem.getRepairCost();
+    if (cost > 0 && economySystem.spend(cost)) {
+      hullSystem.fullRepair();
+      return true;
+    }
+    return false;
+  }
+
+  // Hull upgrade
+  bool upgradeHull() {
+    final cost = hullSystem.getUpgradeCost();
+    if (cost > 0 && economySystem.spend(cost)) {
+      hullSystem.upgrade();
+      return true;
+    }
+    return false;
+  }
+
+  // Drillbit upgrade
+  bool upgradeDrillbit() {
+    final cost = drillbitSystem.getUpgradeCost();
+    if (cost > 0 && economySystem.spend(cost)) {
+      drillbitSystem.upgrade();
+      return true;
+    }
+    return false;
+  }
+
+  // Engine upgrade
+  bool upgradeEngine() {
+    final cost = engineSystem.getUpgradeCost();
+    if (cost > 0 && economySystem.spend(cost)) {
+      engineSystem.upgrade();
+      return true;
+    }
+    return false;
+  }
+
+  // Cooling upgrade
+  bool upgradeCooling() {
+    final cost = coolingSystem.getUpgradeCost();
+    if (cost > 0 && economySystem.spend(cost)) {
+      coolingSystem.upgrade();
+      return true;
+    }
+    return false;
+  }
+
+  // ============================================================
+  // ITEM SHOP
+  // ============================================================
+
+  bool buyItem(ItemType type) {
+    if (!itemSystem.canAddItem(type)) return false;
+    if (!economySystem.spend(type.price)) return false;
+    itemSystem.addItem(type);
+    return true;
+  }
+
+  // Item usage
+  bool useItem(ItemType type) {
+    if (!itemSystem.hasItem(type)) return false;
+    if (_state != GameState.playing) return false;
+
+    switch (type) {
+      case ItemType.backupFuel:
+        fuelSystem.add(type.fuelAmount);
+        break;
+
+      case ItemType.repairBot:
+        hullSystem.repair(type.repairAmount);
+        break;
+
+      case ItemType.dynamite:
+        tileMap.explode(drill.gridX, drill.gridY, type.explosionRadius);
+        break;
+
+      case ItemType.c4:
+        tileMap.explode(drill.gridX, drill.gridY, type.explosionRadius);
+        break;
+
+      case ItemType.spaceRift:
+        drill.teleportToSurface();
+        break;
+    }
+
+    itemSystem.useItem(type);
+    return true;
+  }
+}

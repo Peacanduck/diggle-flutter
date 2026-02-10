@@ -160,4 +160,34 @@ class ItemSystem extends ChangeNotifier {
     _items.clear();
     notifyListeners();
   }
+
+  /// Export inventory as a serializable map (item name → quantity).
+  Map<String, dynamic> exportInventory() {
+    final map = <String, dynamic>{};
+    _items.forEach((type, qty) {
+      map[type.name] = qty;
+    });
+    return map;
+  }
+
+  /// Import inventory from a previously exported map.
+  void importInventory(dynamic data) {
+    _items.clear();
+    if (data is Map) {
+      for (final entry in data.entries) {
+        try {
+          final type = ItemType.values.firstWhere(
+                (t) => t.name == entry.key.toString(),
+          );
+          final qty = (entry.value as num).toInt();
+          if (qty > 0) {
+            _items[type] = qty.clamp(0, maxStack);
+          }
+        } catch (_) {
+          // Skip unknown item types
+        }
+      }
+    }
+    notifyListeners();
+  }
 }

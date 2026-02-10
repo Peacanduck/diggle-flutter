@@ -102,4 +102,26 @@ class HullSystem extends ChangeNotifier {
     _hull = _hullLevel.maxHull;
     notifyListeners();
   }
+
+  /// Hull level as int index (for serialization).
+  int get level => _hullLevel.index;
+
+  /// Restore hull state from a saved game.
+  void restore({
+    required double hull,
+    required double maxHull,
+    required int level,
+  }) {
+    _hullLevel = HullLevel.values.firstWhere(
+          (l) => l.maxHull == maxHull,
+      orElse: () {
+        if (level >= 0 && level < HullLevel.values.length) {
+          return HullLevel.values[level];
+        }
+        return HullLevel.level1;
+      },
+    );
+    _hull = hull.clamp(0, _hullLevel.maxHull);
+    notifyListeners();
+  }
 }

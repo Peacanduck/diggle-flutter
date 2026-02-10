@@ -1,14 +1,61 @@
 /// main_menu.dart
-/// Main menu screen with wallet connection and game start options.
+/// Redesigned main menu with traditional game-style navigation:
+/// - New Game → Save Slots (new game mode) → Game
+/// - Continue → loads most recent save directly
+/// - Load Game → Save Slots (load mode) → Game
+/// - Account → Profile, wallet, stats
+/// - Settings → Game settings (placeholder)
+/// - How to Play → Tutorial/instructions (placeholder)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../solana/wallet_service.dart';
+import '../services/game_lifecycle_manager.dart';
 
-class MainMenu extends StatelessWidget {
-  final VoidCallback onStartGame;
+class MainMenu extends StatefulWidget {
+  final VoidCallback onNewGame;
+  final VoidCallback onLoadGame;
+  final VoidCallback onContinue;
+  final VoidCallback onAccount;
+  final VoidCallback? onSettings;
+  final VoidCallback? onHowToPlay;
 
-  const MainMenu({super.key, required this.onStartGame});
+  /// Whether a recent save exists (enables Continue button)
+  final bool hasSaves;
+
+  const MainMenu({
+    super.key,
+    required this.onNewGame,
+    required this.onLoadGame,
+    required this.onContinue,
+    required this.onAccount,
+    this.onSettings,
+    this.onHowToPlay,
+    this.hasSaves = false,
+  });
+
+  @override
+  State<MainMenu> createState() => _MainMenuState();
+}
+
+class _MainMenuState extends State<MainMenu>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _animController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +66,7 @@ class MainMenu extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
+              Color(0xFF0d1117),
               Color(0xFF1a1a2e),
               Color(0xFF16213e),
               Color(0xFF0f3460),
@@ -26,493 +74,366 @@ class MainMenu extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              const Spacer(flex: 1),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight,
+                  ),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      children: [
+                        const Spacer(flex: 2),
 
-              // Game Title
-              _buildTitle(),
+                        // ── Game Title ──────────────────────────
+                        _buildTitle(),
 
-              const Spacer(flex: 1),
+                        const Spacer(flex: 2),
 
-              // Menu Options
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: Column(
-                  children: [
-                    // Start Game Button
-                    _MenuButton(
-                      icon: Icons.play_arrow_rounded,
-                      label: 'START MINING',
-                      color: Colors.green,
-                      onPressed: onStartGame,
+                        // ── Menu Buttons ────────────────────────
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Primary: New Game
+                              _buildAnimatedButton(
+                                index: 0,
+                                child: _PrimaryMenuButton(
+                                  icon: Icons.add_circle_outline,
+                                  label: 'NEW GAME',
+                                  color: Colors.amber,
+                                  onPressed: widget.onNewGame,
+                                ),
+                              ),
+
+                              const SizedBox(height: 12),
+
+                              // Continue — only if saves exist
+                              if (widget.hasSaves) ...[
+                                _buildAnimatedButton(
+                                  index: 1,
+                                  child: _PrimaryMenuButton(
+                                    icon: Icons.play_arrow_rounded,
+                                    label: 'CONTINUE',
+                                    color: Colors.green,
+                                    onPressed: widget.onContinue,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+
+                              // Load Game
+                              _buildAnimatedButton(
+                                index: widget.hasSaves ? 2 : 1,
+                                child: _SecondaryMenuButton(
+                                  icon: Icons.folder_open,
+                                  label: 'LOAD GAME',
+                                  color: Colors.cyan,
+                                  onPressed: widget.onLoadGame,
+                                  enabled: widget.hasSaves,
+                                ),
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              // ── Divider ──────────────────────
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      height: 1,
+                                      color: Colors.white.withOpacity(0.08),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12),
+                                    child: Icon(Icons.construction,
+                                        color: Colors.white.withOpacity(0.15),
+                                        size: 16),
+                                  ),
+                                  Expanded(
+                                    child: Container(
+                                      height: 1,
+                                      color: Colors.white.withOpacity(0.08),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              // Account
+                              _buildAnimatedButton(
+                                index: widget.hasSaves ? 3 : 2,
+                                child: _SecondaryMenuButton(
+                                  icon: Icons.person,
+                                  label: 'ACCOUNT',
+                                  color: Colors.purple,
+                                  onPressed: widget.onAccount,
+                                ),
+                              ),
+
+                              const SizedBox(height: 12),
+
+                              // Bottom row: Settings + How to Play
+                              _buildAnimatedButton(
+                                index: widget.hasSaves ? 4 : 3,
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: _CompactMenuButton(
+                                        icon: Icons.settings,
+                                        label: 'Settings',
+                                        onPressed: widget.onSettings ??
+                                                () => _showComingSoon(
+                                                context, 'Settings'),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _CompactMenuButton(
+                                        icon: Icons.help_outline,
+                                        label: 'How to Play',
+                                        onPressed: widget.onHowToPlay ??
+                                                () => _showHowToPlayDialog(context),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const Spacer(flex: 3),
+
+                        // ── Version / Footer ───────────────────
+                        _buildFooter(),
+                        const SizedBox(height: 16),
+                      ],
                     ),
-
-                    const SizedBox(height: 16),
-
-                    // Wallet Connection Section
-                    _buildWalletSection(context),
-
-                    const SizedBox(height: 16),
-
-                    // Settings Button (placeholder)
-                    _MenuButton(
-                      icon: Icons.settings,
-                      label: 'SETTINGS',
-                      color: Colors.grey.shade700,
-                      onPressed: () {
-                        _showSettingsDialog(context);
-                      },
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // How to Play Button
-                    _MenuButton(
-                      icon: Icons.help_outline,
-                      label: 'HOW TO PLAY',
-                      color: Colors.blue.shade700,
-                      onPressed: () {
-                        _showHowToPlayDialog(context);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              const Spacer(flex: 2),
-
-              // Version info
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  'v1.0.0 • Built with Flutter & Flame',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.3),
-                    fontSize: 12,
                   ),
                 ),
-              ),
-            ],
+              );
+            },
           ),
         ),
       ),
     );
   }
+
+  // ── Title ─────────────────────────────────────────────────────
 
   Widget _buildTitle() {
-    return Column(
-      children: [
-        // Drill Icon
-        Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            color: Colors.brown.shade700,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.amber.withOpacity(0.3),
-                blurRadius: 30,
-                spreadRadius: 5,
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.construction,
-            size: 60,
-            color: Colors.amber,
-          ),
-        ),
-
-        const SizedBox(height: 24),
-
-        // Title Text
-        ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [Colors.amber, Colors.orange, Colors.amber],
-          ).createShader(bounds),
-          child: const Text(
-            'DIGGLE',
-            style: TextStyle(
-              fontSize: 56,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: 8,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
-        Text(
-          'MINE DEEP • SELL HIGH',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.white.withOpacity(0.6),
-            letterSpacing: 4,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildWalletSection(BuildContext context) {
-    return Consumer<WalletService>(
-      builder: (context, wallet, _) {
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: wallet.isConnected
-                  ? Colors.green.shade700
-                  : Colors.purple.shade700.withOpacity(0.5),
-            ),
-          ),
-          child: Column(
-            children: [
-              // Cluster Selector
-              _buildClusterSelector(context, wallet),
-
-              const SizedBox(height: 12),
-              const Divider(color: Colors.white24, height: 1),
-              const SizedBox(height: 12),
-
-              // Wallet Connection Status
-              if (wallet.isConnected)
-                _buildConnectedState(wallet)
-              else if (wallet.isConnecting)
-                _buildConnectingState()
-              else
-                _buildDisconnectedState(context, wallet),
-            ],
-          ),
+    return AnimatedBuilder(
+      animation: _animController,
+      builder: (context, child) {
+        final t = Curves.easeOutBack.transform(
+          _animController.value.clamp(0.0, 1.0),
+        );
+        return Transform.scale(
+          scale: 0.5 + 0.5 * t,
+          child: Opacity(opacity: t.clamp(0.0, 1.0), child: child),
         );
       },
-    );
-  }
-
-  Widget _buildClusterSelector(BuildContext context, WalletService wallet) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.language,
-              color: Colors.white54,
-              size: 18,
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'Network:',
-              style: TextStyle(
-                color: Colors.white54,
-                fontSize: 13,
-              ),
-            ),
-            const SizedBox(width: 12),
-
-            // Cluster Toggle
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _ClusterChip(
-                    label: 'Devnet',
-                    isSelected: wallet.isDevnet,
-                    color: Colors.orange,
-                    onTap: wallet.isConnecting
-                        ? null
-                        : () => wallet.setCluster(SolanaCluster.devnet),
-                  ),
-                  _ClusterChip(
-                    label: 'Mainnet',
-                    isSelected: wallet.isMainnet,
-                    color: Colors.green,
-                    onTap: wallet.isConnecting
-                        ? null
-                        : () => wallet.setCluster(SolanaCluster.mainnet),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-
-        // Devnet note
-        if (wallet.isDevnet && !wallet.isConnected)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              '💡 Tip: Use Phantom for best devnet support',
-              style: TextStyle(
-                color: Colors.orange.withOpacity(0.7),
-                fontSize: 11,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildConnectedState(WalletService wallet) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.check_circle, color: Colors.green, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              'Connected to ${wallet.cluster.displayName}',
-              style: const TextStyle(
-                color: Colors.green,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          wallet.shortPublicKey ?? '',
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.7),
-            fontFamily: 'monospace',
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () => wallet.disconnect(),
-            icon: const Icon(Icons.link_off, size: 18),
-            label: const Text('DISCONNECT'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white70,
-              side: const BorderSide(color: Colors.white24),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildConnectingState() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: Colors.purple,
-            ),
-          ),
-          SizedBox(width: 12),
-          Text(
-            'Connecting to wallet...',
-            style: TextStyle(color: Colors.white70),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDisconnectedState(BuildContext context, WalletService wallet) {
-    return Column(
-      children: [
-        if (wallet.errorMessage != null)
-          Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.red.shade900.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.error_outline, color: Colors.red, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    wallet.errorMessage!,
-                    style: const TextStyle(color: Colors.red, fontSize: 12),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => wallet.clearError(),
-                  child: const Icon(Icons.close, color: Colors.red, size: 18),
-                ),
-              ],
-            ),
-          ),
-
-        SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: ElevatedButton.icon(
-            onPressed: () => wallet.connect(),
-            icon: const Icon(Icons.account_balance_wallet, size: 20),
-            label: Text(
-              'CONNECT TO ${wallet.cluster.displayName.toUpperCase()}',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.purple.shade700,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ),
-
-        if (!wallet.isAvailable)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              'No Solana wallet app detected',
-              style: TextStyle(
-                color: Colors.orange.withOpacity(0.7),
-                fontSize: 11,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  void _showSettingsDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1a1a2e),
-        title: const Text(
-          'Settings',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Settings coming soon!\n\n• Sound effects\n• Music volume\n• Haptic feedback',
-              style: TextStyle(color: Colors.white70),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showHowToPlayDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1a1a2e),
-        title: const Row(
-          children: [
-            Icon(Icons.help_outline, color: Colors.amber),
-            SizedBox(width: 8),
-            Text(
-              'How to Play',
-              style: TextStyle(color: Colors.white),
-            ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildHelpSection(
-                '⛏️ Mining',
-                'Use the arrow controls to move your drill. Dig through dirt and rock to find valuable ores.',
-              ),
-              _buildHelpSection(
-                '⛽ Fuel',
-                'Moving and digging consumes fuel. Return to the surface before running out!',
-              ),
-              _buildHelpSection(
-                '🛡️ Hull',
-                'Falling too far damages your hull. Watch your HP!',
-              ),
-              _buildHelpSection(
-                '💰 Selling',
-                'Return to the surface and visit the SHOP to sell your ore for cash.',
-              ),
-              _buildHelpSection(
-                '🔧 Upgrades',
-                'Use cash to upgrade your fuel tank, cargo bay, and hull armor.',
-              ),
-              _buildHelpSection(
-                '⚠️ Hazards',
-                'Watch out for lava (instant death) and gas pockets (damage)!',
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('GOT IT!'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHelpSection(String title, String description) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.amber,
-              fontWeight: FontWeight.bold,
+          // Pickaxe icon
+          Icon(
+            Icons.construction,
+            color: Colors.amber.shade400,
+            size: 48,
+          ),
+          const SizedBox(height: 8),
+          // Game name
+          ShaderMask(
+            shaderCallback: (bounds) => LinearGradient(
+              colors: [
+                Colors.amber.shade300,
+                Colors.amber.shade600,
+                Colors.orange.shade700,
+              ],
+            ).createShader(bounds),
+            child: const Text(
+              'DIGGLE',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 52,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 8,
+                height: 1.0,
+              ),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
-            description,
-            style: const TextStyle(color: Colors.white70, fontSize: 13),
+            'DIG DEEP  •  MINE RICHES  •  GO FURTHER',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.35),
+              fontSize: 10,
+              letterSpacing: 3,
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── Animated Button Wrapper ───────────────────────────────────
+
+  Widget _buildAnimatedButton({required int index, required Widget child}) {
+    return AnimatedBuilder(
+      animation: _animController,
+      builder: (context, c) {
+        final delay = 0.15 + index * 0.08;
+        final end = (delay + 0.4).clamp(0.0, 1.0);
+        final t = ((_animController.value - delay) / (end - delay))
+            .clamp(0.0, 1.0);
+        final curved = Curves.easeOut.transform(t);
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - curved)),
+          child: Opacity(opacity: curved, child: c),
+        );
+      },
+      child: child,
+    );
+  }
+
+  // ── Footer ────────────────────────────────────────────────────
+
+  Widget _buildFooter() {
+    return Column(
+      children: [
+        Text(
+          'Pleb Solutions',
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.2),
+            fontSize: 11,
+            letterSpacing: 1,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          'v0.1.0-alpha',
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.12),
+            fontSize: 9,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Coming Soon Dialog ────────────────────────────────────────
+
+  void _showComingSoon(BuildContext context, String feature) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$feature coming soon!'),
+        backgroundColor: Colors.blueGrey.shade700,
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
 }
 
-/// Styled menu button widget
-class _MenuButton extends StatelessWidget {
+// How to play Dialog
+void _showHowToPlayDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: const Color(0xFF1a1a2e),
+      title: const Row(
+        children: [
+          Icon(Icons.help_outline, color: Colors.amber),
+          SizedBox(width: 8),
+          Text(
+            'How to Play',
+            style: TextStyle(color: Colors.white),
+          ),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildHelpSection(
+              '⛏️ Mining',
+              'Use the arrow controls to move your drill. Dig through dirt and rock to find valuable ores.',
+            ),
+            _buildHelpSection(
+              '⛽ Fuel',
+              'Moving and digging consumes fuel. Return to the surface before running out!',
+            ),
+            _buildHelpSection(
+              '🛡️ Hull',
+              'Falling too far damages your hull. Watch your HP!',
+            ),
+            _buildHelpSection(
+              '💰 Selling',
+              'Return to the surface and visit the SHOP to sell your ore for cash.',
+            ),
+            _buildHelpSection(
+              '🔧 Upgrades',
+              'Use cash to upgrade your fuel tank, cargo bay, and hull armor.',
+            ),
+            _buildHelpSection(
+              '⚠️ Hazards',
+              'Watch out for lava (instant death) and gas pockets (damage)!',
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('GOT IT!'),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildHelpSection(String title, String description) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.amber,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          description,
+          style: const TextStyle(color: Colors.white70, fontSize: 13),
+        ),
+      ],
+    ),
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Menu Button Widgets
+// ═══════════════════════════════════════════════════════════════════
+
+/// Full-width primary action button (New Game, Continue)
+class _PrimaryMenuButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
   final VoidCallback onPressed;
 
-  const _MenuButton({
+  const _PrimaryMenuButton({
     required this.icon,
     required this.label,
     required this.color,
@@ -524,62 +445,139 @@ class _MenuButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 56,
-      child: ElevatedButton.icon(
+      child: ElevatedButton(
         onPressed: onPressed,
-        icon: Icon(icon, size: 24),
-        label: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1,
-          ),
-        ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
+          backgroundColor: color.withOpacity(0.15),
+          foregroundColor: color,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(color: color.withOpacity(0.4), width: 1.5),
           ),
-          elevation: 4,
+          elevation: 0,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 22),
+            const SizedBox(width: 10),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.5,
+                color: color,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// Cluster selection chip widget
-class _ClusterChip extends StatelessWidget {
+/// Full-width secondary action button (Load Game, Account)
+class _SecondaryMenuButton extends StatelessWidget {
+  final IconData icon;
   final String label;
-  final bool isSelected;
   final Color color;
-  final VoidCallback? onTap;
+  final VoidCallback onPressed;
+  final bool enabled;
 
-  const _ClusterChip({
+  const _SecondaryMenuButton({
+    required this.icon,
     required this.label,
-    required this.isSelected,
     required this.color,
-    this.onTap,
+    required this.onPressed,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.8) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.white54,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            fontSize: 13,
+    final effectiveColor = enabled ? color : Colors.grey.shade700;
+
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: OutlinedButton(
+        onPressed: enabled ? onPressed : null,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: effectiveColor,
+          side: BorderSide(
+            color: effectiveColor.withOpacity(enabled ? 0.3 : 0.15),
           ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: effectiveColor),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1,
+                color: effectiveColor,
+              ),
+            ),
+            if (!enabled) ...[
+              const SizedBox(width: 6),
+              Text(
+                '(no saves)',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.white.withOpacity(0.2),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact half-width button for Settings / How to Play
+class _CompactMenuButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  const _CompactMenuButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 44,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.white38,
+          side: BorderSide(color: Colors.white.withOpacity(0.1)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+            ),
+          ],
         ),
       ),
     );
