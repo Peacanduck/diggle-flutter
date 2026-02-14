@@ -502,7 +502,7 @@ class _GameScreenState extends State<GameScreen> {
                         'x': game.drill.position.x,
                         'y': game.drill.position.y,
                       },
-                      depthReached: game.drill.position.y.toInt(),
+                      depthReached: game.drill.depth,
                       playtimeSeconds: game.playtimeSeconds,
                     );
                     if (mounted) {
@@ -551,7 +551,7 @@ class _GameScreenState extends State<GameScreen> {
                         'x': game.drill.position.x,
                         'y': game.drill.position.y,
                       },
-                      depthReached: game.drill.position.y.toInt(),
+                      depthReached: game.drill.depth,
                       playtimeSeconds: game.playtimeSeconds,
                     );
                   }
@@ -595,7 +595,7 @@ class _GameScreenState extends State<GameScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Depth reached: ${game.drill.position.y.toInt()}m',
+                'Depth reached: ${game.drill.depth}m',
                 style: const TextStyle(color: Colors.white70, fontSize: 16),
               ),
               const SizedBox(height: 32),

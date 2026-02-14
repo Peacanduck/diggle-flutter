@@ -60,7 +60,7 @@ class _HudOverlayState extends State<HudOverlay> {
 
           // Item bar (below stats)
           Positioned(
-            top: 90,
+            top: 150,
             left: 0,
             right: 0,
             child: _buildItemBar(),
@@ -87,7 +87,7 @@ class _HudOverlayState extends State<HudOverlay> {
             ),
           ),
 
-          // Controls at bottom
+          /* Controls at bottom*/
           Positioned(
             bottom: 30,
             left: 0,
@@ -96,7 +96,7 @@ class _HudOverlayState extends State<HudOverlay> {
           ),
           // premium shop
           Positioned(
-            top: 150,
+            top: 210,
             left: 16,
             child: ElevatedButton.icon(
               onPressed: () => widget.game.openPremiumStore(),
@@ -111,7 +111,7 @@ class _HudOverlayState extends State<HudOverlay> {
           // Shop button when at surface
           if (widget.game.drill.isAtSurface)
             Positioned(
-              top: 150,
+              top: 210,
               right: 16,
               child: ElevatedButton.icon(
                 onPressed: () => widget.game.openShop(),

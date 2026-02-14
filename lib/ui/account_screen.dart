@@ -312,7 +312,7 @@ class _AccountScreenState extends State<AccountScreen> {
           iconColor: Colors.purple,
           title: 'SOLANA WALLET',
           subtitle:
-          'Connect for premium store, NFTs, and future token rewards',
+          'Connect for premium store, NFTs',
           child: Column(
             children: [
               // Cluster selector

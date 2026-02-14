@@ -31,6 +31,9 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   late TileMapComponent tileMap;
   late DrillComponent drill;
 
+  // Joystick Control
+  //late final JoystickComponent joystick;
+
   // Core systems
   late FuelSystem fuelSystem;
   late EconomySystem economySystem;
@@ -115,12 +118,23 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     engineSystem = EngineSystem();
     coolingSystem = CoolingSystem();
 
-
+    /* --- 1. Initialize Joystick ---
+    joystick = JoystickComponent(
+      knob: CircleComponent(
+          radius: 20,
+          paint: Paint()..color = Colors.white.withOpacity(0.8)
+      ),
+      background: CircleComponent(
+          radius: 50,
+          paint: Paint()..color = Colors.black.withOpacity(0.5)
+      ),
+      margin: const EdgeInsets.only(left: 40, bottom: 40),
+    );*/
 
     // Create tile map
     tileMap = TileMapComponent(config: worldConfig);
 
-    // Create drill with all systems
+    // Create drill with all systems AND Joystick reference
     drill = DrillComponent(
       tileMap: tileMap,
       fuelSystem: fuelSystem,
@@ -129,6 +143,8 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
       drillbitSystem: drillbitSystem,
       engineSystem: engineSystem,
       coolingSystem: coolingSystem,
+      // --- 2. Pass Joystick to Drill ---
+      //joystick: joystick,
       onGameOver: _handleGameOver,
       onReachSurface: _handleReachSurface,
     );
@@ -136,6 +152,10 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     // Add to world
     world.add(tileMap);
     world.add(drill);
+
+    // --- 3. Add Joystick to Camera Viewport (HUD) ---
+    // This ensures it stays fixed on screen while the camera moves
+   // camera.viewport.add(joystick);
 
     // Camera setup
     camera.viewfinder.anchor = Anchor.center;
@@ -186,6 +206,8 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     fuelSystem.pause();
     overlays.add('gameOver');
     overlays.remove('hud');
+    // Hide joystick on game over
+   // joystick.removeFromParent();
   }
 
   void _handleReachSurface() {}
@@ -195,16 +217,22 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     _state = GameState.shopping;
     fuelSystem.pause();
     overlays.add('shop');
+    // Hide joystick in shop
+   // if (joystick.parent != null) joystick.removeFromParent();
   }
 
   void openPremiumStore() {
     overlays.add('premiumStore');
+    // Hide joystick
+    //if (joystick.parent != null) joystick.removeFromParent();
   }
 
   void closeShop() {
     _state = GameState.playing;
     fuelSystem.resume();
     overlays.remove('shop');
+    // Restore joystick
+   // if (joystick.parent == null) camera.viewport.add(joystick);
   }
 
   void restart() {
@@ -232,6 +260,8 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     if (!overlays.isActive('hud')) {
       overlays.add('hud');
     }
+    // Ensure joystick is visible
+   // if (joystick.parent == null) camera.viewport.add(joystick);
   }
 
   void pause() {
@@ -239,6 +269,8 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     _state = GameState.paused;
     fuelSystem.pause();
     overlays.add('pause');
+    // Hide joystick
+    //if (joystick.parent != null) joystick.removeFromParent();
   }
 
   void resume() {
@@ -246,9 +278,11 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     _state = GameState.playing;
     fuelSystem.resume();
     overlays.remove('pause');
+    // Restore joystick
+   // if (joystick.parent == null) camera.viewport.add(joystick);
   }
 
-  // Input
+  /* Input (Legacy - kept for compatibility if you have buttons, but Joystick takes priority)*/
   void handleMove(MoveDirection direction) {
     if (_state != GameState.playing) return;
     drill.heldDirection = direction;
