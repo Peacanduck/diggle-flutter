@@ -4,7 +4,7 @@
 /// Three sections:
 /// 1. Points Store - buy boosters with earned points (no wallet needed)
 /// 2. Premium Store - buy boosters/points with SOL (wallet required, on-chain)
-/// 3. NFT Collection - mint limited edition reward-boosting NFTs
+/// 3. NFT Collection - COMING SOON
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -64,7 +64,7 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
                 children: [
                   _buildPointsStore(),
                   _buildPremiumStore(),
-                  _buildNFTSection(),
+                  _buildNFTComingSoon(),
                 ],
               ),
             ),
@@ -314,7 +314,7 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
     );
   }
 
-  /// Premium SOL store - on-chain purchases
+  /// Premium SOL store - on-chain purchases (only shows on-chain prices)
   Widget _buildPremiumStore() {
     return Consumer<WalletService>(
       builder: (context, wallet, _) {
@@ -325,12 +325,16 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
         return ListenableBuilder(
           listenable: widget.boostManager,
           builder: (context, _) {
+            // Only show items when on-chain store config is loaded
+            if (!widget.boostManager.isStoreLoaded) {
+              return _buildStoreNotLoaded();
+            }
+
             return ListView.builder(
               padding: const EdgeInsets.all(12),
               itemCount: BoostManager.premiumStoreItems.length,
               itemBuilder: (context, index) {
                 final item = BoostManager.premiumStoreItems[index];
-                // Use on-chain price if available, fallback to default
                 final price =
                 widget.boostManager.getPremiumItemPrice(item);
 
@@ -357,7 +361,7 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
                       ),
                     ],
                   ),
-                  canAfford: true, // SOL balance check could be added
+                  canAfford: true,
                   isLoading: widget.boostManager.isLoading,
                   onPurchase: () async {
                     final sig =
@@ -381,272 +385,205 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
     );
   }
 
-  /// NFT collection section
-  Widget _buildNFTSection() {
-    return Consumer<WalletService>(
-      builder: (context, wallet, _) {
-        return ListenableBuilder(
-          listenable: widget.boostManager,
-          builder: (context, _) {
-            final nft = widget.boostManager.nftCollection;
-
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.amber.shade900.withOpacity(0.3),
-                          Colors.purple.shade900.withOpacity(0.3),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.amber.shade700),
-                    ),
-                    child: Column(
-                      children: [
-                        // NFT Image placeholder
-                        Container(
-                          width: 160,
-                          height: 160,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade800,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                                color: Colors.amber.shade600, width: 2),
-                          ),
-                          child: const Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text('💎',
-                                    style: TextStyle(fontSize: 48)),
-                                SizedBox(height: 8),
-                                Text(
-                                  'Diamond Drill',
-                                  style: TextStyle(
-                                    color: Colors.amber,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        Text(
-                          nft.name,
-                          style: const TextStyle(
-                            color: Colors.amber,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        Text(
-                          'Limited Edition Reward Booster',
-                          style: TextStyle(color: Colors.white.withOpacity(0.7)),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Benefits
-                        _buildNFTBenefit(
-                          '⚡',
-                          'XP Boost',
-                          '+${((nft.xpMultiplier - 1) * 100).toInt()}% XP permanently',
-                        ),
-                        _buildNFTBenefit(
-                          '💎',
-                          'Points Boost',
-                          '+${((nft.pointsMultiplier - 1) * 100).toInt()}% points permanently',
-                        ),
-                        _buildNFTBenefit(
-                          '🏆',
-                          'Supply',
-                          '${nft.currentSupply}/${nft.maxSupply} minted',
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // NFT status
-                        if (widget.boostManager.hasNFT)
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color:
-                              Colors.green.shade900.withOpacity(0.5),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.green),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment:
-                              MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.check_circle,
-                                    color: Colors.green),
-                                SizedBox(width: 8),
-                                Text(
-                                  'NFT Detected! Boosts Active',
-                                  style: TextStyle(
-                                    color: Colors.green,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        else if (!wallet.isConnected)
-                          Column(
-                            children: [
-                              const Text(
-                                'Connect your wallet to mint or detect existing NFTs',
-                                style: TextStyle(color: Colors.white54),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 12),
-                              ElevatedButton.icon(
-                                onPressed: () => wallet.connect(),
-                                icon: const Icon(
-                                    Icons.account_balance_wallet),
-                                label: const Text('CONNECT WALLET'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.purple,
-                                ),
-                              ),
-                            ],
-                          )
-                        else
-                          Column(
-                            children: [
-                              if (nft.isSoldOut)
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red.shade900
-                                        .withOpacity(0.5),
-                                    borderRadius:
-                                    BorderRadius.circular(8),
-                                  ),
-                                  child: const Text(
-                                    'SOLD OUT',
-                                    style: TextStyle(
-                                      color: Colors.red,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                )
-                              else ...[
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 52,
-                                  child: ElevatedButton.icon(
-                                    onPressed:
-                                    widget.boostManager.isLoading
-                                        ? null
-                                        : () async {
-                                      final mint =
-                                      await widget
-                                          .boostManager
-                                          .mintNFT();
-                                      if (mint != null) {
-                                        _showMessage(
-                                            'NFT Minted! 🎉 Mint: ${mint.substring(0, 8)}...',
-                                            true);
-                                      } else {
-                                        _showMessage(
-                                          widget.boostManager
-                                              .error ??
-                                              'Mint failed',
-                                          false,
-                                        );
-                                      }
-                                    },
-                                    icon: widget
-                                        .boostManager.isLoading
-                                        ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child:
-                                      CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                        : const Text('💎',
-                                        style: TextStyle(
-                                            fontSize: 20)),
-                                    label: Text(
-                                      'MINT FOR ${nft.mintPriceSOL} SOL',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                      Colors.amber.shade700,
-                                      foregroundColor: Colors.black,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                        BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                TextButton(
-                                  onPressed: () =>
-                                      widget.boostManager.checkForNFT(),
-                                  child: const Text(
-                                    'Already own one? Tap to detect',
-                                    style:
-                                    TextStyle(color: Colors.white54),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
+  /// Shown when on-chain store config hasn't loaded yet
+  Widget _buildStoreNotLoaded() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.cloud_off_rounded,
+              color: Colors.orange.shade400,
+              size: 56,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Store Prices Unavailable',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
-            );
-          },
-        );
-      },
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Unable to load on-chain pricing.\nPlease check your connection and try again.',
+              style: TextStyle(color: Colors.white.withOpacity(0.5)),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => widget.boostManager.refreshStoreConfig(),
+              icon: const Icon(Icons.refresh),
+              label: const Text('RETRY'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange.shade700,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 32, vertical: 14),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildNFTBenefit(String icon, String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+  // ============================================================
+  // NFT SECTION — COMING SOON
+  // ============================================================
+
+  Widget _buildNFTComingSoon() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(icon, style: const TextStyle(fontSize: 20)),
-          const SizedBox(width: 12),
-          Text(title, style: const TextStyle(color: Colors.white70)),
-          const Spacer(),
+          // Diamond icon with glow effect
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  Colors.amber.shade900.withOpacity(0.3),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+            child: Center(
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade900,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.amber.shade700.withOpacity(0.5),
+                    width: 2,
+                  ),
+                ),
+                child: const Center(
+                  child: Text('💎', style: TextStyle(fontSize: 36)),
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Coming Soon title
+          ShaderMask(
+            shaderCallback: (bounds) => LinearGradient(
+              colors: [
+                Colors.amber.shade300,
+                Colors.amber.shade600,
+                Colors.orange.shade700,
+              ],
+            ).createShader(bounds),
+            child: const Text(
+              'COMING SOON',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 4,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
           Text(
-            value,
-            style: const TextStyle(
-              color: Colors.amber,
+            'Diggle Drill Machine NFT',
+            style: TextStyle(
+              color: Colors.amber.shade400,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          Text(
+            'Limited edition reward-boosting NFTs are on the way.\n'
+                'Hold a Drill Machine NFT for permanent XP and Points multipliers!',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.5),
+              fontSize: 14,
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          const SizedBox(height: 24),
+
+          // Preview of benefits
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.04),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.amber.withOpacity(0.15),
+              ),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'PLANNED BENEFITS',
+                  style: TextStyle(
+                    color: Colors.amber.shade600,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildComingSoonBenefit('⚡', 'Permanent XP Boost', '+25% XP'),
+                const SizedBox(height: 8),
+                _buildComingSoonBenefit('💎', 'Permanent Points Boost', '+25% Points'),
+                const SizedBox(height: 8),
+                _buildComingSoonBenefit('🏆', 'Limited Supply', '10,000 max'),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          Text(
+            'Stay tuned for the mint announcement!',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.3),
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildComingSoonBenefit(String icon, String title, String value) {
+    return Row(
+      children: [
+        Text(icon, style: const TextStyle(fontSize: 18)),
+        const SizedBox(width: 12),
+        Text(title,
+            style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13)),
+        const Spacer(),
+        Text(
+          value,
+          style: TextStyle(
+            color: Colors.amber.shade400,
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
+        ),
+      ],
     );
   }
 

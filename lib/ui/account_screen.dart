@@ -1,10 +1,11 @@
 /// account_screen.dart
 /// Account management screen showing:
 /// - Player profile (display name, ID)
-/// - Wallet connection with cluster selector
+/// - Wallet connection with cluster selector (debug only)
 /// - Lifetime stats summary
 /// - Points balance and ledger preview
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -315,10 +316,41 @@ class _AccountScreenState extends State<AccountScreen> {
           'Connect for premium store, NFTs',
           child: Column(
             children: [
-              // Cluster selector
-              _buildClusterSelector(wallet),
+              // Cluster selector — only visible in debug builds
+              if (wallet.canSwitchCluster) ...[
+                _buildClusterSelector(wallet),
+                const Divider(color: Colors.white12, height: 24),
+              ],
 
-              const Divider(color: Colors.white12, height: 24),
+              // Network indicator for release builds (always mainnet)
+              if (!wallet.canSwitchCluster) ...[
+                Row(
+                  children: [
+                    Icon(Icons.language, color: Colors.white.withOpacity(0.4), size: 18),
+                    const SizedBox(width: 8),
+                    Text('Network',
+                        style: TextStyle(
+                            color: Colors.white.withOpacity(0.5), fontSize: 13)),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'Mainnet',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(color: Colors.white12, height: 24),
+              ],
 
               // Connection state
               if (wallet.isConnected)
@@ -486,7 +518,8 @@ class _AccountScreenState extends State<AccountScreen> {
                             fontSize: 14,
                           ),
                         ),
-                        if (wallet.isDevnet) ...[
+                        // Airdrop button — only in debug on devnet
+                        if (kDebugMode && wallet.isDevnet) ...[
                           const Spacer(),
                           TextButton.icon(
                             onPressed: () async {
@@ -595,7 +628,7 @@ class _AccountScreenState extends State<AccountScreen> {
             onPressed: () => wallet.connect(),
             icon: const Icon(Icons.account_balance_wallet, size: 20),
             label: Text(
-              'CONNECT TO ${wallet.cluster.displayName.toUpperCase()}',
+              'CONNECT WALLET',
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 letterSpacing: 0.5,
@@ -611,7 +644,8 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
         ),
 
-        if (wallet.isDevnet)
+        // Devnet hint — only in debug
+        if (kDebugMode && wallet.isDevnet)
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(

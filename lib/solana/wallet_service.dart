@@ -4,7 +4,7 @@
 /// This service wraps the solana_mobile_client plugin and provides:
 /// - State management for wallet connection
 /// - Connection status tracking
-/// - Cluster switching (devnet/mainnet)
+/// - Cluster switching (devnet/mainnet) — devnet only in debug builds
 /// - Transaction signing and sending via MWA
 /// - Error handling with user-friendly messages
 ///
@@ -69,8 +69,8 @@ class WalletService extends ChangeNotifier {
   /// Whether Solana Mobile is available on this device
   bool _isAvailable = false;
 
-  /// Current cluster
-  SolanaCluster _cluster = SolanaCluster.devnet;
+  /// Current cluster — defaults to mainnet in release, devnet in debug
+  SolanaCluster _cluster = kDebugMode ? SolanaCluster.devnet : SolanaCluster.mainnet;
 
   /// Solana client for RPC calls
   SolanaClient? _solanaClient;
@@ -115,6 +115,9 @@ class WalletService extends ChangeNotifier {
   bool get isDevnet => _cluster == SolanaCluster.devnet;
   bool get isMainnet => _cluster == SolanaCluster.mainnet;
 
+  /// Whether cluster switching is allowed (debug builds only)
+  bool get canSwitchCluster => kDebugMode;
+
   /// Get the Solana RPC client (for direct RPC calls from other services)
   SolanaClient? get solanaClient => _solanaClient;
 
@@ -130,7 +133,9 @@ class WalletService extends ChangeNotifier {
       _isAvailable = await _checkWalletAvailability();
       _setupSolanaClient();
       debugPrint(
-          'WalletService initialized - available: $_isAvailable, cluster: ${_cluster.displayName}');
+          'WalletService initialized - available: $_isAvailable, '
+              'cluster: ${_cluster.displayName}, '
+              'debug: $kDebugMode');
     } catch (e) {
       debugPrint('WalletService initialization error: $e');
       _isAvailable = false;
@@ -158,6 +163,11 @@ class WalletService extends ChangeNotifier {
   // ============================================================
 
   Future<void> setCluster(SolanaCluster cluster) async {
+    // In release builds, only allow mainnet
+    if (!kDebugMode && cluster == SolanaCluster.devnet) {
+      debugPrint('WalletService: devnet not available in release builds');
+      return;
+    }
     if (_cluster == cluster) return;
     if (isConnected) {
       await disconnect();
@@ -169,6 +179,11 @@ class WalletService extends ChangeNotifier {
   }
 
   Future<void> toggleCluster() async {
+    // Only allow toggling in debug builds
+    if (!kDebugMode) {
+      debugPrint('WalletService: cluster toggle disabled in release builds');
+      return;
+    }
     if (_cluster == SolanaCluster.devnet) {
       await setCluster(SolanaCluster.mainnet);
     } else {
@@ -548,6 +563,11 @@ class WalletService extends ChangeNotifier {
     }
     if (_cluster != SolanaCluster.devnet) {
       debugPrint('Airdrop only available on devnet');
+      return false;
+    }
+    // Extra guard: only allow in debug builds
+    if (!kDebugMode) {
+      debugPrint('Airdrop disabled in release builds');
       return false;
     }
 
