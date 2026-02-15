@@ -52,6 +52,7 @@ dependencies:
   # Solana Mobile Wallet Integration
   solana_mobile_client: ^0.1.2
   solana: ^0.31.0
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:

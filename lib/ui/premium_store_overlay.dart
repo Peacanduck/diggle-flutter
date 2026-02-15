@@ -12,17 +12,20 @@ import '../game/diggle_game.dart';
 import '../game/systems/xp_points_system.dart';
 import '../game/systems/boost_manager.dart';
 import '../solana/wallet_service.dart';
+import '../solana/candy_machine_service.dart';
 
 class PremiumStoreOverlay extends StatefulWidget {
   final DiggleGame game;
   final XPPointsSystem xpSystem;
   final BoostManager boostManager;
+  final CandyMachineService candyMachineService;
 
   const PremiumStoreOverlay({
     super.key,
     required this.game,
     required this.xpSystem,
     required this.boostManager,
+    required this.candyMachineService,
   });
 
   @override
@@ -64,7 +67,7 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
                 children: [
                   _buildPointsStore(),
                   _buildPremiumStore(),
-                  _buildNFTComingSoon(),
+                  _buildNFTSection(),
                 ],
               ),
             ),
@@ -432,19 +435,46 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
   }
 
   // ============================================================
-  // NFT SECTION — COMING SOON
+  // NFT SECTION — CANDY MACHINE MINT
   // ============================================================
 
-  Widget _buildNFTComingSoon() {
+  Widget _buildNFTSection() {
+    return Consumer<WalletService>(
+      builder: (context, wallet, _) {
+        if (!wallet.isConnected) {
+          return _buildWalletPrompt();
+        }
+
+        return ListenableBuilder(
+          listenable: widget.candyMachineService,
+          builder: (context, _) {
+            final cms = widget.candyMachineService;
+
+            // Already owns an NFT — show owned state
+            if (cms.hasNFT) {
+              return _buildNFTOwned(cms);
+            }
+
+            // Show mint UI
+            return _buildNFTMint(cms);
+          },
+        );
+      },
+    );
+  }
+
+  /// Shows the mint interface when user doesn't own an NFT yet
+  Widget _buildNFTMint(CandyMachineService cms) {
+    final info = cms.info;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(20),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          // Diamond icon with glow effect
+          // NFT Preview
           Container(
-            width: 120,
-            height: 120,
+            width: 100,
+            height: 100,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: RadialGradient(
@@ -456,8 +486,8 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
             ),
             child: Center(
               child: Container(
-                width: 80,
-                height: 80,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
                   color: Colors.grey.shade900,
                   shape: BoxShape.circle,
@@ -467,15 +497,15 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
                   ),
                 ),
                 child: const Center(
-                  child: Text('💎', style: TextStyle(fontSize: 36)),
+                  child: Text('💎', style: TextStyle(fontSize: 32)),
                 ),
               ),
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
 
-          // Coming Soon title
+          // Title
           ShaderMask(
             shaderCallback: (bounds) => LinearGradient(
               colors: [
@@ -485,56 +515,40 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
               ],
             ).createShader(bounds),
             child: const Text(
-              'COMING SOON',
+              'DIGGLE DIAMOND DRILL',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 28,
+                fontSize: 22,
                 fontWeight: FontWeight.w900,
-                letterSpacing: 4,
+                letterSpacing: 2,
               ),
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
 
           Text(
-            'Diggle Drill Machine NFT',
+            'Permanent boost NFT — one per player',
             style: TextStyle(
-              color: Colors.amber.shade400,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+              color: Colors.white.withOpacity(0.5),
+              fontSize: 13,
             ),
           ),
 
           const SizedBox(height: 16),
 
-          Text(
-            'Limited edition reward-boosting NFTs are on the way.\n'
-                'Hold a Drill Machine NFT for permanent XP and Points multipliers!',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.5),
-              fontSize: 14,
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          const SizedBox(height: 24),
-
-          // Preview of benefits
+          // Benefits
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.04),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.amber.withOpacity(0.15),
-              ),
+              border: Border.all(color: Colors.amber.withOpacity(0.15)),
             ),
             child: Column(
               children: [
                 Text(
-                  'PLANNED BENEFITS',
+                  'HOLDER BENEFITS',
                   style: TextStyle(
                     color: Colors.amber.shade600,
                     fontSize: 11,
@@ -542,43 +556,383 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
                     letterSpacing: 1.5,
                   ),
                 ),
-                const SizedBox(height: 12),
-                _buildComingSoonBenefit('⚡', 'Permanent XP Boost', '+25% XP'),
-                const SizedBox(height: 8),
-                _buildComingSoonBenefit('💎', 'Permanent Points Boost', '+25% Points'),
-                const SizedBox(height: 8),
-                _buildComingSoonBenefit('🏆', 'Limited Supply', '10,000 max'),
+                const SizedBox(height: 10),
+                _buildBenefitRow('⚡', 'Permanent XP Boost', '+25% XP'),
+                const SizedBox(height: 6),
+                _buildBenefitRow('💎', 'Permanent Points Boost', '+25% Points'),
+                const SizedBox(height: 6),
+                _buildBenefitRow('🏆', 'Limited Supply',
+                    info != null ? '${info.itemsRemaining}/${info.itemsAvailable}' : '...'),
               ],
             ),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
-          Text(
-            'Stay tuned for the mint announcement!',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.3),
-              fontSize: 12,
-              fontStyle: FontStyle.italic,
-            ),
+          // Mint info / status
+          if (cms.isLoadingInfo)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.amber,
+              ),
+            )
+          else if (info == null)
+            _buildMintInfoError(cms)
+          else if (info.isSoldOut)
+              _buildSoldOut()
+            else if (!info.isMintLive)
+                _buildMintNotLive(info)
+              else
+                _buildMintButton(cms, info),
+
+          // Mint status feedback
+          if (cms.mintStatus != MintStatus.idle)
+            _buildMintStatusFeedback(cms),
+
+          const SizedBox(height: 8),
+
+          // Refresh button
+          TextButton.icon(
+            onPressed: cms.isLoadingInfo ? null : () => cms.fetchMintInfo(),
+            icon: Icon(Icons.refresh, size: 16,
+                color: Colors.white.withOpacity(0.4)),
+            label: Text('Refresh',
+                style: TextStyle(color: Colors.white.withOpacity(0.4),
+                    fontSize: 12)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildComingSoonBenefit(String icon, String title, String value) {
+  Widget _buildMintButton(CandyMachineService cms, CandyMachineInfo info) {
+    final isMinting = cms.isMinting;
+    final price = info.mintPriceSol;
+
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: isMinting ? null : () => _handleMint(cms),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.amber.shade700,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: Colors.grey.shade800,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: isMinting
+            ? const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+              strokeWidth: 2, color: Colors.white),
+        )
+            : Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('💎', style: TextStyle(fontSize: 18)),
+            const SizedBox(width: 8),
+            Text(
+              price != null
+                  ? 'MINT — ${price.toStringAsFixed(price < 0.01 ? 4 : 2)} SOL'
+                  : 'MINT NFT',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleMint(CandyMachineService cms) async {
+    final sig = await cms.mint();
+    if (sig != null) {
+      _showMessage('NFT Minted! 🎉', true);
+    } else if (cms.error != null) {
+      _showMessage(cms.error!, false);
+    }
+  }
+
+  Widget _buildMintStatusFeedback(CandyMachineService cms) {
+    String message;
+    Color color;
+    IconData icon;
+
+    switch (cms.mintStatus) {
+      case MintStatus.fetchingTransaction:
+        message = 'Preparing transaction...';
+        color = Colors.blue;
+        icon = Icons.cloud_download;
+        break;
+      case MintStatus.awaitingSignature:
+        message = 'Approve in your wallet app...';
+        color = Colors.orange;
+        icon = Icons.fingerprint;
+        break;
+      case MintStatus.sending:
+        message = 'Sending transaction...';
+        color = Colors.cyan;
+        icon = Icons.send;
+        break;
+      case MintStatus.confirming:
+        message = 'Confirming on-chain...';
+        color = Colors.purple;
+        icon = Icons.hourglass_top;
+        break;
+      case MintStatus.success:
+        message = 'Minted successfully!';
+        color = Colors.green;
+        icon = Icons.check_circle;
+        break;
+      case MintStatus.error:
+        message = cms.error ?? 'Mint failed';
+        color = Colors.red;
+        icon = Icons.error;
+        break;
+      default:
+        return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(color: color, fontSize: 13),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (cms.mintStatus == MintStatus.error ||
+                cms.mintStatus == MintStatus.success)
+              GestureDetector(
+                onTap: () => cms.resetMintStatus(),
+                child: Icon(Icons.close, color: color, size: 16),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Shows the "already owned" state
+  Widget _buildNFTOwned(CandyMachineService cms) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          // Checkmark badge
+          Container(
+            width: 90,
+            height: 90,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  Colors.green.shade900.withOpacity(0.4),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+            child: Center(
+              child: Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.green.shade900.withOpacity(0.5),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.green.shade400.withOpacity(0.5),
+                    width: 2,
+                  ),
+                ),
+                child: const Center(
+                  child: Text('✅', style: TextStyle(fontSize: 28)),
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          const Text(
+            'DIAMOND DRILL HOLDER',
+            style: TextStyle(
+              color: Colors.green,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 2,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            'Your boosts are permanently active!',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.5),
+              fontSize: 14,
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Active boosts
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.green.withOpacity(0.2)),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'ACTIVE BOOSTS',
+                  style: TextStyle(
+                    color: Colors.green.shade400,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildBenefitRow('⚡', 'XP Boost', '+25% XP',
+                    activeColor: Colors.green),
+                const SizedBox(height: 8),
+                _buildBenefitRow('💎', 'Points Boost', '+25% Points',
+                    activeColor: Colors.green),
+              ],
+            ),
+          ),
+
+          if (cms.ownedNFT != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Mint: ${cms.ownedNFT!.mintAddress.substring(0, 8)}...',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.3),
+                fontSize: 11,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMintInfoError(CandyMachineService cms) {
+    return Column(
+      children: [
+        Icon(Icons.cloud_off, color: Colors.orange.shade400, size: 36),
+        const SizedBox(height: 8),
+        Text(
+          cms.error ?? 'Unable to load mint info',
+          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          onPressed: () => cms.fetchMintInfo(),
+          icon: const Icon(Icons.refresh, size: 16),
+          label: const Text('RETRY'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange.shade700,
+            foregroundColor: Colors.white,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSoldOut() {
+    return Column(
+      children: [
+        Text(
+          'SOLD OUT',
+          style: TextStyle(
+            color: Colors.red.shade400,
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 3,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'All Diggle Diamond Drill NFTs have been minted!',
+          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMintNotLive(CandyMachineInfo info) {
+    return Column(
+      children: [
+        Icon(Icons.schedule, color: Colors.amber.shade400, size: 36),
+        const SizedBox(height: 8),
+        const Text(
+          'MINT OPENS SOON',
+          style: TextStyle(
+            color: Colors.amber,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          info.startDate != null
+              ? 'Starts: ${_formatDate(info.startDate!)}'
+              : 'Check back later!',
+          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
+        ),
+      ],
+    );
+  }
+
+  String _formatDate(DateTime dt) {
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-'
+        '${dt.day.toString().padLeft(2, '0')} '
+        '${dt.hour.toString().padLeft(2, '0')}:'
+        '${dt.minute.toString().padLeft(2, '0')} UTC';
+  }
+
+  Widget _buildBenefitRow(String icon, String title, String value,
+      {Color? activeColor}) {
     return Row(
       children: [
         Text(icon, style: const TextStyle(fontSize: 18)),
         const SizedBox(width: 12),
         Text(title,
-            style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13)),
+            style: TextStyle(
+                color: (activeColor ?? Colors.white).withOpacity(0.6),
+                fontSize: 13)),
         const Spacer(),
         Text(
           value,
           style: TextStyle(
-            color: Colors.amber.shade400,
+            color: activeColor ?? Colors.amber.shade400,
             fontWeight: FontWeight.bold,
             fontSize: 13,
           ),

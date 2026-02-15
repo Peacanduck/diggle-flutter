@@ -4,11 +4,10 @@
 /// Responsibilities:
 /// - Fetches store config and active boosters from on-chain accounts
 /// - Builds and sends purchase transactions via MWA
-/// - Detects NFTs in connected wallet for permanent boosts
+/// - Delegates NFT detection to CandyMachineService (Metaplex Candy Machine)
 /// - Manages timed boost expiry
 /// - Syncs boost multipliers to XPPointsSystem
 /// - Logs purchases to Supabase via XPStatsBridge
-
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
@@ -18,6 +17,7 @@ import '../../services/xp_stats_bridge.dart';
 import './xp_points_system.dart';
 import '../../solana/wallet_service.dart';
 import '../../solana/diggle_mart_client.dart';
+import '../../solana/candy_machine_service.dart';
 
 /// Types of boosters available
 enum BoosterType {
@@ -174,6 +174,7 @@ class NFTCollectionInfo {
 class BoostManager extends ChangeNotifier {
   final XPPointsSystem xpSystem;
   final WalletService walletService;
+  final CandyMachineService candyMachineService;
 
   /// Optional bridge for Supabase persistence.
   /// Set after construction via [attachStatsBridge].
@@ -184,13 +185,6 @@ class BoostManager extends ChangeNotifier {
 
   /// Active boosters (from chain + local points purchases)
   final List<Booster> _activeBoosters = [];
-
-  /// Whether NFT boost is detected
-  bool _hasNFT = false;
-
-  /// NFT metadata if detected
-  String? _nftName;
-  String? _nftImageUri;
 
   /// On-chain store data
   OnChainStore? _storeData;
@@ -308,12 +302,12 @@ class BoostManager extends ChangeNotifier {
     ),
   ];
 
-  /// NFT collection info - defaults, updated from chain
+  /// NFT collection info - defaults, updated from candy machine service
   NFTCollectionInfo _nftCollection = const NFTCollectionInfo(
     name: 'Diggle Diamond Drill',
     xpMultiplier: 1.25,
     pointsMultiplier: 1.25,
-    maxSupply: 1000,
+    maxSupply: 10000,
     mintPriceSOL: 0.1,
   );
 
@@ -326,6 +320,7 @@ class BoostManager extends ChangeNotifier {
   BoostManager({
     required this.xpSystem,
     required this.walletService,
+    required this.candyMachineService,
   }) {
     // Initialize the on-chain client if wallet service has a Solana client
     _initMartClient();
@@ -339,8 +334,15 @@ class BoostManager extends ChangeNotifier {
     // Listen for wallet changes
     walletService.addListener(_onWalletChanged);
 
+    // Listen for candy machine service changes (NFT ownership updates)
+    candyMachineService.addListener(_onCandyMachineChanged);
+
     // Fetch store config on init
     _fetchStoreConfig();
+
+    // Initialize candy machine AFTER the current build frame completes
+    // to avoid notifyListeners() during widget build
+    Future.microtask(() => candyMachineService.initialize());
   }
 
   /// Attach the Supabase stats bridge for persistence.
@@ -354,6 +356,7 @@ class BoostManager extends ChangeNotifier {
   void dispose() {
     _expiryTimer?.cancel();
     walletService.removeListener(_onWalletChanged);
+    candyMachineService.removeListener(_onCandyMachineChanged);
     super.dispose();
   }
 
@@ -372,9 +375,11 @@ class BoostManager extends ChangeNotifier {
   List<Booster> get activeBoosters =>
       _activeBoosters.where((b) => !b.isExpired).toList();
 
-  bool get hasNFT => _hasNFT;
-  String? get nftName => _nftName;
-  String? get nftImageUri => _nftImageUri;
+  /// NFT ownership is now delegated to CandyMachineService
+  bool get hasNFT => candyMachineService.hasNFT;
+
+  String? get nftName => hasNFT ? _nftCollection.name : null;
+  String? get nftImageUri => null; // Could be fetched from metadata URI
   bool get isLoading => _isLoading;
   String? get error => _error;
   OnChainStore? get storeData => _storeData;
@@ -392,7 +397,7 @@ class BoostManager extends ChangeNotifier {
         mult *= b.multiplier;
       }
     }
-    if (_hasNFT) mult *= _nftCollection.xpMultiplier;
+    if (hasNFT) mult *= _nftCollection.xpMultiplier;
     return mult;
   }
 
@@ -404,7 +409,7 @@ class BoostManager extends ChangeNotifier {
         mult *= b.multiplier;
       }
     }
-    if (_hasNFT) mult *= _nftCollection.pointsMultiplier;
+    if (hasNFT) mult *= _nftCollection.pointsMultiplier;
     return mult;
   }
 
@@ -444,8 +449,7 @@ class BoostManager extends ChangeNotifier {
   // ============================================================
   // FETCH ON-CHAIN DATA
   // ============================================================
-// Update premium store item prices from on-chain config
-  // (StoreItem is const, so we just use getPremiumItemPrice() for display)
+
   /// Fetch store config from on-chain
   Future<void> _fetchStoreConfig({bool silent = false}) async {
     _initMartClient();
@@ -460,10 +464,9 @@ class BoostManager extends ChangeNotifier {
         debugPrint(
             'Store config loaded: active=${_storeData!.config.isActive}, '
                 'totalSold=${_storeData!.totalBoostersSold}');
-       if(!silent) notifyListeners();
+        if(!silent) notifyListeners();
       } else {
         debugPrint('Store account returned null - has the store been initialized on-chain?');
-
       }
     } catch (e) {
       debugPrint('Failed to fetch store config: $e');
@@ -500,32 +503,6 @@ class BoostManager extends ChangeNotifier {
     }
   }
 
-  /// Fetch NFT collection info from chain
-  Future<void> fetchNftCollectionInfo() async {
-    if (_martClient == null) return;
-
-    try {
-      _nftCollectionData = await _martClient!.fetchNftCollection();
-      if (_nftCollectionData != null) {
-        _nftCollection = NFTCollectionInfo(
-          name: _nftCollectionData!.name,
-          xpMultiplier: _nftCollection.xpMultiplier,
-          pointsMultiplier: _nftCollection.pointsMultiplier,
-          maxSupply: _nftCollectionData!.maxSupply,
-          mintPriceSOL: _nftCollectionData!.mintPriceSOL,
-          currentSupply: _nftCollectionData!.currentSupply,
-          isActive: _nftCollectionData!.isActive,
-          collectionMint: _nftCollectionData!.collectionMint,
-        );
-        debugPrint('NFT collection loaded: ${_nftCollection.name}, '
-            'supply: ${_nftCollection.currentSupply}/${_nftCollection.maxSupply}');
-        notifyListeners();
-      }
-    } catch (e) {
-      debugPrint('Failed to fetch NFT collection: $e');
-    }
-  }
-
   // ============================================================
   // POINTS-BASED PURCHASES (offline, no wallet needed)
   // ============================================================
@@ -546,7 +523,6 @@ class BoostManager extends ChangeNotifier {
       xpSystem.spendPoints(item.priceInPoints);
     }
 
-
     final booster = Booster(
       type: item.boosterType,
       multiplier: item.multiplier,
@@ -566,11 +542,6 @@ class BoostManager extends ChangeNotifier {
   // ============================================================
 
   /// Purchase a premium booster with SOL via on-chain transaction.
-  ///
-  /// Builds the transaction, sends to wallet for signing via MWA,
-  /// then confirms on-chain.
-  ///
-  /// Returns transaction signature on success, null on failure.
   Future<String?> purchaseWithSOL(StoreItem item) async {
     if (!item.requiresWallet) return null;
     if (!walletService.isConnected) {
@@ -605,9 +576,6 @@ class BoostManager extends ChangeNotifier {
       bool isPointsPack = item.onChainPackType != null;
 
       if (isPointsPack) {
-        // ============================================================
-        // POINTS PACK PURCHASE
-        // ============================================================
         debugPrint(
             'Building purchasePointsPack tx (packType: ${item.onChainPackType})...');
 
@@ -617,9 +585,6 @@ class BoostManager extends ChangeNotifier {
         );
       } else if (item.onChainBoosterType != null &&
           item.onChainDurationSeconds != null) {
-        // ============================================================
-        // BOOSTER PURCHASE
-        // ============================================================
         debugPrint(
             'Building purchaseBooster tx (type: ${item.onChainBoosterType}, '
                 'duration: ${item.onChainDurationSeconds}s, '
@@ -667,7 +632,6 @@ class BoostManager extends ChangeNotifier {
 
       // Apply the effects locally + log to Supabase
       if (isPointsPack) {
-        // Award points locally
         final config = _storeData?.config;
         int pointsAmount;
         if (item.onChainPackType == 0) {
@@ -675,7 +639,6 @@ class BoostManager extends ChangeNotifier {
         } else {
           pointsAmount = config?.pointsPackLargeAmount ?? 2000;
         }
-        // Use bridge for tracked award, fallback to direct
         if (_statsBridge != null) {
           _statsBridge!.awardPackPurchase(
             pointsAmount,
@@ -687,19 +650,17 @@ class BoostManager extends ChangeNotifier {
         }
         debugPrint('Awarded $pointsAmount points from pack purchase');
       } else {
-        // Add the booster locally (also fetch from chain to get exact data)
         final booster = Booster(
           type: item.boosterType,
           multiplier: item.multiplier,
           duration: item.duration,
           expiresAt: DateTime.now().add(item.duration),
           isActive: true,
-          onChainAddress: signature, // Use signature as temp identifier
+          onChainAddress: signature,
         );
         _activeBoosters.add(booster);
         _syncMultipliers();
 
-        // Log booster purchase to Supabase
         _statsBridge?.logBoosterPurchase(
           boosterType: item.onChainBoosterType!,
           durationSeconds: item.onChainDurationSeconds!,
@@ -707,7 +668,6 @@ class BoostManager extends ChangeNotifier {
           txSignature: signature,
         );
 
-        // Fetch fresh data from chain in the background
         Future.delayed(const Duration(seconds: 2), () {
           fetchOnChainBoosters();
         });
@@ -726,210 +686,41 @@ class BoostManager extends ChangeNotifier {
   }
 
   // ============================================================
-  // NFT DETECTION
+  // NFT DETECTION — Delegated to CandyMachineService
   // ============================================================
 
-  /// Check connected wallet for Diggle NFT by looking at token accounts
+  /// Check connected wallet for Diggle NFT.
+  /// Delegates to CandyMachineService which handles Metaplex metadata parsing.
   Future<void> checkForNFT() async {
     if (!walletService.isConnected) {
-      _hasNFT = false;
       _syncMultipliers();
       notifyListeners();
       return;
     }
 
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      // Fetch NFT collection info from chain first
-      await fetchNftCollectionInfo();
-
-      final collectionMint = _nftCollectionData?.collectionMint;
-      if (collectionMint == null ||
-          collectionMint == 'YOUR_COLLECTION_MINT_ADDRESS_HERE') {
-        debugPrint('NFT collection not yet deployed');
-        _hasNFT = false;
-        _isLoading = false;
-        _syncMultipliers();
-        notifyListeners();
-        return;
-      }
-
-      // Check if wallet holds any tokens from this collection
-      // This requires checking token accounts with Metaplex metadata
-      final pubkey = walletService.publicKey;
-      final solanaClient = walletService.solanaClient;
-
-      if (pubkey == null || solanaClient == null) {
-        _hasNFT = false;
-        _isLoading = false;
-        _syncMultipliers();
-        notifyListeners();
-        return;
-      }
-
-      // Fetch token accounts for this wallet
-      // Look for NFTs (amount=1, decimals=0) whose collection matches
-      try {
-         final tokenAccounts =
-       await solanaClient.rpcClient.getTokenAccountsByOwner(
-          pubkey,
-          TokenAccountsFilter.byProgramId(tokenProgramId),
-          encoding: Encoding.jsonParsed,
-        );
-
-        // For each token with amount=1, check if it's from our collection
-        // In a full implementation, you'd fetch Metaplex metadata for each mint
-        // and check the collection field. For now, we do a basic check.
-        for (final account in tokenAccounts.value) {
-          try {
-            final parsed = account.account.data;
-           if (parsed is ParsedAccountData) {
-             final parsedData = parsed.parsed as Map<String, dynamic>;
-              final info = parsedData['info'] as Map<String, dynamic>?;
-              if (info != null) {
-                final tokenAmount = info['tokenAmount'];
-                if (tokenAmount != null &&
-                    tokenAmount['decimals'] == 0 &&
-                    tokenAmount['uiAmount'] == 1) {
-                  // This is an NFT. In production, verify collection via Metaplex.
-                  // For now, we log it for debugging.
-                  debugPrint(
-                      'Found potential NFT: ${info['mint']}');
-                }
-              }
-            }
-    } catch (e) {
-            // Skip malformed accounts
-          }
-        }
-
-        // Until full Metaplex integration, NFT detection relies on
-        // the collection being properly set up and verified
-        _hasNFT = false; // Will be true once collection is deployed and verified
-      } catch (e) {
-        debugPrint('Error scanning token accounts: $e');
-        _hasNFT = false;
-      }
-
-      _syncMultipliers();
-      _isLoading = false;
-      notifyListeners();
-    } catch (e) {
-      debugPrint('NFT check error: $e');
-      _hasNFT = false;
-      _isLoading = false;
-      notifyListeners();
-    }
+    await candyMachineService.checkNFTOwnership();
+    // _onCandyMachineChanged will fire and sync multipliers
   }
 
-  /// Mint a limited edition NFT from the on-chain collection
-  Future<String?> mintNFT() async {
-    if (!walletService.isConnected) {
-      _error = 'Wallet not connected';
-      notifyListeners();
-      return null;
-    }
-
-    final minterPubkey = walletService.publicKeyObject;
-    if (minterPubkey == null) {
-      _error = 'Invalid wallet public key';
-      notifyListeners();
-      return null;
-    }
-
-    _initMartClient();
-    if (_martClient == null) {
-      _error = 'RPC client not available';
-      notifyListeners();
-      return null;
-    }
-
-    // Check if collection is deployed and active
-    await fetchNftCollectionInfo();
-    if (_nftCollectionData == null || !_nftCollectionData!.isActive) {
-      _error = 'NFT collection not yet deployed or inactive. Coming soon!';
-      _isLoading = false;
-      notifyListeners();
-      return null;
-    }
-
-    if (_nftCollectionData!.isSoldOut) {
-      _error = 'NFT collection is sold out!';
-      _isLoading = false;
-      notifyListeners();
-      return null;
-    }
-
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      // For NFT minting, we need a new mint keypair.
-      // The mint account must be created in the same transaction.
-      // This requires the client to generate a keypair, pre-sign with it,
-      // then have the wallet sign as the minter.
-      //
-      // NOTE: This is a simplified flow. A production implementation
-      // would need to:
-      // 1. Generate a mint keypair
-      // 2. Build create_account + initialize_mint instructions
-      // 3. Append the mint_nft instruction
-      // 4. Partially sign with the mint keypair
-      // 5. Send to MWA for wallet signature
-      //
-      // For now, we build the mint_nft instruction assuming the mint
-      // is created by the Anchor program (if your program handles it).
-
-      // Generate a temporary mint keypair
-      final mintKeypair = await Ed25519HDKeyPair.random();
-      final nftMintPubkey = mintKeypair.publicKey;
-
-      debugPrint('Building mintNft tx (mint: ${nftMintPubkey.toBase58()})...');
-
-      final txBytes = await _martClient!.buildMintNftTx(
-        minter: minterPubkey,
-        nftMintPubkey: nftMintPubkey,
+  /// Called when CandyMachineService notifies (NFT ownership change, mint status, etc.)
+  void _onCandyMachineChanged() {
+    // Update NFT collection info from candy machine mint info if available
+    final cmInfo = candyMachineService.info;
+    if (cmInfo != null) {
+      _nftCollection = NFTCollectionInfo(
+        name: _nftCollection.name,
+        xpMultiplier: _nftCollection.xpMultiplier,
+        pointsMultiplier: _nftCollection.pointsMultiplier,
+        maxSupply: cmInfo.itemsAvailable,
+        mintPriceSOL: cmInfo.mintPriceSol ?? _nftCollection.mintPriceSOL,
+        currentSupply: cmInfo.itemsRedeemed,
+        isActive: cmInfo.isMintLive && !cmInfo.isSoldOut,
+        collectionMint: CandyMachineService.collectionMint,
       );
-
-      // Send to wallet for signing
-      debugPrint('Sending mint transaction to wallet...');
-      final signature =
-      await walletService.signAndSendTransaction(txBytes);
-
-      if (signature == null) {
-        _error = walletService.errorMessage ?? 'Mint transaction failed';
-        _isLoading = false;
-        notifyListeners();
-        return null;
-      }
-
-      // Confirm
-      final confirmed = await _martClient!.confirmTransaction(signature);
-      if (!confirmed) {
-        _error = 'Mint transaction failed to confirm';
-        _isLoading = false;
-        notifyListeners();
-        return null;
-      }
-
-      // NFT minted successfully!
-      _hasNFT = true;
-      _nftName = _nftCollection.name;
-      _syncMultipliers();
-
-      _isLoading = false;
-      notifyListeners();
-      return nftMintPubkey.toBase58();
-    } catch (e) {
-      debugPrint('NFT mint error: $e');
-      _error = 'Mint failed: ${e.toString()}';
-      _isLoading = false;
-      notifyListeners();
-      return null;
     }
+
+    _syncMultipliers();
+    notifyListeners();
   }
 
   // ============================================================
@@ -942,14 +733,10 @@ class BoostManager extends ChangeNotifier {
     _fetchStoreConfig();
 
     if (walletService.isConnected) {
-      // Fetch data when wallet connects
-     // _fetchStoreConfig();
       fetchOnChainBoosters();
-      checkForNFT();
+      // NFT check is handled by CandyMachineService listening to wallet
+      candyMachineService.initialize();
     } else {
-      _hasNFT = false;
-      _nftName = null;
-      _nftImageUri = null;
       // Remove on-chain boosters, keep local ones
       _activeBoosters.removeWhere((b) => b.onChainAddress != null);
       _syncMultipliers();
@@ -968,12 +755,12 @@ class BoostManager extends ChangeNotifier {
     }
   }
 
-  /// Sync multipliers from active boosters to XP system
+  /// Sync multipliers from active boosters + NFT to XP system
   void _syncMultipliers() {
     xpSystem.setXPBoost(totalXPMultiplier);
     xpSystem.setPointsBoost(totalPointsMultiplier);
 
-    if (_hasNFT) {
+    if (hasNFT) {
       xpSystem.setNFTXPMultiplier(_nftCollection.xpMultiplier);
       xpSystem.setNFTPointsMultiplier(_nftCollection.pointsMultiplier);
     } else {
@@ -984,9 +771,6 @@ class BoostManager extends ChangeNotifier {
 
   void reset() {
     _activeBoosters.clear();
-    _hasNFT = false;
-    _nftName = null;
-    _nftImageUri = null;
     _error = null;
     _syncMultipliers();
     notifyListeners();

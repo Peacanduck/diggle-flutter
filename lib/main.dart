@@ -11,6 +11,7 @@
 /// Services initialized:
 ///   - SupabaseService (cloud persistence)
 ///   - WalletService (Solana wallet connection)
+///   - CandyMachineService (NFT minting via Candy Machine)
 ///   - StatsService, WorldSaveService, PlayerService, PointsLedgerService
 ///   - GameLifecycleManager (orchestrates bootstrap + save/load)
 
@@ -30,6 +31,7 @@ import 'services/stats_service.dart';
 import 'services/supabase_service.dart';
 import 'services/world_save_service.dart';
 import 'solana/wallet_service.dart';
+import 'solana/candy_machine_service.dart';
 import 'ui/main_menu.dart';
 import 'ui/save_slots_screen.dart';
 import 'ui/account_screen.dart';
@@ -65,6 +67,19 @@ void main() async {
   final walletService = WalletService();
   await walletService.initialize();
 
+  // ── Initialize Candy Machine Service ─────────────────────────
+  // Anon key is public/safe to embed — it only grants row-level access.
+  // The edge function was deployed with --no-verify-jwt so this is
+  // used only for routing, not authentication.
+  final candyMachineService = CandyMachineService(
+    wallet: walletService,
+    supabaseUrl: 'https://vdcpbqsnkivokroqxelq.supabase.co',
+    supabaseAnonKey: const String.fromEnvironment(
+      'SUPABASE_ANON_KEY',
+      defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.PLACEHOLDER',
+    ),
+  );
+
   // ── Create Backend Services ──────────────────────────────────
   final statsService = StatsService();
   final worldSaveService = WorldSaveService();
@@ -86,6 +101,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: walletService),
+        ChangeNotifierProvider.value(value: candyMachineService),
         Provider.value(value: statsService),
         Provider.value(value: worldSaveService),
         Provider.value(value: playerService),
@@ -338,11 +354,14 @@ class _GameScreenState extends State<GameScreen> {
     // Create game
     _game = DiggleGame(seed: widget.seed);
 
-    // Initialize BoostManager with wallet service
+    // Initialize BoostManager with wallet + candy machine services
     final walletService = context.read<WalletService>();
+    final candyMachineService = context.read<CandyMachineService>();
+
     _boostManager = BoostManager(
       xpSystem: _game.xpPointsSystem,
       walletService: walletService,
+      candyMachineService: candyMachineService,
     );
     _game.boostManager = _boostManager;
 
@@ -383,9 +402,9 @@ class _GameScreenState extends State<GameScreen> {
 
         // Restore player position
         if (save.playerPosition != null) {
-         _game.drill.restorePosition(save.playerPosition!['x'] ?? 0, save.playerPosition!['y'] ?? 0);
+          _game.drill.restorePosition(save.playerPosition!['x'] ?? 0, save.playerPosition!['y'] ?? 0);
           // _game.drill.position.x = save.playerPosition!['x'] ?? 0;
-         // _game.drill.position.y = save.playerPosition!['y'] ?? 0;
+          // _game.drill.position.y = save.playerPosition!['y'] ?? 0;
         }
 
         debugPrint('GameScreen: restored save from slot ${widget.slot} , pos: ${save.playerPosition!['x']} '
@@ -429,6 +448,7 @@ class _GameScreenState extends State<GameScreen> {
               game: g,
               xpSystem: g.xpPointsSystem,
               boostManager: _boostManager,
+              candyMachineService: context.read<CandyMachineService>(),
             );
           },
           'xpHud': (context, game) {
