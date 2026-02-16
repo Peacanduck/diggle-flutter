@@ -515,7 +515,7 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
               ],
             ).createShader(bounds),
             child: const Text(
-              'DIGGLE DRILL Machine',
+              'DIGGLE DIAMOND DRILL',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 22,
@@ -595,7 +595,10 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
 
           // Refresh button
           TextButton.icon(
-            onPressed: cms.isLoadingInfo ? null : () => cms.fetchMintInfo(),
+            onPressed: cms.isLoadingInfo ? null : () {
+              cms.fetchMintInfo();
+              cms.checkNFTOwnership();
+            },
             icon: Icon(Icons.refresh, size: 16,
                 color: Colors.white.withOpacity(0.4)),
             label: Text('Refresh',
@@ -738,7 +741,7 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
   Widget _buildNFTOwned(CandyMachineService cms) {
     final nft = cms.ownedNFT;
     final imageUri = nft?.imageUri;
-    final nftName = nft?.name ?? 'DRILL Machine HOLDER';
+    final nftName = nft?.name ?? 'DIAMOND DRILL HOLDER';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -880,7 +883,10 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
         ),
         const SizedBox(height: 12),
         ElevatedButton.icon(
-          onPressed: () => cms.fetchMintInfo(),
+          onPressed: () {
+            cms.fetchMintInfo();
+            cms.checkNFTOwnership();
+          },
           icon: const Icon(Icons.refresh, size: 16),
           label: const Text('RETRY'),
           style: ElevatedButton.styleFrom(
@@ -906,7 +912,7 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
         ),
         const SizedBox(height: 8),
         Text(
-          'All Diggle Drill Machine NFTs have been minted!',
+          'All Diggle Diamond Drill NFTs have been minted!',
           style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
           textAlign: TextAlign.center,
         ),
