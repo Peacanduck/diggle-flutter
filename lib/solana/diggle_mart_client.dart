@@ -4,20 +4,18 @@
 /// Program ID: 6CQzNRRyMYox8G3oWLPJ8MwXthznqq6bMREdUwqKDNKA
 ///
 /// Handles:
-/// - PDA derivation for store, treasury, boosters, NFT collection
+/// - PDA derivation for store, treasury, boosters
 /// - Building instructions with Anchor discriminators + Borsh args
 /// - Transaction construction for MWA signing
-/// - Deserializing on-chain account data (Store, BoosterAccount, NftCollection)
+/// - Deserializing on-chain account data (Store, BoosterAccount)
 ///
 /// Instructions supported:
 /// - purchaseBooster(boosterType: u8, durationSeconds: i64)
 /// - purchasePointsPack(packType: u8)
-/// - mintNft()
 ///
 /// Read operations:
-/// - fetchStoreConfig()
+/// - fetchStore()
 /// - fetchActiveBoosters(ownerPubkey)
-/// - fetchNftCollection()
 
 import 'dart:convert';
 import 'dart:typed_data';
@@ -32,29 +30,18 @@ import 'package:solana/solana.dart';
 
 /// Diggle Mart program ID
 const String diggleMartProgramId =
-    '6CQzNRRyMYox8G3oWLPJ8MwXthznqq6bMREdUwqKDNKA';
+    'CHY3Z9P6icJiB4zDjoemhWWR71yh11Fhz8dhZHaxpsV4';
 
 /// System program
 const String systemProgramId = '11111111111111111111111111111111';
-
-/// SPL Token program
-const String tokenProgramId = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
-
-/// SPL Associated Token Account program
-const String associatedTokenProgramId =
-    'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL';
-
-/// Sysvar Rent
-const String sysvarRentId = 'SysvarRent111111111111111111111111111111111';
 
 /// PDA seeds
 const String _seedStore = 'store';
 const String _seedTreasury = 'treasury';
 const String _seedBooster = 'booster';
-const String _seedNftCollection = 'nft_collection';
 
 // ============================================================
-// ANCHOR INSTRUCTION DISCRIMINATORS (from IDL)
+// ANCHOR INSTRUCTION DISCRIMINATORS (from IDL — 8 bytes)
 // ============================================================
 
 final Uint8List _discPurchaseBooster =
@@ -63,21 +50,13 @@ Uint8List.fromList([251, 49, 11, 156, 68, 194, 21, 140]);
 final Uint8List _discPurchasePointsPack =
 Uint8List.fromList([125, 42, 47, 199, 26, 93, 227, 99]);
 
-final Uint8List _discMintNft =
-Uint8List.fromList([211, 57, 6, 167, 15, 219, 35, 251]);
-
 // ============================================================
-// ANCHOR ACCOUNT DISCRIMINATORS (from IDL)
+// ANCHOR ACCOUNT DISCRIMINATORS (from IDL — 1 byte, optimized)
 // ============================================================
 
-final Uint8List _discBoosterAccount =
-Uint8List.fromList([76, 202, 210, 44, 136, 61, 228, 19]);
+const int _discStoreAccount = 1;
 
-final Uint8List _discStoreAccount =
-Uint8List.fromList([130, 48, 247, 244, 182, 191, 30, 26]);
-
-final Uint8List _discNftCollectionAccount =
-Uint8List.fromList([230, 92, 80, 190, 97, 0, 132, 22]);
+const int _discBoosterAccount = 2;
 
 // ============================================================
 // DATA MODELS
@@ -179,37 +158,6 @@ class OnChainBooster {
   }
 }
 
-/// On-chain NFT collection data
-class OnChainNftCollection {
-  final String authority;
-  final String collectionMint;
-  final int maxSupply;
-  final int currentSupply;
-  final int mintPrice; // lamports
-  final String name;
-  final String symbol;
-  final String uri;
-  final bool isActive;
-  final int bump;
-
-  const OnChainNftCollection({
-    required this.authority,
-    required this.collectionMint,
-    required this.maxSupply,
-    required this.currentSupply,
-    required this.mintPrice,
-    required this.name,
-    required this.symbol,
-    required this.uri,
-    required this.isActive,
-    required this.bump,
-  });
-
-  double get mintPriceSOL => mintPrice / 1e9;
-  bool get isSoldOut => currentSupply >= maxSupply;
-  int get remainingSupply => maxSupply - currentSupply;
-}
-
 // ============================================================
 // DIGGLE MART CLIENT
 // ============================================================
@@ -221,7 +169,6 @@ class DiggleMartClient {
   // Cached PDAs
   Ed25519HDPublicKey? _storePda;
   Ed25519HDPublicKey? _treasuryPda;
-  Ed25519HDPublicKey? _nftCollectionPda;
 
   DiggleMartClient({required this.rpcClient})
       : programId = Ed25519HDPublicKey.fromBase58(diggleMartProgramId);
@@ -252,17 +199,6 @@ class DiggleMartClient {
     return result;
   }
 
-  /// Derive NFT collection PDA: seeds = ["nft_collection"]
-  Future<Ed25519HDPublicKey> getNftCollectionPda() async {
-    if (_nftCollectionPda != null) return _nftCollectionPda!;
-    final result = await Ed25519HDPublicKey.findProgramAddress(
-      seeds: [utf8.encode(_seedNftCollection)],
-      programId: programId,
-    );
-    _nftCollectionPda = result;
-    return result;
-  }
-
   /// Derive booster PDA: seeds = ["booster", buyer, total_boosters_sold (LE u64)]
   Future<Ed25519HDPublicKey> getBoosterPda(
       Ed25519HDPublicKey buyer,
@@ -276,21 +212,6 @@ class DiggleMartClient {
         countBytes,
       ],
       programId: programId,
-    );
-    return result;
-  }
-
-  /// Derive ATA (Associated Token Account)
-  Future<Ed25519HDPublicKey> getAssociatedTokenAddress(
-      Ed25519HDPublicKey owner,
-      Ed25519HDPublicKey mint,
-      ) async {
-    final ataProgramId =
-    Ed25519HDPublicKey.fromBase58(associatedTokenProgramId);
-    final tokenProgram = Ed25519HDPublicKey.fromBase58(tokenProgramId);
-    final result = await Ed25519HDPublicKey.findProgramAddress(
-      seeds: [owner.bytes, tokenProgram.bytes, mint.bytes],
-      programId: ataProgramId,
     );
     return result;
   }
@@ -318,7 +239,6 @@ class DiggleMartClient {
       if (accountData is BinaryAccountData) {
         data = Uint8List.fromList(accountData.data);
       } else {
-        // Try to handle as raw list/string
         debugPrint('Unexpected account data type: ${accountData.runtimeType}');
         return null;
       }
@@ -334,24 +254,18 @@ class DiggleMartClient {
   /// Fetch active boosters for a wallet address
   Future<List<OnChainBooster>> fetchActiveBoosters(String ownerPubkey) async {
     try {
-      // Use getProgramAccounts with memcmp filters:
-      // - Filter 1: Account discriminator (bytes 0-7)
-      // - Filter 2: Owner pubkey (bytes 8-39)
-      final ownerBytes =
-          Ed25519HDPublicKey.fromBase58(ownerPubkey).bytes;
-
       final accounts = await rpcClient.rpcClient.getProgramAccounts(
         diggleMartProgramId,
         encoding: Encoding.base64,
         filters: [
-          // Filter by account discriminator
+          // Filter by 1-byte account discriminator at offset 0
           ProgramDataFilter.memcmpBase58(
             offset: 0,
-            bytes: base58encode(_discBoosterAccount),
+            bytes: base58encode(Uint8List.fromList([_discBoosterAccount])),
           ),
-          // Filter by owner
+          // Filter by owner pubkey at offset 1 (right after 1-byte discriminator)
           ProgramDataFilter.memcmpBase58(
-            offset: 8,
+            offset: 1,
             bytes: ownerPubkey,
           ),
         ],
@@ -360,7 +274,8 @@ class DiggleMartClient {
       final boosters = <OnChainBooster>[];
       for (final account in accounts) {
         try {
-          final data = Uint8List.fromList((account.account.data as BinaryAccountData).data);
+          final data = Uint8List.fromList(
+              (account.account.data as BinaryAccountData).data);
           final booster = _deserializeBooster(data, account.pubkey);
           if (booster != null && !booster.isExpired) {
             boosters.add(booster);
@@ -374,28 +289,6 @@ class DiggleMartClient {
     } catch (e) {
       debugPrint('Error fetching boosters: $e');
       return [];
-    }
-  }
-
-  /// Fetch NFT collection data
-  Future<OnChainNftCollection?> fetchNftCollection() async {
-    try {
-      final pda = await getNftCollectionPda();
-      final accountInfo = await rpcClient.rpcClient.getAccountInfo(
-        pda.toBase58(),
-        encoding: Encoding.base64,
-      );
-
-      if (accountInfo.value == null || accountInfo.value!.data == null) {
-        debugPrint('NFT collection account not found');
-        return null;
-      }
-
-      final data = Uint8List.fromList((accountInfo.value!.data as BinaryAccountData).data);
-      return _deserializeNftCollection(data);
-    } catch (e) {
-      debugPrint('Error fetching NFT collection: $e');
-      return null;
     }
   }
 
@@ -480,54 +373,6 @@ class DiggleMartClient {
     return _buildSerializedTransaction(instruction, buyer);
   }
 
-  /// Build a mintNft transaction.
-  ///
-  /// [minter] - the wallet minting (signer + payer)
-  /// [nftMintPubkey] - the pre-created mint account pubkey
-  ///
-  /// NOTE: The nft mint account must be created in a preceding instruction
-  /// within the same transaction. This method returns the mint_nft instruction.
-  /// The caller is responsible for also including create_account + initialize_mint
-  /// instructions for the nft mint keypair.
-  ///
-  /// Returns serialized transaction bytes ready for MWA signing.
-  Future<Uint8List> buildMintNftTx({
-    required Ed25519HDPublicKey minter,
-    required Ed25519HDPublicKey nftMintPubkey,
-  }) async {
-    final nftCollectionPda = await getNftCollectionPda();
-    final treasuryPda = await getTreasuryPda();
-    final minterAta = await getAssociatedTokenAddress(minter, nftMintPubkey);
-
-    final tokenProgram = Ed25519HDPublicKey.fromBase58(tokenProgramId);
-    final ataProgramPubkey =
-    Ed25519HDPublicKey.fromBase58(associatedTokenProgramId);
-    final systemProgram = Ed25519HDPublicKey.fromBase58(systemProgramId);
-    final rent = Ed25519HDPublicKey.fromBase58(sysvarRentId);
-
-    // Instruction data: just the discriminator (no args)
-    final data = BytesBuilder();
-    data.add(_discMintNft);
-
-    final instruction = Instruction(
-      programId: programId,
-      accounts: [
-        AccountMeta.writeable(pubKey: minter, isSigner: true),
-        AccountMeta.writeable(pubKey: nftCollectionPda, isSigner: false),
-        AccountMeta.writeable(pubKey: nftMintPubkey, isSigner: false),
-        AccountMeta.writeable(pubKey: minterAta, isSigner: false),
-        AccountMeta.writeable(pubKey: treasuryPda, isSigner: false),
-        AccountMeta.readonly(pubKey: tokenProgram, isSigner: false),
-        AccountMeta.readonly(pubKey: ataProgramPubkey, isSigner: false),
-        AccountMeta.readonly(pubKey: systemProgram, isSigner: false),
-        AccountMeta.readonly(pubKey: rent, isSigner: false),
-      ],
-      data: ByteArray(data.toBytes()),
-    );
-
-    return _buildSerializedTransaction(instruction, minter);
-  }
-
   // ============================================================
   // TRANSACTION HELPERS
   // ============================================================
@@ -557,28 +402,9 @@ class DiggleMartClient {
       feePayer: feePayer,
     );
 
-
     final numSignatures = compiledMessage.requiredSignatureCount;
     debugPrint('Compiled message: $numSignatures required sigs, '
         '${compiledMessage.accountKeys.length} accounts');
-    /* Build wire format manually for maximum compatibility
-    final buffer = BytesBuilder();
-    // 1. Compact-u16: number of signatures
-    _writeCompactU16(buffer, numSignatures);
-
-    // 2. Placeholder signatures (64 zero bytes each)
-    for (int i = 0; i < numSignatures; i++) {
-      buffer.add(Uint8List(64)); // 64 zero bytes
-    }
-    // 3. Serialized message bytes
-    // CompiledMessage.data returns ByteArray with the serialized message
-    final messageBytes = compiledMessage.toList();
-    buffer.add(messageBytes);
-
-    final txBytes = Uint8List.fromList(buffer.toBytes());
-    debugPrint('Serialized tx: ${txBytes.length} bytes '
-        '(sigs: ${numSignatures * 64 + 1}, msg: ${messageBytes.length})');
-    return txBytes;*/
 
     // Build wire format using SignedTx with placeholder signatures
     final tx = SignedTx(
@@ -593,21 +419,6 @@ class DiggleMartClient {
     return txBytes;
   }
 
-/* /// Write a compact-u16 value to a BytesBuilder.
-  /// Solana uses a variable-length encoding for small integers.
-  void _writeCompactU16(BytesBuilder buffer, int value) {
-    if (value < 0x80) {
-      buffer.addByte(value);
-    } else if (value < 0x4000) {
-      buffer.addByte((value & 0x7F) | 0x80);
-      buffer.addByte(value >> 7);
-    } else {
-      buffer.addByte((value & 0x7F) | 0x80);
-      buffer.addByte(((value >> 7) & 0x7F) | 0x80);
-      buffer.addByte(value >> 14);
-    }
-  }
-*/
   /// Confirm a transaction signature
   Future<bool> confirmTransaction(String signature,
       {Duration timeout = const Duration(seconds: 30)}) async {
@@ -637,19 +448,18 @@ class DiggleMartClient {
   // DESERIALIZATION
   // ============================================================
 
-  /// Deserialize Store account data (after discriminator)
+  /// Deserialize Store account data (1-byte discriminator)
   OnChainStore? _deserializeStore(Uint8List data) {
-    if (data.length < 8) return null;
+    if (data.isEmpty) return null;
 
-    // Verify discriminator
-    for (int i = 0; i < 8; i++) {
-      if (data[i] != _discStoreAccount[i]) {
-        debugPrint('Store discriminator mismatch');
-        return null;
-      }
+    // Verify 1-byte discriminator
+    if (data[0] != _discStoreAccount) {
+      debugPrint(
+          'Store discriminator mismatch: got ${data[0]}, expected $_discStoreAccount');
+      return null;
     }
 
-    final reader = _BorshReader(data, 8); // Skip discriminator
+    final reader = _BorshReader(data, 1); // Skip 1-byte discriminator
 
     final authority = reader.readPubkey();
     final treasury = reader.readPubkey();
@@ -693,15 +503,14 @@ class DiggleMartClient {
     );
   }
 
-  /// Deserialize BoosterAccount data
+  /// Deserialize BoosterAccount data (1-byte discriminator)
   OnChainBooster? _deserializeBooster(Uint8List data, String address) {
-    if (data.length < 8) return null;
+    if (data.isEmpty) return null;
 
-    for (int i = 0; i < 8; i++) {
-      if (data[i] != _discBoosterAccount[i]) return null;
-    }
+    // Verify 1-byte discriminator
+    if (data[0] != _discBoosterAccount) return null;
 
-    final reader = _BorshReader(data, 8);
+    final reader = _BorshReader(data, 1); // Skip 1-byte discriminator
 
     final owner = reader.readPubkey();
     final boosterType = reader.readU8();
@@ -722,41 +531,6 @@ class DiggleMartClient {
       pricePaid: pricePaid,
       bump: bump,
       address: address,
-    );
-  }
-
-  /// Deserialize NftCollection account data
-  OnChainNftCollection? _deserializeNftCollection(Uint8List data) {
-    if (data.length < 8) return null;
-
-    for (int i = 0; i < 8; i++) {
-      if (data[i] != _discNftCollectionAccount[i]) return null;
-    }
-
-    final reader = _BorshReader(data, 8);
-
-    final authority = reader.readPubkey();
-    final collectionMint = reader.readPubkey();
-    final maxSupply = reader.readU32();
-    final currentSupply = reader.readU32();
-    final mintPrice = reader.readU64();
-    final name = reader.readString();
-    final symbol = reader.readString();
-    final uri = reader.readString();
-    final isActive = reader.readBool();
-    final bump = reader.readU8();
-
-    return OnChainNftCollection(
-      authority: authority,
-      collectionMint: collectionMint,
-      maxSupply: maxSupply,
-      currentSupply: currentSupply,
-      mintPrice: mintPrice,
-      name: name,
-      symbol: symbol,
-      uri: uri,
-      isActive: isActive,
-      bump: bump,
     );
   }
 

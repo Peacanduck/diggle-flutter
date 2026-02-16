@@ -189,9 +189,6 @@ class BoostManager extends ChangeNotifier {
   /// On-chain store data
   OnChainStore? _storeData;
 
-  /// NFT collection data from chain
-  OnChainNftCollection? _nftCollectionData;
-
   /// Expiry check timer
   Timer? _expiryTimer;
 

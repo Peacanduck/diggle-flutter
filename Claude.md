@@ -74,8 +74,7 @@ lib/
 | `withdrawTreasury` | `amount: u64` | Admin: withdraw SOL from treasury |
 | `purchaseBooster` | `boosterType: u8, durationSeconds: i64` | Buy timed XP/Points/Combo boost |
 | `purchasePointsPack` | `packType: u8` | Buy points (0=small, 1=large) |
-| `mintNft` | — | Mint limited edition NFT from collection |
-| `initializeNftCollection` | `maxSupply, mintPrice, name, symbol, uri` | Admin: setup NFT collection |
+
 
 ### Account Types
 
@@ -84,7 +83,7 @@ lib/
 | `Store` | `[130, 48, 247, 244, 182, 191, 30, 26]` | `["store"]` |
 | `Treasury` (PDA, no data) | — | `["treasury"]` |
 | `BoosterAccount` | `[76, 202, 210, 44, 136, 61, 228, 19]` | `["booster", buyer_pubkey, booster_count_u64_le]` |
-| `NftCollection` | `[230, 92, 80, 190, 97, 0, 132, 22]` | `["nft_collection"]` |
+
 
 ### Instruction Discriminators
 
@@ -92,7 +91,7 @@ lib/
 |---|---|
 | `purchaseBooster` | `[251, 49, 11, 156, 68, 194, 21, 140]` |
 | `purchasePointsPack` | `[125, 42, 47, 199, 26, 93, 227, 99]` |
-| `mintNft` | `[211, 57, 6, 167, 15, 219, 35, 251]` |
+
 
 ### StoreConfig Fields
 

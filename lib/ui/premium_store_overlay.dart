@@ -515,7 +515,7 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
               ],
             ).createShader(bounds),
             child: const Text(
-              'DIGGLE DIAMOND DRILL',
+              'DIGGLE DRILL MACHINE',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 22,
@@ -741,7 +741,7 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
   Widget _buildNFTOwned(CandyMachineService cms) {
     final nft = cms.ownedNFT;
     final imageUri = nft?.imageUri;
-    final nftName = nft?.name ?? 'DIAMOND DRILL HOLDER';
+    final nftName = nft?.name ?? 'DRILL MACHINE HOLDER';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -912,7 +912,7 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
         ),
         const SizedBox(height: 8),
         Text(
-          'All Diggle Diamond Drill NFTs have been minted!',
+          'All Diggle Drill NFTs have been minted!',
           style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
           textAlign: TextAlign.center,
         ),
@@ -1075,12 +1075,15 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
               children: [
                 Row(
                   children: [
-                    Text(
-                      item.name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
+                    Flexible(
+                      child: Text(
+                        item.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (item.requiresWallet) ...[

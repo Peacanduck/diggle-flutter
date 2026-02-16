@@ -15,7 +15,7 @@ class SupabaseService {
   // ── Configuration ──────────────────────────────────────────────
   // TODO: Move to environment config / --dart-define
   static const String _supabaseUrl = 'https://vdcpbqsnkivokroqxelq.supabase.co';
-  static const String _supabaseAnonKey = 'sb_publishable_3Lt47dggCSWufo6kLq6fzg_B7yvx0Lm';
+  static const String _supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkY3BicXNua2l2b2tyb3F4ZWxxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2MTkzNjAsImV4cCI6MjA4NjE5NTM2MH0.FZOVMRmElsmlGLqJp1QkKVQoMTmc2lkBlF4Sk8yuNi8';
 
   SupabaseClient get client => Supabase.instance.client;
   bool _initialized = false;
@@ -44,8 +44,52 @@ class SupabaseService {
     // Restore session if user was previously signed in
     final session = client.auth.currentSession;
     if (session != null) {
-      _playerId = session.user.id;
-      debugPrint('Supabase: restored session for player $_playerId');
+      // Validate the restored session is still valid server-side
+      try {
+        final userResponse = await client.auth.getUser();
+        if (userResponse.user != null) {
+          _playerId = userResponse.user!.id;
+          debugPrint('Supabase: restored session for player $_playerId');
+
+          // Verify the player row actually exists in the database
+          final playerExists = await _verifyPlayerRow(_playerId!);
+          if (!playerExists) {
+            debugPrint('Supabase: session valid but player row missing — will re-create on ensurePlayer');
+            // Don't clear _playerId — auth is valid, just needs the DB row
+          }
+        } else {
+          debugPrint('Supabase: restored session has no user — clearing');
+          await _clearStaleSession();
+        }
+      } catch (e) {
+        debugPrint('Supabase: session validation failed ($e) — clearing stale session');
+        await _clearStaleSession();
+      }
+    }
+  }
+
+  /// Clear a stale/invalid session so the next ensurePlayer does a fresh sign-in.
+  Future<void> _clearStaleSession() async {
+    _playerId = null;
+    try {
+      await client.auth.signOut(scope: SignOutScope.local);
+    } catch (e) {
+      debugPrint('Supabase: error during stale session cleanup: $e');
+    }
+  }
+
+  /// Check if the player row exists in the players table.
+  Future<bool> _verifyPlayerRow(String playerId) async {
+    try {
+      final result = await client
+          .from('players')
+          .select('id')
+          .eq('id', playerId)
+          .maybeSingle();
+      return result != null;
+    } catch (e) {
+      debugPrint('Supabase: error verifying player row: $e');
+      return false;
     }
   }
 
@@ -56,9 +100,16 @@ class SupabaseService {
   Future<String> ensurePlayer(String deviceId, {String? displayName}) async {
     _assertInitialized();
 
-    // If already authenticated, just update last_seen
+    // If already authenticated, verify the player row exists
     if (_playerId != null) {
-      await _touchLastSeen();
+      final exists = await _verifyPlayerRow(_playerId!);
+      if (exists) {
+        await _touchLastSeen();
+        return _playerId!;
+      }
+      // Auth user exists but player row doesn't — re-create it
+      debugPrint('Supabase: player row missing for $_playerId, re-creating...');
+      await _createPlayerRow(deviceId, displayName);
       return _playerId!;
     }
 
@@ -74,16 +125,59 @@ class SupabaseService {
       _playerId = userId;
       debugPrint('Supabase: signed in anonymously as $_playerId');
 
-      // Create player + stats rows via server function
+      // Create player + stats rows
+      await _createPlayerRow(deviceId, displayName);
+      return _playerId!;
+    } catch (e) {
+      debugPrint('Supabase auth error: $e');
+      rethrow;
+    }
+  }
+
+  /// Create the player and stats rows in the database.
+  /// Tries the RPC function first, falls back to direct insert.
+  Future<void> _createPlayerRow(String deviceId, String? displayName) async {
+    try {
       await client.rpc('create_player_with_stats', params: {
         'p_device_id': deviceId,
         'p_display_name': displayName,
       });
 
-      debugPrint('Supabase: player record ensured');
-      return _playerId!;
+      // Verify it actually worked
+      final exists = await _verifyPlayerRow(_playerId!);
+      if (exists) {
+        debugPrint('Supabase: player record ensured via RPC');
+        return;
+      }
+
+      debugPrint('Supabase: RPC succeeded but player row not found — trying direct insert');
     } catch (e) {
-      debugPrint('Supabase auth error: $e');
+      debugPrint('Supabase: RPC create_player_with_stats failed: $e — trying direct insert');
+    }
+
+    // Fallback: direct insert
+    try {
+      await client.from('players').upsert({
+        'id': _playerId!,
+        'device_id': deviceId,
+        'display_name': displayName,
+        'last_seen_at': DateTime.now().toUtc().toIso8601String(),
+      });
+
+      // Also create the stats row if it doesn't exist
+      try {
+        await client.from('player_stats').upsert({
+          'player_id': _playerId!,
+          'total_xp': 0,
+          'total_points': 0,
+        });
+      } catch (e) {
+        debugPrint('Supabase: stats row creation failed (may already exist): $e');
+      }
+
+      debugPrint('Supabase: player record ensured via direct insert');
+    } catch (e) {
+      debugPrint('Supabase: direct insert also failed: $e');
       rethrow;
     }
   }
