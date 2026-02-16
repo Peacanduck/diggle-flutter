@@ -515,7 +515,7 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
               ],
             ).createShader(bounds),
             child: const Text(
-              'DIGGLE DIAMOND DRILL',
+              'DIGGLE DRILL Machine',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 22,
@@ -736,37 +736,63 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
 
   /// Shows the "already owned" state
   Widget _buildNFTOwned(CandyMachineService cms) {
+    final nft = cms.ownedNFT;
+    final imageUri = nft?.imageUri;
+    final nftName = nft?.name ?? 'DRILL Machine HOLDER';
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          // Checkmark badge
+          // NFT image or fallback checkmark
           Container(
-            width: 90,
-            height: 90,
+            width: 120,
+            height: 120,
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  Colors.green.shade900.withOpacity(0.4),
-                  Colors.transparent,
-                ],
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.green.shade400.withOpacity(0.6),
+                width: 2,
               ),
-            ),
-            child: Center(
-              child: Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: Colors.green.shade900.withOpacity(0.5),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.green.shade400.withOpacity(0.5),
-                    width: 2,
-                  ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.green.withOpacity(0.2),
+                  blurRadius: 20,
+                  spreadRadius: 2,
                 ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: imageUri != null
+                  ? Image.network(
+                imageUri,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    color: Colors.green.shade900.withOpacity(0.3),
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.green,
+                      ),
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.green.shade900.withOpacity(0.3),
+                    child: const Center(
+                      child: Text('💎', style: TextStyle(fontSize: 40)),
+                    ),
+                  );
+                },
+              )
+                  : Container(
+                color: Colors.green.shade900.withOpacity(0.3),
                 child: const Center(
-                  child: Text('✅', style: TextStyle(fontSize: 28)),
+                  child: Text('💎', style: TextStyle(fontSize: 40)),
                 ),
               ),
             ),
@@ -774,14 +800,15 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
 
           const SizedBox(height: 16),
 
-          const Text(
-            'DIAMOND DRILL HOLDER',
-            style: TextStyle(
+          Text(
+            nftName.toUpperCase(),
+            style: const TextStyle(
               color: Colors.green,
               fontSize: 20,
               fontWeight: FontWeight.w900,
               letterSpacing: 2,
             ),
+            textAlign: TextAlign.center,
           ),
 
           const SizedBox(height: 8),
@@ -879,7 +906,7 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
         ),
         const SizedBox(height: 8),
         Text(
-          'All Diggle Diamond Drill NFTs have been minted!',
+          'All Diggle Drill Machine NFTs have been minted!',
           style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
           textAlign: TextAlign.center,
         ),

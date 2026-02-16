@@ -400,8 +400,8 @@ class CandyMachineService extends ChangeNotifier {
       _mintStatus = MintStatus.success;
       notifyListeners();
 
-      // Refresh ownership in background (slight delay for RPC to catch up)
-      Future.delayed(const Duration(seconds: 3), () => checkNFTOwnership());
+      // Refresh ownership in background (delay for RPC to catch up + network recovery)
+      Future.delayed(const Duration(seconds: 5), () => checkNFTOwnership());
 
       return signature;
 
@@ -441,20 +441,34 @@ class CandyMachineService extends ChangeNotifier {
 
     try {
       final client = _solanaClient;
-
       final ownerPubkey = _wallet.publicKey!;
       debugPrint('CandyMachine: Checking NFT ownership for $ownerPubkey');
 
-      // Get all token accounts owned by this wallet
-      // Use base64 encoding to avoid typed-object parsing issues
-      final tokenAccounts = await client.rpcClient.getTokenAccountsByOwner(
-        ownerPubkey,
-        TokenAccountsFilter.byProgramId(
-          'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-        ),
-        encoding: Encoding.base64,
-        commitment: Commitment.confirmed,
-      );
+      // Retry logic — Android network can be flaky after MWA app switch
+      late final dynamic tokenAccounts;
+      const maxRetries = 3;
+      for (int attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          if (attempt > 1) {
+            debugPrint('CandyMachine: NFT check retry $attempt/$maxRetries...');
+            await Future.delayed(Duration(seconds: attempt * 2));
+          }
+          tokenAccounts = await client.rpcClient.getTokenAccountsByOwner(
+            ownerPubkey,
+            TokenAccountsFilter.byProgramId(
+              'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+            ),
+            encoding: Encoding.base64,
+            commitment: Commitment.confirmed,
+          );
+          break; // Success
+        } catch (e) {
+          final isNetworkError = e.toString().contains('SocketException') ||
+              e.toString().contains('host lookup') ||
+              e.toString().contains('Connection refused');
+          if (!isNetworkError || attempt == maxRetries) rethrow;
+        }
+      }
 
       debugPrint('CandyMachine: Found ${tokenAccounts.value.length} token accounts');
 
@@ -489,16 +503,23 @@ class CandyMachineService extends ChangeNotifier {
           debugPrint('CandyMachine: Checking NFT mint: $mintAddress');
 
           // Check if this NFT belongs to our collection
-          final isDiggle = await _isDiggleCollectionNFT(client, mintAddress);
-          if (isDiggle) {
+          final result = await _isDiggleCollectionNFT(client, mintAddress);
+          if (result.isMatch) {
+            // Fetch the off-chain metadata JSON for the image
+            String? imageUri;
+            if (result.uri != null && result.uri!.isNotEmpty) {
+              imageUri = await _fetchNFTImageUri(result.uri!);
+            }
+
             _ownedNFT = OwnedDiggleNFT(
               mintAddress: mintAddress,
               tokenAccount: account.pubkey,
-              name: null,
+              name: result.name,
+              imageUri: imageUri,
             );
             _isCheckingOwnership = false;
             notifyListeners();
-            debugPrint('CandyMachine: ✅ Found Diggle NFT: $mintAddress');
+            debugPrint('CandyMachine: ✅ Found Diggle NFT: $mintAddress (image: $imageUri)');
             return true;
           }
         } catch (e) {
@@ -525,13 +546,14 @@ class CandyMachineService extends ChangeNotifier {
 
   /// Check if an NFT mint belongs to the Diggle collection
   /// by reading its on-chain metadata and checking the collection field.
-  Future<bool> _isDiggleCollectionNFT(
+  /// Returns name and URI if it matches.
+  Future<({bool isMatch, String? name, String? uri})> _isDiggleCollectionNFT(
       SolanaClient client,
       String mintAddress,
       ) async {
+    const noMatch = (isMatch: false, name: null, uri: null);
     try {
       // Derive the metadata PDA
-      // Seeds: ["metadata", token_metadata_program, mint]
       final metadataProgramKey =
       Ed25519HDPublicKey.fromBase58(_tokenMetadataProgram);
       final mintKey = Ed25519HDPublicKey.fromBase58(mintAddress);
@@ -547,13 +569,10 @@ class CandyMachineService extends ChangeNotifier {
         programId: metadataProgramKey,
       );
 
-      // findProgramAddress may return Ed25519HDPublicKey or a record type
-      // depending on the solana package version
       String metadataPdaBase58;
       if (result is Ed25519HDPublicKey) {
         metadataPdaBase58 = result.toBase58();
       } else {
-        // Try accessing as a record/tuple (newer versions)
         try {
           metadataPdaBase58 = (result as dynamic).toBase58();
         } catch (_) {
@@ -564,7 +583,7 @@ class CandyMachineService extends ChangeNotifier {
               metadataPdaBase58 = (result as dynamic).key.toBase58();
             } catch (e) {
               debugPrint('CandyMachine: Cannot extract PDA address from result type: ${result.runtimeType}');
-              return false;
+              return noMatch;
             }
           }
         }
@@ -572,7 +591,6 @@ class CandyMachineService extends ChangeNotifier {
 
       debugPrint('CandyMachine: Metadata PDA for $mintAddress: $metadataPdaBase58');
 
-      // Fetch the metadata account
       final accountInfo = await client.rpcClient.getAccountInfo(
         metadataPdaBase58,
         encoding: Encoding.base64,
@@ -581,12 +599,11 @@ class CandyMachineService extends ChangeNotifier {
 
       if (accountInfo.value == null || accountInfo.value!.data == null) {
         debugPrint('CandyMachine: No metadata account found for $mintAddress');
-        return false;
+        return noMatch;
       }
 
       debugPrint('CandyMachine: Metadata account found, owner: ${accountInfo.value!.owner}');
 
-      // Parse the metadata to check collection field
       final data = accountInfo.value!.data;
       if (data is BinaryAccountData) {
         final bytes = Uint8List.fromList(data.data);
@@ -596,16 +613,17 @@ class CandyMachineService extends ChangeNotifier {
         debugPrint('CandyMachine: Unexpected data type: ${data.runtimeType}');
       }
 
-      return false;
+      return noMatch;
     } catch (e, stack) {
       debugPrint('CandyMachine: Error checking collection for $mintAddress: $e');
       debugPrint('CandyMachine: Stack: $stack');
-      return false;
+      return noMatch;
     }
   }
 
-  /// Parse Metaplex metadata bytes to check if the collection field
-  /// matches our expected collection mint.
+  /// Result of parsing collection metadata
+  /// Contains the collection match status plus name and URI if found.
+  /// Parse Metaplex metadata bytes to check collection and extract name/uri.
   ///
   /// Metadata V1 layout (simplified):
   ///   - key (1 byte)
@@ -621,7 +639,7 @@ class CandyMachineService extends ChangeNotifier {
   ///   - edition_nonce (optional: 1 bool + 1 byte)
   ///   - token_standard (optional: 1 bool + 1 byte)
   ///   - collection (optional: 1 bool + 1 verified + 32 key)
-  bool _parseCollectionFromMetadata(
+  ({bool isMatch, String? name, String? uri}) _parseCollectionFromMetadata(
       Uint8List bytes,
       String expectedCollection,
       ) {
@@ -636,29 +654,39 @@ class CandyMachineService extends ChangeNotifier {
       offset += 32;
 
       // name (borsh string: 4 byte len + data)
-      if (offset + 4 > bytes.length) return false;
+      if (offset + 4 > bytes.length) return (isMatch: false, name: null, uri: null);
       final nameLen = _readU32LE(bytes, offset);
-      offset += 4 + nameLen;
+      offset += 4;
+      final name = String.fromCharCodes(bytes.sublist(offset, offset + nameLen))
+          .replaceAll('\x00', '')
+          .trim();
+      offset += nameLen;
 
       // symbol
-      if (offset + 4 > bytes.length) return false;
+      if (offset + 4 > bytes.length) return (isMatch: false, name: name, uri: null);
       final symbolLen = _readU32LE(bytes, offset);
       offset += 4 + symbolLen;
 
       // uri
-      if (offset + 4 > bytes.length) return false;
+      if (offset + 4 > bytes.length) return (isMatch: false, name: name, uri: null);
       final uriLen = _readU32LE(bytes, offset);
-      offset += 4 + uriLen;
+      offset += 4;
+      final uri = String.fromCharCodes(bytes.sublist(offset, offset + uriLen))
+          .replaceAll('\x00', '')
+          .trim();
+      offset += uriLen;
+
+      debugPrint('CandyMachine: Parsed metadata — name: "$name", uri: "$uri"');
 
       // seller_fee_basis_points (2)
       offset += 2;
 
       // creators (Option<Vec<Creator>>)
-      if (offset >= bytes.length) return false;
+      if (offset >= bytes.length) return (isMatch: false, name: name, uri: uri);
       final hasCreators = bytes[offset] == 1;
       offset += 1;
       if (hasCreators) {
-        if (offset + 4 > bytes.length) return false;
+        if (offset + 4 > bytes.length) return (isMatch: false, name: name, uri: uri);
         final numCreators = _readU32LE(bytes, offset);
         offset += 4;
         // Each creator: 32 (address) + 1 (verified) + 1 (share) = 34
@@ -672,25 +700,25 @@ class CandyMachineService extends ChangeNotifier {
       offset += 1;
 
       // edition_nonce (Option<u8>)
-      if (offset >= bytes.length) return false;
+      if (offset >= bytes.length) return (isMatch: false, name: name, uri: uri);
       final hasEditionNonce = bytes[offset] == 1;
       offset += 1;
       if (hasEditionNonce) offset += 1;
 
       // token_standard (Option<u8>)
-      if (offset >= bytes.length) return false;
+      if (offset >= bytes.length) return (isMatch: false, name: name, uri: uri);
       final hasTokenStandard = bytes[offset] == 1;
       offset += 1;
       if (hasTokenStandard) offset += 1;
 
       // collection (Option<Collection>)
       // Collection = { verified: bool(1), key: Pubkey(32) }
-      if (offset >= bytes.length) return false;
+      if (offset >= bytes.length) return (isMatch: false, name: name, uri: uri);
       final hasCollection = bytes[offset] == 1;
       offset += 1;
 
-      if (!hasCollection) return false;
-      if (offset + 33 > bytes.length) return false;
+      if (!hasCollection) return (isMatch: false, name: name, uri: uri);
+      if (offset + 33 > bytes.length) return (isMatch: false, name: name, uri: uri);
 
       final verified = bytes[offset] == 1;
       offset += 1;
@@ -705,11 +733,36 @@ class CandyMachineService extends ChangeNotifier {
             'verified=$verified, expected=$expectedCollection',
       );
 
-      return collectionKeyBase58 == expectedCollection && verified;
+      final isMatch = collectionKeyBase58 == expectedCollection && verified;
+      return (isMatch: isMatch, name: name, uri: uri);
     } catch (e) {
       debugPrint('CandyMachine: Metadata parse error: $e');
-      return false;
+      return (isMatch: false, name: null, uri: null);
     }
+  }
+
+  /// Fetch the image URI from the NFT's off-chain metadata JSON.
+  /// The on-chain metadata URI points to a JSON file (e.g. on Arweave/IPFS)
+  /// that contains an "image" field with the actual image URL.
+  Future<String?> _fetchNFTImageUri(String metadataUri) async {
+    try {
+      debugPrint('CandyMachine: Fetching off-chain metadata from: $metadataUri');
+      final response = await http
+          .get(Uri.parse(metadataUri))
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final image = json['image'] as String?;
+        debugPrint('CandyMachine: NFT image URI: $image');
+        return image;
+      } else {
+        debugPrint('CandyMachine: Metadata fetch failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('CandyMachine: Error fetching NFT metadata JSON: $e');
+    }
+    return null;
   }
 
   int _readU32LE(Uint8List bytes, int offset) {
