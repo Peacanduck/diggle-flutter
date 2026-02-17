@@ -308,7 +308,7 @@ class _MainMenuState extends State<MainMenu>
     return Column(
       children: [
         Text(
-          'Pleb Solutions',
+          'PyroLabs',
           style: TextStyle(
             color: Colors.white.withOpacity(0.2),
             fontSize: 11,

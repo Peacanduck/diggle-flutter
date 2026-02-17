@@ -102,8 +102,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
       );
     }
 
-    debugPrint('DiggleGame: services attached '
-        '(xp: ${stats.xp}, pts: ${stats.points}, lvl: ${stats.level})');
+    debugPrint('DiggleGame: services attached');
   }
 
   @override
@@ -156,7 +155,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
 
     // --- 3. Add Joystick to Camera Viewport (HUD) ---
     // This ensures it stays fixed on screen while the camera moves
-   // camera.viewport.add(joystick);
+    // camera.viewport.add(joystick);
 
     // Camera setup
     camera.viewfinder.anchor = Anchor.center;
@@ -183,7 +182,8 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     //xpPointsSystem.updateDepth(drill.depth);
     //xpPointsSystem.checkDepthMilestone(drill.depth);
     // CHANGED: Use bridge instead of xpPointsSystem directly
-    statsBridge?.checkDepthMilestone(drill.depth); //??  xpPointsSystem.checkDepthMilestone(drill.depth);
+    statsBridge?.checkDepthMilestone(drill.depth) ??
+        xpPointsSystem.checkDepthMilestone(drill.depth);
 
     // Track play time (sync every 60s)
     _playTimeAccumulator += dt;
@@ -207,7 +207,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     overlays.add('gameOver');
     overlays.remove('hud');
     // Hide joystick on game over
-   // joystick.removeFromParent();
+    // joystick.removeFromParent();
   }
 
   void _handleReachSurface() {}
@@ -218,7 +218,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     fuelSystem.pause();
     overlays.add('shop');
     // Hide joystick in shop
-   // if (joystick.parent != null) joystick.removeFromParent();
+    // if (joystick.parent != null) joystick.removeFromParent();
   }
 
   void openPremiumStore() {
@@ -232,7 +232,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     fuelSystem.resume();
     overlays.remove('shop');
     // Restore joystick
-   // if (joystick.parent == null) camera.viewport.add(joystick);
+    // if (joystick.parent == null) camera.viewport.add(joystick);
   }
 
   void restart() {
@@ -261,7 +261,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
       overlays.add('hud');
     }
     // Ensure joystick is visible
-   // if (joystick.parent == null) camera.viewport.add(joystick);
+    // if (joystick.parent == null) camera.viewport.add(joystick);
   }
 
   void pause() {
@@ -279,7 +279,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     fuelSystem.resume();
     overlays.remove('pause');
     // Restore joystick
-   // if (joystick.parent == null) camera.viewport.add(joystick);
+    // if (joystick.parent == null) camera.viewport.add(joystick);
   }
 
   /* Input (Legacy - kept for compatibility if you have buttons, but Joystick takes priority)*/
@@ -461,7 +461,8 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     final earned = economySystem.sellAllOre();
     if (earned > 0) {
       // xpPointsSystem.awardForSale(earned, economySystem.totalOreCollected);
-      statsBridge?.awardForSale(earned, economySystem.totalOreCollected); //?? xpPointsSystem.awardForSale(earned, economySystem.totalOreCollected);
+      statsBridge?.awardForSale(earned, economySystem.totalOreCollected) ??
+          xpPointsSystem.awardForSale(earned, economySystem.totalOreCollected);
     }
     return earned;
   }
