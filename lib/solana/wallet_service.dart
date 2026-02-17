@@ -480,6 +480,98 @@ class WalletService extends ChangeNotifier {
   }
 
   // ============================================================
+  // MESSAGE SIGNING (for Sign In With Solana)
+  // ============================================================
+
+  /// Sign a message (arbitrary bytes) via MWA.
+  ///
+  /// Used for wallet-based authentication (Sign In With Solana).
+  /// The wallet app will show the message and ask the user to approve.
+  ///
+  /// [messageBytes] - the raw message bytes to sign
+  ///
+  /// Returns the 64-byte ed25519 signature, or null on failure.
+  Future<Uint8List?> signMessage(Uint8List messageBytes) async {
+    if (!isConnected || _authToken == null) {
+      _errorMessage = 'Wallet not connected';
+      notifyListeners();
+      return null;
+    }
+
+    LocalAssociationScenario? session;
+
+    try {
+      debugPrint('Opening MWA session for message signing...');
+      session = await LocalAssociationScenario.create();
+
+      // ignore: unawaited_futures
+      session.startActivityForResult(null);
+      final client = await session.start();
+
+      // Reauthorize
+      debugPrint('Reauthorizing...');
+      final reauth = await client.reauthorize(
+        identityUri: Uri.parse('https://diggle.app'),
+        iconUri: Uri.parse('favicon.ico'),
+        identityName: 'Diggle',
+        authToken: _authToken!,
+      );
+
+      if (reauth == null) {
+        final freshAuth = await client.authorize(
+          identityUri: Uri.parse('https://diggle.app'),
+          iconUri: Uri.parse('favicon.ico'),
+          identityName: 'Diggle',
+          cluster: _cluster.value,
+        );
+        if (freshAuth == null) {
+          _errorMessage = 'Authorization failed';
+          notifyListeners();
+          return null;
+        }
+        _publicKeyBytes = freshAuth.publicKey;
+        _authToken = freshAuth.authToken;
+      } else {
+        _authToken = reauth.authToken;
+      }
+
+      // Sign the message
+      debugPrint('Signing message (${messageBytes.length} bytes)...');
+      final result = await client.signMessages(
+        messages: [messageBytes],
+        addresses: [_publicKeyBytes!],
+      );
+
+      if (result != null && result.signedMessages.isNotEmpty) {
+        final signedMessage = result.signedMessages.first;
+        if (signedMessage.signatures.isNotEmpty) {
+          final signature = Uint8List.fromList(signedMessage.signatures.first);
+          debugPrint('Message signed successfully (${signature.length} bytes)');
+          return signature;
+        }
+      }
+
+      _errorMessage = 'Message signing was cancelled';
+      notifyListeners();
+      return null;
+    } catch (e, stackTrace) {
+      debugPrint('Message signing error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      _errorMessage = _getTransactionError(e);
+      notifyListeners();
+      return null;
+    } finally {
+      if (session != null) {
+        try {
+          await session.close();
+        } catch (e) {
+          debugPrint('Error closing MWA session: $e');
+        }
+      }
+    }
+  }
+
+  // ============================================================
   // ERROR HANDLING
   // ============================================================
 

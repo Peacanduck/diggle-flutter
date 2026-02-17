@@ -7,11 +7,12 @@
 ///
 /// Usage:
 ///   Created in main.dart, registered with Provider.
-///   Call bootstrap() once at startup.
-///   Call onGamePause() / onGameResume() from game lifecycle.
+///   Call bootstrap() once after authentication.
+///   Call reset() on sign-out so the next user can bootstrap fresh.
 
-import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import '../solana/wallet_service.dart';
 import 'supabase_service.dart';
 import 'stats_service.dart';
@@ -39,7 +40,8 @@ class GameLifecycleManager {
 
   // ── Bootstrap ──────────────────────────────────────────────────
 
-  /// Call once at app startup. Signs in anonymously and loads player data.
+  /// Call once after authentication succeeds.
+  /// Creates the player row (if needed) and loads stats.
   Future<void> bootstrap() async {
     if (_bootstrapped) return;
 
@@ -49,12 +51,17 @@ class GameLifecycleManager {
         return;
       }
 
-      // Generate a stable device ID
-      final deviceId = _getDeviceId();
+      if (!SupabaseService.instance.isAuthenticated) {
+        debugPrint('GameLifecycle: not authenticated, skipping bootstrap');
+        return;
+      }
 
-      // Anonymous auth + create player record
-      await SupabaseService.instance.ensurePlayer(deviceId);
-      debugPrint('GameLifecycle: player authenticated');
+      // Generate a stable device ID
+      final deviceId = await _getDeviceId();
+
+      // Create player record if it doesn't exist
+      final playerId = await SupabaseService.instance.ensurePlayer(deviceId);
+      debugPrint('GameLifecycle: player ensured ($playerId)');
 
       // Load stats from server
       await statsService.loadStats();
@@ -70,6 +77,16 @@ class GameLifecycleManager {
     } catch (e) {
       debugPrint('GameLifecycle: bootstrap error (game will work offline): $e');
     }
+  }
+
+  // ── Reset ──────────────────────────────────────────────────────
+
+  /// Reset state so the next user can bootstrap fresh.
+  /// Call this on sign-out before navigating to the auth screen.
+  void reset() {
+    _bootstrapped = false;
+    statsService.stopPeriodicSync();
+    debugPrint('GameLifecycle: reset for new session');
   }
 
   // ── Wallet Events ──────────────────────────────────────────────
@@ -168,13 +185,21 @@ class GameLifecycleManager {
 
   // ── Device ID ──────────────────────────────────────────────────
 
-  /// Generate a stable device identifier.
-  /// In production, use a proper device ID package or store in SharedPreferences.
-  String _getDeviceId() {
-    // Simple approach: use a hash of platform info
-    // Replace with device_info_plus or stored UUID for production
-    final platformInfo = '${Platform.operatingSystem}_${Platform.localHostname}';
-    return 'device_${platformInfo.hashCode.toUnsigned(32).toRadixString(16)}';
+  static const String _deviceIdKey = 'diggle_device_id';
+
+  /// Get or create a stable device identifier.
+  /// Generated once on first launch, persisted in SharedPreferences.
+  Future<String> _getDeviceId() async {
+    final prefs = SharedPreferencesAsync();
+    final existing = await prefs.getString(_deviceIdKey);
+    if (existing != null) {
+      return existing;
+    }
+
+    final deviceId = const Uuid().v4();
+    await prefs.setString(_deviceIdKey, deviceId);
+    debugPrint('GameLifecycle: generated new device ID: $deviceId');
+    return deviceId;
   }
 
   // ── Disposal ───────────────────────────────────────────────────

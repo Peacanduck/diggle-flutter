@@ -102,7 +102,8 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
       );
     }
 
-    debugPrint('DiggleGame: services attached');
+    debugPrint('DiggleGame: services attached '
+        '(xp: ${stats.xp}, pts: ${stats.points}, lvl: ${stats.level})');
   }
 
   @override
@@ -182,8 +183,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     //xpPointsSystem.updateDepth(drill.depth);
     //xpPointsSystem.checkDepthMilestone(drill.depth);
     // CHANGED: Use bridge instead of xpPointsSystem directly
-    statsBridge?.checkDepthMilestone(drill.depth) ??
-        xpPointsSystem.checkDepthMilestone(drill.depth);
+    statsBridge?.checkDepthMilestone(drill.depth); //??  xpPointsSystem.checkDepthMilestone(drill.depth);
 
     // Track play time (sync every 60s)
     _playTimeAccumulator += dt;
@@ -461,8 +461,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     final earned = economySystem.sellAllOre();
     if (earned > 0) {
       // xpPointsSystem.awardForSale(earned, economySystem.totalOreCollected);
-      statsBridge?.awardForSale(earned, economySystem.totalOreCollected) ??
-          xpPointsSystem.awardForSale(earned, economySystem.totalOreCollected);
+      statsBridge?.awardForSale(earned, economySystem.totalOreCollected); //?? xpPointsSystem.awardForSale(earned, economySystem.totalOreCollected);
     }
     return earned;
   }

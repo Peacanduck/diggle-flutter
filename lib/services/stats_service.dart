@@ -13,6 +13,8 @@
 ///   await service.syncToServer();           // Flush to Supabase
 
 import 'dart:async';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'supabase_service.dart';
 
@@ -90,10 +92,29 @@ class _PendingPointsEntry {
     this.metadata,
     this.txSignature,
   });
+  Map<String, dynamic> toJson() => {
+    'amount': amount,
+    'source': source,
+    'metadata': metadata,
+    'txSignature': txSignature,
+  };
+
+  factory _PendingPointsEntry.fromJson(Map<String, dynamic> json) {
+    return _PendingPointsEntry(
+      amount: (json['amount'] as num).toInt(),
+      source: json['source'] as String,
+      metadata: json['metadata'] as Map<String, dynamic>?,
+      txSignature: json['txSignature'] as String?,
+    );
+  }
 }
 
 class StatsService {
   final _supabase = SupabaseService.instance;
+
+  // SharedPreferences keys
+  static const String _pendingLedgerKey = 'diggle_pending_ledger';
+  static const String _pendingDeltasKey = 'diggle_pending_deltas';
 
   /// Current local stats (source of truth during gameplay).
   PlayerStats _stats = PlayerStats();
@@ -123,6 +144,9 @@ class StatsService {
       debugPrint('StatsService: no player, using defaults');
       return;
     }
+
+    // Restore any pending data from a previous session that wasn't synced
+    await _restorePendingData();
 
     try {
       final data = await _supabase.client
@@ -158,6 +182,7 @@ class StatsService {
 
   /// Flush everything to server. Call on pause, exit, game over.
   Future<void> syncToServer() async {
+    debugPrint('StatsService(${identityHashCode(this)}): syncing...');
     if (_syncing) return;
     _syncing = true;
 
@@ -174,9 +199,14 @@ class StatsService {
       // 2. Sync cumulative stats
       await _syncStats(playerId);
 
+      // 3. Clear persisted pending data on success
+      await _clearPersistedPendingData();
+
       debugPrint('StatsService: synced to server '
           '(${_stats.xp} XP, ${_stats.points} pts)');
     } catch (e) {
+      // Persist pending data so it survives app kill
+      await _persistPendingData();
       debugPrint('StatsService.syncToServer error: $e');
     } finally {
       _syncing = false;
@@ -191,7 +221,7 @@ class StatsService {
     _stats.xp += amount;
     _stats.totalXpEarned += amount;
     _xpDeltaSinceSync += amount;
-
+    debugPrint('StatsService(${identityHashCode(this)}): +$amount XP → total ${_stats.xp}');
     // Level up check (exponential curve: 100 * level^1.5)
     while (_stats.xp >= _xpForLevel(_stats.level + 1)) {
       _stats.level++;
@@ -290,8 +320,11 @@ class StatsService {
           .from('player_stats')
           .update({
         'xp': _stats.xp,
+        'points': _stats.points,
         'level': _stats.level,
         'total_xp_earned': _stats.totalXpEarned,
+        'total_points_earned': _stats.totalPointsEarned,
+        'total_points_spent': _stats.totalPointsSpent,
         'max_depth_reached': _stats.maxDepthReached,
         'total_ores_mined': _stats.totalOresMined,
         'total_play_time_seconds': _stats.totalPlayTimeSeconds,
@@ -306,6 +339,97 @@ class StatsService {
       _depthThisSession = 0;
     } catch (e) {
       debugPrint('StatsService._syncStats error: $e');
+    }
+  }
+
+  // ── Offline Persistence ────────────────────────────────────────
+  /// Persist pending ledger entries and deltas to SharedPreferences.
+  /// Called when sync fails so data survives app kill.
+  Future<void> _persistPendingData() async {
+    try {
+      final prefs = SharedPreferencesAsync();
+      // Persist pending ledger
+      if (_pendingLedger.isNotEmpty) {
+        final ledgerJson = _pendingLedger.map((e) => e.toJson()).toList();
+        await prefs.setString(_pendingLedgerKey, jsonEncode(ledgerJson));
+      }
+      // Persist deltas
+      if (_xpDeltaSinceSync > 0 || _oresMinedDelta > 0 ||
+          _playTimeDelta > 0 || _depthThisSession > 0) {
+        final deltas = {
+          'xpDelta': _xpDeltaSinceSync,
+          'oresDelta': _oresMinedDelta,
+          'playTimeDelta': _playTimeDelta,
+          'depthSession': _depthThisSession,
+          'stats': _stats.toJson(),
+        };
+        await prefs.setString(_pendingDeltasKey, jsonEncode(deltas));
+      }
+      debugPrint('StatsService: persisted ${_pendingLedger.length} '
+          'ledger entries and deltas to disk');
+    } catch (e) {
+      debugPrint('StatsService: failed to persist pending data: $e');
+    }
+  }
+  /// Restore pending data from SharedPreferences (previous session crash/kill).
+  Future<void> _restorePendingData() async {
+    try {
+      final prefs = SharedPreferencesAsync();
+      // Restore pending ledger
+      final ledgerStr = await prefs.getString(_pendingLedgerKey);
+      if (ledgerStr != null) {
+        final ledgerList = jsonDecode(ledgerStr) as List;
+        for (final item in ledgerList) {
+          _pendingLedger.add(
+            _PendingPointsEntry.fromJson(item as Map<String, dynamic>),
+          );
+        }
+        debugPrint('StatsService: restored ${_pendingLedger.length} '
+            'pending ledger entries from disk');
+      }
+
+      // Restore deltas
+      final deltasStr = await prefs.getString(_pendingDeltasKey);
+      if (deltasStr != null) {
+        final deltas = jsonDecode(deltasStr) as Map<String, dynamic>;
+        _xpDeltaSinceSync += (deltas['xpDelta'] as num?)?.toInt() ?? 0;
+        _oresMinedDelta += (deltas['oresDelta'] as num?)?.toInt() ?? 0;
+        _playTimeDelta += (deltas['playTimeDelta'] as num?)?.toInt() ?? 0;
+        final savedDepth = (deltas['depthSession'] as num?)?.toInt() ?? 0;
+        if (savedDepth > _depthThisSession) {
+          _depthThisSession = savedDepth;
+        }
+
+        // Restore full stats snapshot if server load fails
+        if (deltas.containsKey('stats')) {
+          final savedStats = PlayerStats.fromJson(
+            deltas['stats'] as Map<String, dynamic>,
+          );
+          // Use saved stats as baseline (server load will override if available)
+          _stats = savedStats;
+          debugPrint('StatsService: restored stats snapshot from disk');
+        }
+        debugPrint('StatsService: restored deltas from disk '
+            '(xp: $_xpDeltaSinceSync, ores: $_oresMinedDelta)');
+      }
+    } catch (e) {
+      debugPrint('StatsService: failed to restore pending data: $e');
+    }
+  }
+
+  /// Clear persisted pending data after successful sync.
+  Future<void> _clearPersistedPendingData() async {
+    try {
+      final prefs = SharedPreferencesAsync();
+      // Only clear our specific keys
+      if (await prefs.containsKey(_pendingLedgerKey)) {
+        await prefs.remove(_pendingLedgerKey);
+      }
+      if (await prefs.containsKey(_pendingDeltasKey)) {
+        await prefs.remove(_pendingDeltasKey);
+      }
+    } catch (e) {
+      debugPrint('StatsService: failed to clear persisted data: $e');
     }
   }
 

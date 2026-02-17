@@ -367,11 +367,14 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
 
       if (result.isOre) {
         economySystem.collectOre(result);
-        if (gameRef.statsBridge != null) {
+       /* if (gameRef.statsBridge != null) {
           gameRef.statsBridge!.awardForMining(result, depth);
         } else {
           gameRef.xpPointsSystem.awardForMining(result, depth);
-        }
+        }*/
+        // Always go through the bridge — keeps XPPointsSystem and StatsService in sync
+        gameRef.statsBridge?.awardForMining(result, depth);
+
       }
       tileMap.revealAround(_digX, _digY);
       _target = _tileCenter(_digX, _digY);

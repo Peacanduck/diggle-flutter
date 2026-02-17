@@ -22,10 +22,15 @@ class XPStatsBridge {
   final XPPointsSystem xpSystem;
   final StatsService statsService;
 
+  /// Track the XP system's level so we can detect level-ups
+  int _lastKnownLevel = 1;
+
   XPStatsBridge({
     required this.xpSystem,
     required this.statsService,
-  });
+  }) {
+    _lastKnownLevel = xpSystem.level;
+  }
 
   // ── Mining Rewards ─────────────────────────────────────────────
 
@@ -52,15 +57,18 @@ class XPStatsBridge {
       statsService.recordMining(depthReached: depth);
     }
 
+    // Check for level-up that happened inside awardForMining
+    _checkForLevelUp();
+
     return event;
   }
 
   // ── Depth Milestones ───────────────────────────────────────────
 
   /// Check and award depth milestones.
-  RewardEvent? checkDepthMilestone(int depth) {
+  void checkDepthMilestone(int depth) {
     final event = xpSystem.checkDepthMilestone(depth);
-    if (event == null) return null;
+    if (event == null) return;
 
     if (event.finalXP > 0) {
       statsService.addLocalXP(event.finalXP);
@@ -72,13 +80,13 @@ class XPStatsBridge {
       });
     }
 
-    return event;
+    _checkForLevelUp();
   }
 
   // ── Selling Ores ───────────────────────────────────────────────
 
   /// Award XP/points for selling ores.
-  RewardEvent? awardForSale(int cashEarned, int totalOresSold) {
+  RewardEvent awardForSale(int cashEarned, int totalOresSold) {
     final event = xpSystem.awardForSale(cashEarned, totalOresSold);
 
     if (event.finalXP > 0) {
@@ -90,6 +98,8 @@ class XPStatsBridge {
         'total_ores_sold': totalOresSold,
       });
     }
+
+    _checkForLevelUp();
 
     return event;
   }
@@ -133,8 +143,6 @@ class XPStatsBridge {
     required double priceSOL,
     String? txSignature,
   }) {
-    // Booster purchases don't change points balance,
-    // but we log them for the audit trail
     statsService.addLocalPoints(0, 'booster_purchase', metadata: {
       'booster_type': boosterType,
       'duration_seconds': durationSeconds,
@@ -142,6 +150,26 @@ class XPStatsBridge {
     }, txSignature: txSignature);
 
     debugPrint('XPStatsBridge: logged booster purchase (tx: $txSignature)');
+  }
+
+  // ── Level-Up Detection ─────────────────────────────────────────
+
+  /// Detect if XPPointsSystem leveled up and forward bonus points to StatsService.
+  void _checkForLevelUp() {
+    final currentLevel = xpSystem.level;
+    if (currentLevel > _lastKnownLevel) {
+      // XPPointsSystem._onLevelUp already added bonus points locally.
+      // Forward that same bonus to StatsService so they stay in sync.
+      for (int lvl = _lastKnownLevel + 1; lvl <= currentLevel; lvl++) {
+        final bonusPoints = lvl * 10; // Must match XPPointsSystem._onLevelUp
+        statsService.addLocalPoints(bonusPoints, 'level_up', metadata: {
+          'level': lvl,
+        });
+      }
+      debugPrint('XPStatsBridge: forwarded level-up bonuses '
+          '(${_lastKnownLevel} → $currentLevel)');
+      _lastKnownLevel = currentLevel;
+    }
   }
 
   // ── Play Time Tracking ─────────────────────────────────────────

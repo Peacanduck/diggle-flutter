@@ -13,11 +13,13 @@ import '../solana/wallet_service.dart';
 import '../services/stats_service.dart';
 import '../services/player_service.dart';
 import '../services/game_lifecycle_manager.dart';
+import '../services/supabase_service.dart';
 
 class AccountScreen extends StatefulWidget {
   final VoidCallback onBack;
+  final VoidCallback? onSignOut;
 
-  const AccountScreen({super.key, required this.onBack});
+  const AccountScreen({super.key, required this.onBack, this.onSignOut});
 
   @override
   State<AccountScreen> createState() => _AccountScreenState();
@@ -133,6 +135,8 @@ class _AccountScreenState extends State<AccountScreen> {
                       _buildWalletSection(),
                       const SizedBox(height: 16),
                       _buildStatsSection(),
+                      const SizedBox(height: 24),
+                      _buildSignOutSection(),
                       const SizedBox(height: 32),
                     ],
                   ),
@@ -733,6 +737,93 @@ class _AccountScreenState extends State<AccountScreen> {
         ],
       ),
     );
+  }
+
+  // ── Sign Out Section ──────────────────────────────────────────
+
+  Widget _buildSignOutSection() {
+    final supabase = SupabaseService.instance;
+    final authLabel = switch (supabase.authMethod) {
+      AuthMethod.email => 'Signed in with email',
+      AuthMethod.wallet => 'Signed in with wallet',
+      AuthMethod.guest => 'Playing as guest',
+      AuthMethod.none => '',
+    };
+
+    return Column(
+      children: [
+        if (authLabel.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              authLabel,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.4),
+                fontSize: 12,
+              ),
+            ),
+          ),
+        if (supabase.isGuest)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              'Upgrade to email or wallet to save your account across devices',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.amber.withOpacity(0.6),
+                fontSize: 11,
+              ),
+            ),
+          ),
+        if (widget.onSignOut != null)
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _confirmSignOut(),
+              icon: const Icon(Icons.logout, size: 18),
+              label: const Text('Sign Out'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red.shade300,
+                side: BorderSide(color: Colors.red.shade300.withOpacity(0.3)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _confirmSignOut() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1a1a2e),
+        title: const Text('Sign Out', style: TextStyle(color: Colors.white)),
+        content: Text(
+          SupabaseService.instance.isGuest
+              ? 'As a guest, signing out will lose access to your saves on this device. Are you sure?'
+              : 'Are you sure you want to sign out?',
+          style: TextStyle(color: Colors.white.withOpacity(0.7)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Sign Out', style: TextStyle(color: Colors.red.shade300)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && widget.onSignOut != null) {
+      widget.onSignOut!();
+    }
   }
 
   // ── Helpers ────────────────────────────────────────────────────

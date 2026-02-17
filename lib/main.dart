@@ -39,6 +39,7 @@ import 'ui/premium_store_overlay.dart';
 import 'ui/xp_hud_widget.dart';
 import 'ui/hud_overlay.dart';
 import 'ui/shop_overlay.dart';
+import 'ui/auth_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -76,7 +77,7 @@ void main() async {
     supabaseUrl: 'https://vdcpbqsnkivokroqxelq.supabase.co',
     supabaseAnonKey: const String.fromEnvironment(
       'SUPABASE_ANON_KEY',
-      defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.PLACEHOLDER',
+      defaultValue: 'sb_publishable_3Lt47dggCSWufo6kLq6fzg_B7yvx0Lm',
     ),
   );
 
@@ -94,8 +95,7 @@ void main() async {
     playerService: playerService,
   );
 
-  // Bootstrap: anonymous auth + load stats (non-blocking)
-  lifecycleManager.bootstrap();
+  // Bootstrap happens after authentication (triggered by AuthScreen/AppNavigator)
 
   runApp(
     MultiProvider(
@@ -141,7 +141,7 @@ class DiggleApp extends StatelessWidget {
 // App Navigator — manages all screen transitions
 // ═══════════════════════════════════════════════════════════════════
 
-enum AppScreen { mainMenu, game }
+enum AppScreen { auth, mainMenu, game }
 
 class AppNavigator extends StatefulWidget {
   const AppNavigator({super.key});
@@ -152,7 +152,9 @@ class AppNavigator extends StatefulWidget {
 
 class _AppNavigatorState extends State<AppNavigator>
     with WidgetsBindingObserver {
-  AppScreen _screen = AppScreen.mainMenu;
+  /// Start at auth if no session, main menu if already authenticated
+  late AppScreen _screen;
+  bool _bootstrapping = false;
 
   /// Current game config (set when starting/loading a game)
   int? _gameSeed;
@@ -170,8 +172,18 @@ class _AppNavigatorState extends State<AppNavigator>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Check for existing saves after first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkForSaves());
+
+    // Determine starting screen based on auth state
+    if (SupabaseService.instance.isAuthenticated) {
+      _screen = AppScreen.mainMenu;
+      // Already authenticated from restored session — bootstrap
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _runBootstrap();
+        _checkForSaves();
+      });
+    } else {
+      _screen = AppScreen.auth;
+    }
   }
 
   @override
@@ -222,6 +234,27 @@ class _AppNavigatorState extends State<AppNavigator>
 
   // ── Navigation Actions ─────────────────────────────────────────
 
+  /// Run bootstrap (ensurePlayer + load stats) after authentication.
+  Future<void> _runBootstrap() async {
+    if (_bootstrapping) return;
+    _bootstrapping = true;
+    try {
+      final lifecycle = context.read<GameLifecycleManager>();
+      await lifecycle.bootstrap();
+    } catch (e) {
+      debugPrint('AppNavigator: bootstrap error: $e');
+    } finally {
+      _bootstrapping = false;
+    }
+  }
+
+  /// Called when AuthScreen completes authentication.
+  void _onAuthenticated() {
+    setState(() => _screen = AppScreen.mainMenu);
+    _runBootstrap();
+    _checkForSaves();
+  }
+
   /// Open Save Slots in "New Game" mode
   void _onNewGame() {
     Navigator.of(context).push(
@@ -267,9 +300,36 @@ class _AppNavigatorState extends State<AppNavigator>
       MaterialPageRoute(
         builder: (_) => AccountScreen(
           onBack: () => Navigator.of(context).pop(),
+          onSignOut: () {
+            Navigator.of(context).pop(); // close account screen
+            _signOut();
+          },
         ),
       ),
     );
+  }
+
+  /// Sign out and return to auth screen
+  Future<void> _signOut() async {
+    try {
+      // Reset lifecycle so next user can bootstrap fresh
+      final lifecycle = context.read<GameLifecycleManager>();
+      lifecycle.reset();
+      await SupabaseService.instance.signOut();
+    } catch (e) {
+      debugPrint('AppNavigator: sign out error: $e');
+    }
+    if (mounted) {
+      setState(() {
+        _screen = AppScreen.auth;
+        _hasSaves = false;
+        _mostRecentSlot = null;
+        _mostRecentSeed = null;
+        _gameSeed = null;
+        _gameSlot = null;
+        _isNewGame = true;
+      });
+    }
   }
 
   /// Start the game with given slot and seed
@@ -300,6 +360,9 @@ class _AppNavigatorState extends State<AppNavigator>
   @override
   Widget build(BuildContext context) {
     switch (_screen) {
+      case AppScreen.auth:
+        return AuthScreen(onAuthenticated: _onAuthenticated);
+
       case AppScreen.mainMenu:
         return MainMenu(
           onNewGame: _onNewGame,
