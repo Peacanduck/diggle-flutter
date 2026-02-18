@@ -1,7 +1,7 @@
 /// diggle_mart_client.dart
 /// Client for the Diggle Mart on-chain Solana program.
 ///
-/// Program ID: 6CQzNRRyMYox8G3oWLPJ8MwXthznqq6bMREdUwqKDNKA
+/// Program ID: CHY3Z9P6icJiB4zDjoemhWWR71yh11Fhz8dhZHaxpsV4
 ///
 /// Handles:
 /// - PDA derivation for store, treasury, boosters

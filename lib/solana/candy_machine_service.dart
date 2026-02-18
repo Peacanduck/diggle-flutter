@@ -133,7 +133,7 @@ class CandyMachineService extends ChangeNotifier {
 
   /// Known collection mint for Diggle NFTs
   static const String collectionMint =
-      '4eFNHpLUiVEAh2wi9K1YLUEeTdDYJgjiLhgEkxbw8upV';
+      '3FJkKz61tMRt3rDzGk1Xp6mTN8kGYXtwSTgYaYEmx5fG'; // 4eFNHpLUiVEAh2wi9K1YLUEeTdDYJgjiLhgEkxbw8upV devnet
 
   /// Metaplex Token Metadata program ID
   static const String _tokenMetadataProgram =
