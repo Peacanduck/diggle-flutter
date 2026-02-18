@@ -24,27 +24,27 @@ class LevelThresholds {
     100,     // Level 2
     300,     // Level 3
     600,     // Level 4
-    1000,    // Level 5
-    1500,    // Level 6
-    2200,    // Level 7
-    3000,    // Level 8
-    4000,    // Level 9
-    5200,    // Level 10
-    6600,    // Level 11
-    8200,    // Level 12
-    10000,   // Level 13
-    12000,   // Level 14
-    14500,   // Level 15
-    17500,   // Level 16
-    21000,   // Level 17
-    25000,   // Level 18
-    30000,   // Level 19
-    36000,   // Level 20
-    43000,   // Level 21
-    51000,   // Level 22
-    60000,   // Level 23
-    70000,   // Level 24
-    82000,   // Level 25  (max for now)
+    1200,    // Level 5
+    2400,    // Level 6
+    4800,    // Level 7
+    19200,    // Level 8
+    38400,    // Level 9
+    76800,    // Level 10
+    153600,    // Level 11
+    307200,    // Level 12
+    450000,   // Level 13
+    614400,   // Level 14
+    875420,   // Level 15
+    1001200,   // Level 16
+    1228800,   // Level 17
+    1756421,   // Level 18
+    2457600,   // Level 19
+    4915200,   // Level 20
+    9830400,   // Level 21
+    19660800,   // Level 22
+    39321600,   // Level 23
+    78643200,   // Level 24
+    157286400,   // Level 25  (max for now)
   ];
 
   static int get maxLevel => thresholds.length;

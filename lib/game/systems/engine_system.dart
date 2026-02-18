@@ -20,21 +20,21 @@ enum EngineLevel {
   improved(
     speedMultiplier: 1.25,
     flySpeedMultiplier: 1.2,
-    upgradeCost: 200,
+    upgradeCost: 2000,
     name: 'Improved Engine',
     description: 'Faster movement and better thrust.',
   ),
   turbo(
     speedMultiplier: 1.5,
     flySpeedMultiplier: 1.5,
-    upgradeCost: 500,
+    upgradeCost: 50000,
     name: 'Turbo Engine',
     description: 'Significantly faster all-around.',
   ),
   quantum(
     speedMultiplier: 2.0,
     flySpeedMultiplier: 1.8,
-    upgradeCost: 1000,
+    upgradeCost: 100000,
     name: 'Quantum Engine',
     description: 'Maximum speed. Blazing fast movement.',
   );

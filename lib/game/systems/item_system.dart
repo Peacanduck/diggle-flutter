@@ -47,15 +47,15 @@ extension ItemTypeExtension on ItemType {
   int get price {
     switch (this) {
       case ItemType.backupFuel:
-        return 30;
+        return 100;
       case ItemType.repairBot:
-        return 50;
+        return 250;
       case ItemType.dynamite:
-        return 75;
-      case ItemType.c4:
-        return 150;
-      case ItemType.spaceRift:
         return 200;
+      case ItemType.c4:
+        return 1000;
+      case ItemType.spaceRift:
+        return 20000;
     }
   }
 

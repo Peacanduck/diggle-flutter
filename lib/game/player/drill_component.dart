@@ -53,10 +53,10 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
   int _currentFallY = 0;
 
   // Base speeds (modified by engine system)
-  static const double baseNormalSpeed = 200.0;
-  static const double baseFlySpeed = 320.0;
-  static const double baseFallSpeed = 280.0;
-  static const double baseDigSpeed = 4.0;
+  static const double baseNormalSpeed = 120.0;
+  static const double baseFlySpeed = 250.0;
+  static const double baseFallSpeed = 250.0;
+  static const double baseDigSpeed = 2.0;
 
   // Fall damage settings
   static const int safeFallDistance = 3;

@@ -20,21 +20,21 @@ enum DrillbitLevel {
   reinforced(
     digSpeedMultiplier: 1.3,
     maxHardness: 2,
-    upgradeCost: 250,
+    upgradeCost: 2500,
     name: 'Reinforced Bit',
     description: 'Faster drilling. Can mine rock and medium ores.',
   ),
   titanium(
     digSpeedMultiplier: 1.6,
     maxHardness: 3,
-    upgradeCost: 600,
+    upgradeCost: 6000,
     name: 'Titanium Bit',
     description: 'Much faster drilling. Can mine hard ores.',
   ),
   diamond(
     digSpeedMultiplier: 2.0,
     maxHardness: 4,
-    upgradeCost: 1200,
+    upgradeCost: 120000,
     name: 'Diamond Bit',
     description: 'Superior drilling. Can mine the hardest materials.',
   );

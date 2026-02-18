@@ -13,8 +13,8 @@ import '../world/tile.dart';
 /// Cargo upgrade levels and capacities
 enum CargoLevel {
   level1(maxCapacity: 10, upgradeCost: 0, name: 'Basic Cargo'),
-  level2(maxCapacity: 20, upgradeCost: 150, name: 'Extended Cargo'),
-  level3(maxCapacity: 40, upgradeCost: 400, name: 'Heavy Cargo');
+  level2(maxCapacity: 20, upgradeCost: 15000, name: 'Extended Cargo'),
+  level3(maxCapacity: 50, upgradeCost: 40000, name: 'Heavy Cargo');
 
   final int maxCapacity;
   final int upgradeCost;

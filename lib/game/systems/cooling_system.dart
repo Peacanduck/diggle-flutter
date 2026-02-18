@@ -18,19 +18,19 @@ enum CoolingLevel {
   ),
   improved(
     fuelEfficiency: 0.85,
-    upgradeCost: 300,
+    upgradeCost: 3000,
     name: 'Improved Cooling',
     description: '15% less fuel consumption.',
   ),
   advanced(
     fuelEfficiency: 0.70,
-    upgradeCost: 700,
+    upgradeCost: 70000,
     name: 'Advanced Cooling',
     description: '30% less fuel consumption.',
   ),
   cryo(
     fuelEfficiency: 0.50,
-    upgradeCost: 1500,
+    upgradeCost: 150000,
     name: 'Cryo Cooling',
     description: '50% less fuel consumption. Maximum efficiency.',
   );

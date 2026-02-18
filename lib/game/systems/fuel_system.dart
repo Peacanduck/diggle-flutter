@@ -12,8 +12,8 @@ import 'package:flutter/foundation.dart';
 /// Fuel tank upgrade levels and their capacities
 enum FuelTankLevel {
   level1(maxFuel: 100.0, upgradeCost: 0, name: 'Basic Tank'),
-  level2(maxFuel: 150.0, upgradeCost: 200, name: 'Reinforced Tank'),
-  level3(maxFuel: 250.0, upgradeCost: 500, name: 'Advanced Tank');
+  level2(maxFuel: 150.0, upgradeCost: 2000, name: 'Reinforced Tank'),
+  level3(maxFuel: 250.0, upgradeCost: 15000, name: 'Advanced Tank');
 
   final double maxFuel;
   final int upgradeCost;
@@ -121,8 +121,8 @@ class FuelSystem extends ChangeNotifier {
   /// Get cost to refill from current level
   int getRefillCost() {
     final fuelNeeded = maxFuel - _fuel;
-    // 1 cash per 2 fuel units
-    return (fuelNeeded / 2).ceil();
+    // 1 cash per 10 fuel units
+    return (fuelNeeded / 10).ceil();
   }
 
   // ============================================================

@@ -11,8 +11,8 @@ import 'package:flutter/foundation.dart';
 
 enum HullLevel {
   level1(maxHull: 100.0, upgradeCost: 0, name: 'Basic Hull'),
-  level2(maxHull: 150.0, upgradeCost: 300, name: 'Reinforced Hull'),
-  level3(maxHull: 200.0, upgradeCost: 600, name: 'Titanium Hull');
+  level2(maxHull: 150.0, upgradeCost: 5000, name: 'Reinforced Hull'),
+  level3(maxHull: 200.0, upgradeCost: 60000, name: 'Titanium Hull');
 
   final double maxHull;
   final int upgradeCost;

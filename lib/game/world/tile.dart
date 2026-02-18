@@ -21,12 +21,12 @@ enum TileType {
   // Ores (ordered by value: cheapest to most valuable)
   coal,      // $5
   copper,    // $15
-  silver,    // $35
-  gold,      // $75
-  sapphire,  // $150
-  emerald,   // $250
-  ruby,      // $400
-  diamond,   // $600
+  silver,    // $50
+  gold,      // $150
+  sapphire,  // $400
+  emerald,   // $900
+  ruby,      // $2000
+  diamond,   // $10000
 
   // Hazards
   lava,  // Instant death
@@ -81,13 +81,13 @@ extension TileTypeExtension on TileType {
       case TileType.coal:
         return 1;
       case TileType.rock:
-        return 2;
+        return 3;
       case TileType.copper:
-        return 2;
+        return 1;
       case TileType.silver:
         return 2;
       case TileType.gold:
-        return 3;
+        return 2;
       case TileType.sapphire:
         return 3;
       case TileType.emerald:
@@ -113,17 +113,17 @@ extension TileTypeExtension on TileType {
       case TileType.copper:
         return 15;
       case TileType.silver:
-        return 35;
+        return 50;
       case TileType.gold:
-        return 75;
-      case TileType.sapphire:
         return 150;
-      case TileType.emerald:
-        return 250;
-      case TileType.ruby:
+      case TileType.sapphire:
         return 400;
+      case TileType.emerald:
+        return 900;
+      case TileType.ruby:
+        return 2000;
       case TileType.diamond:
-        return 600;
+        return 10000;
       default:
         return 0;
     }
@@ -332,21 +332,21 @@ extension TileTypeExtension on TileType {
       case TileType.copper:
         return 5;
       case TileType.silver:
-        return 12;
+        return 22;
       case TileType.gold:
-        return 20;
+        return 50;
       case TileType.sapphire:
-        return 30;
+        return 150;
       case TileType.emerald:
-        return 42;
+        return 200;
       case TileType.ruby:
-        return 55;
+        return 350;
       case TileType.diamond:
-        return 70;
+        return 370;
       case TileType.gas:
-        return 8;
+        return 200;
       case TileType.lava:
-        return 25;
+        return 270;
       default:
         return 0;
     }
