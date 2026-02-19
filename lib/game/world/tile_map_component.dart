@@ -8,12 +8,11 @@
 /// - Uses sprite sheet for rendering.
 
 import 'dart:async';
-import 'dart:typed_data';
+//import 'dart:typed_data';
 import 'dart:ui';
 import 'package:flame/components.dart';
-import 'package:flame/flame.dart';
 import 'package:flutter/foundation.dart'; // Required for compute
-import 'package:flutter/material.dart' show Colors, Paint, PaintingStyle;
+import 'package:flutter/material.dart' show Colors, Paint;
 import 'tile.dart';
 import 'world_generator.dart';
 

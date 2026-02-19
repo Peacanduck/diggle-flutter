@@ -11,8 +11,6 @@
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:solana/dto.dart';
-import 'package:solana/solana.dart';
 import '../../services/xp_stats_bridge.dart';
 import './xp_points_system.dart';
 import '../../solana/wallet_service.dart';

@@ -8,8 +8,6 @@
 /// - How to Play → Tutorial/instructions (placeholder)
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../services/game_lifecycle_manager.dart';
 
 class MainMenu extends StatefulWidget {
   final VoidCallback onNewGame;

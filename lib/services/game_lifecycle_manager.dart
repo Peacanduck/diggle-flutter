@@ -101,10 +101,10 @@ class GameLifecycleManager {
     if (!SupabaseService.instance.isAuthenticated) return;
 
     try {
-      await SupabaseService.instance.linkWallet(walletAddress);
-      debugPrint('GameLifecycle: wallet linked $walletAddress');
+      await SupabaseService.instance.updateWalletDisplay(walletAddress);
+      debugPrint('GameLifecycle: wallet display updated $walletAddress');
     } catch (e) {
-      debugPrint('GameLifecycle: wallet link error: $e');
+      debugPrint('GameLifecycle: wallet display updated: $e');
       // WalletAlreadyLinkedException could trigger account merge UI
     }
   }

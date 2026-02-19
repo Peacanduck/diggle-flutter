@@ -15,14 +15,12 @@
 ///   - StatsService, WorldSaveService, PlayerService, PointsLedgerService
 ///   - GameLifecycleManager (orchestrates bootstrap + save/load)
 
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flame/game.dart';
 import 'package:provider/provider.dart';
 
 import 'game/diggle_game.dart';
-import 'game/systems/xp_points_system.dart';
 import 'game/systems/boost_manager.dart';
 import 'services/game_lifecycle_manager.dart';
 import 'services/player_service.dart';

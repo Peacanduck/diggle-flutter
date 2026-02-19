@@ -14,7 +14,6 @@
 /// but some other wallets may not fully support devnet through MWA.
 
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:solana/solana.dart';
 import 'package:solana_mobile_client/solana_mobile_client.dart';

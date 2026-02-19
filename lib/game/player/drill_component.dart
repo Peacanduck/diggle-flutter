@@ -4,7 +4,6 @@
 import 'dart:math' as math; // Added for PI
 import 'dart:ui';
 import 'package:flame/components.dart';
-import 'package:flame/flame.dart';
 import 'package:flutter/material.dart' show Colors, Paint, BlendMode, ColorFilter;
 import '../world/tile_map_component.dart';
 import '../world/tile.dart';

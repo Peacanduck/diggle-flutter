@@ -9,13 +9,8 @@
 
 import 'package:flutter/material.dart';
 import '../game/diggle_game.dart';
-import '../game/systems/fuel_system.dart';
 import '../game/systems/economy_system.dart';
-import '../game/systems/hull_system.dart';
 import '../game/systems/item_system.dart';
-import '../game/systems/drillbit_system.dart';
-import '../game/systems/engine_system.dart';
-import '../game/systems/cooling_system.dart';
 import '../game/world/tile.dart';
 
 /// Shop overlay widget
