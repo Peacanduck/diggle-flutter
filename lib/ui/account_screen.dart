@@ -109,8 +109,8 @@ class _AccountScreenState extends State<AccountScreen> {
                       const SizedBox(height: 16),
 
                       if (supabase.isGuest) ...[
-                        _buildGuestUpgradeSection(),
-                        const SizedBox(height: 16),
+                       // _buildGuestUpgradeSection(),
+                       // const SizedBox(height: 16),
                         _buildWalletAdapterSection(isGuestMode: true),
                       ] else ...[
                         _buildSignInMethodsSection(),
@@ -563,7 +563,7 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   // ── Guest Upgrade Section ──────────────────────────────────────
-
+/*
   Widget _buildGuestUpgradeSection() {
     return _SectionCard(
       icon: Icons.upgrade,
@@ -666,7 +666,7 @@ class _AccountScreenState extends State<AccountScreen> {
       if (mounted) _showSnack('Error: $e', color: Colors.red);
     }
   }
-
+*/
   // ── Wallet Adapter Section ─────────────────────────────────────
 
   Widget _buildWalletAdapterSection({required bool isGuestMode}) {
