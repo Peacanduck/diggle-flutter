@@ -7,6 +7,7 @@
 /// - Value (for ore tiles)
 /// - Hardness (determines which drillbit can mine it)
 /// - Visibility state (fog of war)
+/// - Sprite sheet coordinates (for rendering)
 
 import 'dart:ui';
 
@@ -203,6 +204,56 @@ extension TileTypeExtension on TileType {
   bool get isDiggable {
     return this != TileType.bedrock && this != TileType.empty;
   }
+
+  // ============================================================
+  // SPRITE SHEET COORDINATES
+  // ============================================================
+  // Single source of truth for TerrainSpriteSheet.png layout.
+  // 1-based row/col indexing. Returns null for tiles with no sprite (empty).
+
+  /// Sprite sheet row (1-based). Returns null for tiles with no sprite.
+  int? get spriteRow {
+    switch (this) {
+      case TileType.dirt:     return 3;
+      case TileType.rock:     return 3;
+      case TileType.bedrock:  return 3;
+      case TileType.coal:     return 3;
+      case TileType.copper:   return 3;
+      case TileType.silver:   return 3;
+      case TileType.gold:     return 5;
+      case TileType.sapphire: return 5;
+      case TileType.emerald:  return 5;
+      case TileType.ruby:     return 5;
+      case TileType.diamond:  return 5;
+      case TileType.lava:     return 5;
+      case TileType.gas:      return 7;
+      default:                return null;
+    }
+  }
+
+  /// Sprite sheet column (1-based). Returns null for tiles with no sprite.
+  int? get spriteCol {
+    switch (this) {
+      case TileType.dirt:     return 2;
+      case TileType.rock:     return 4;
+      case TileType.bedrock:  return 6;
+      case TileType.coal:     return 8;
+      case TileType.copper:   return 10;
+      case TileType.silver:   return 12;
+      case TileType.gold:     return 2;
+      case TileType.sapphire: return 4;
+      case TileType.emerald:  return 6;
+      case TileType.ruby:     return 8;
+      case TileType.diamond:  return 10;
+      case TileType.lava:     return 12;
+      case TileType.gas:      return 2;
+      default:                return null;
+    }
+  }
+
+  // ============================================================
+  // DISPLAY PROPERTIES
+  // ============================================================
 
   /// Display color for this tile type
   Color get color {

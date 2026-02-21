@@ -7,11 +7,33 @@
 ///
 /// Only accessible when player is at surface.
 
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../game/diggle_game.dart';
 import '../game/systems/economy_system.dart';
 import '../game/systems/item_system.dart';
 import '../game/world/tile.dart';
+
+/// Paints a single sprite from the sprite sheet.
+class _SpritePainter extends CustomPainter {
+  final ui.Image spriteSheet;
+  final int row;
+  final int col;
+  static const double _tx = 32.0;
+
+  _SpritePainter({required this.spriteSheet, required this.row, required this.col});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final src = Rect.fromLTWH((col - 1) * _tx, (row - 1) * _tx, _tx, _tx);
+    final dst = Rect.fromLTWH(0, 0, size.width, size.height);
+    canvas.drawImageRect(spriteSheet, src, dst, Paint()..filterQuality = FilterQuality.none);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SpritePainter old) =>
+      old.row != row || old.col != col;
+}
 
 /// Shop overlay widget
 class ShopOverlay extends StatefulWidget {
@@ -30,16 +52,68 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
   /// Tab controller for shop sections
   late TabController _tabController;
 
+  /// Cached sprite sheet image for ore icons
+  ui.Image? _spriteSheetImage;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadSpriteSheet();
+  }
+
+  /// Load the sprite sheet image from the game's image cache.
+  void _loadSpriteSheet() {
+    // The game has already loaded this image, so we can grab it from the cache.
+    try {
+      _spriteSheetImage = widget.game.images.fromCache('TerrainSpriteSheet.png');
+      if (mounted) setState(() {});
+    } catch (_) {
+      // If not cached yet, load it asynchronously
+      widget.game.images.load('TerrainSpriteSheet.png').then((image) {
+        if (mounted) {
+          setState(() {
+            _spriteSheetImage = image;
+          });
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  /// Builds a tile sprite icon widget using TileType.spriteRow / spriteCol,
+  /// falling back to a colored box if the sprite sheet isn't loaded or the
+  /// tile type has no sprite mapping.
+  Widget _buildTileIcon(TileType tileType, {double size = 28}) {
+    final row = tileType.spriteRow;
+    final col = tileType.spriteCol;
+    if (_spriteSheetImage != null && row != null && col != null) {
+      return SizedBox(
+        width: size,
+        height: size,
+        child: CustomPaint(
+          painter: _SpritePainter(
+            spriteSheet: _spriteSheetImage!,
+            row: row,
+            col: col,
+          ),
+        ),
+      );
+    }
+    // Fallback: colored box (original behavior)
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: tileType.color,
+        borderRadius: BorderRadius.circular(4),
+      ),
+    );
   }
 
   @override
@@ -49,36 +123,20 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
       child: SafeArea(
         child: Column(
           children: [
-            // Header with close button
             _buildHeader(),
-
-            // Player stats
             _buildPlayerStats(),
-
-            // Tab bar
             _buildTabBar(),
-
-            // Tab content
             Expanded(
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  // Services tab (sell, refuel, repair)
                   _buildServicesTab(),
-
-                  // Upgrades tab
                   _buildUpgradesTab(),
-
-                  // Items tab
                   _buildItemsTab(),
                 ],
               ),
             ),
-
-            // Action message
             if (_message != null) _buildMessage(),
-
-            // Return to mining button
             _buildReturnButton(),
           ],
         ),
@@ -252,7 +310,6 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
       padding: const EdgeInsets.all(12),
       child: Column(
         children: [
-          // Current inventory
           ListenableBuilder(
             listenable: widget.game.itemSystem,
             builder: (context, _) {
@@ -276,7 +333,6 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
               );
             },
           ),
-          // Item purchase buttons
           ...ItemType.values.map((type) => _buildItemPurchaseRow(type)),
         ],
       ),
@@ -303,7 +359,6 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
                   'No ore to sell',
                   style: TextStyle(color: Colors.white54),
                 ),
-
               if (hasOre) ...[
                 const Divider(color: Colors.white24),
                 Row(
@@ -348,14 +403,8 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: item.oreType.color,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
+          // Use the actual ore sprite from the sprite sheet
+          _buildTileIcon(item.oreType, size: 28),
           const SizedBox(width: 12),
           Text(
             item.oreType.displayName,
@@ -641,7 +690,6 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Row(
             children: [
               Text(icon, style: const TextStyle(fontSize: 24)),
@@ -670,8 +718,6 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
             ],
           ),
           const SizedBox(height: 8),
-
-          // Current level
           Row(
             children: [
               Expanded(
@@ -727,8 +773,6 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
               ],
             ],
           ),
-
-          // Upgrade button
           if (!isMaxed) ...[
             const SizedBox(height: 8),
             SizedBox(

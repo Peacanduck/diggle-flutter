@@ -64,11 +64,7 @@ class TileMapComponent extends PositionComponent with HasGameRef {
 
   @override
   Future<void> onLoad() async {
-    // 1. Generate the world in a background isolate to prevent UI freeze (old)
-    // This fixes the "Skipped 129 frames" log at startup
-    //_grid = await compute(_generateWorldInBackground, config);
-
-    // 1. Initialize worldSize immediately (Synchronous) (new)
+    // 1. Initialize worldSize immediately (Synchronous)
     // This MUST happen before any await calls to prevent LateInitializationError
 
     // 2. Calculate world size
@@ -85,12 +81,11 @@ class TileMapComponent extends PositionComponent with HasGameRef {
     _loadSprites();
   }
 
-  /// Maps specific grid locations to TileTypes based on your 13x13 sheet.
+  /// Builds _tileSprites from TileType.spriteRow / spriteCol (single source of truth in tile.dart).
   Future<void> _loadSprites() async {
     _tileSprites = {};
 
-
-    // 3. Generate the world in a background isolate to prevent UI freeze
+    // Generate the world in a background isolate to prevent UI freeze.
     // The render loop will simply skip drawing (because _grid is empty) until this finishes.
     _grid = await compute(_generateWorldInBackground, config);
 
@@ -105,25 +100,14 @@ class TileMapComponent extends PositionComponent with HasGameRef {
       );
     }
 
-    // --- MAPPING CONFIGURATION ---
-    // Row 3 (Index 2): Cols 2, 4, 6, 8, 10, 12
-    _tileSprites[TileType.dirt]     = getSprite(3, 2);
-    _tileSprites[TileType.rock]     = getSprite(3, 4);
-    _tileSprites[TileType.coal]     = getSprite(3, 8);
-    _tileSprites[TileType.copper]   = getSprite(3, 10);
-    _tileSprites[TileType.silver]   = getSprite(3, 12);
-    _tileSprites[TileType.gold]     = getSprite(5, 2);
-
-    // Row 5 (Index 4): Cols 2, 4, 6, 8, 10, 12
-    _tileSprites[TileType.sapphire] = getSprite(5, 4);
-    _tileSprites[TileType.emerald]  = getSprite(5, 6);
-    _tileSprites[TileType.ruby]     = getSprite(5, 8);
-    _tileSprites[TileType.diamond]  = getSprite(5, 10);
-    _tileSprites[TileType.bedrock]  = getSprite(3, 6);
-    _tileSprites[TileType.lava]     = getSprite(5, 12);
-
-    // Row 7 (Index 6): Col 2
-    _tileSprites[TileType.gas]      = getSprite(7, 2);
+    // --- AUTO-MAP from TileType extension getters ---
+    for (final type in TileType.values) {
+      final row = type.spriteRow;
+      final col = type.spriteCol;
+      if (row != null && col != null) {
+        _tileSprites[type] = getSprite(row, col);
+      }
+    }
   }
 
   // ============================================================
