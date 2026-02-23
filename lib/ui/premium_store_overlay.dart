@@ -1,13 +1,35 @@
 /// premium_store_overlay.dart
-/// Premium store UI for purchasing boosters and minting NFTs.
+/// Premium store overlay for points/SOL/NFT purchases.
+/// All user-facing strings localized via AppLocalizations.
 ///
-/// Three sections:
-/// 1. Points Store - buy boosters with earned points (no wallet needed)
-/// 2. Premium Store - buy boosters/points with SOL (wallet required, on-chain)
-/// 3. NFT Collection - COMING SOON
+/// BoostManager API used:
+///   - BoostManager.pointsStoreItems (static)  — points catalog
+///   - BoostManager.premiumStoreItems (static)  — SOL catalog
+///   - boostManager.refreshStoreConfig()        — load on-chain prices
+///   - boostManager.isStoreLoaded               — prices available?
+///   - boostManager.activeBoosters              — active boost list
+///   - boostManager.purchaseWithPoints(item)     — buy with points
+///   - boostManager.purchaseWithSOL(item)        — buy with SOL
+///   - boostManager.getPremiumItemPrice(item)    — on-chain price
+///   - boostManager.checkForNFT()               — refresh NFT ownership
+///   - boostManager.hasNFT                      — NFT ownership flag
+///   - boostManager.nftCollection               — NFTCollectionInfo
+///
+/// CandyMachineService API used:
+///   - candyMachineService.info                 — CandyMachineInfo?
+///     .itemsAvailable, .itemsRedeemed, .mintPriceSol, .isMintLive, .isSoldOut
+///   - candyMachineService.hasNFT               — bool
+///   - candyMachineService.isMinting            — bool
+///   - candyMachineService.mintStatus           — MintStatus?
+///   - candyMachineService.mint()               — Future<String?>
+///
+/// Booster model:
+///   .type.displayName, .type.icon, .multiplier, .isFromNFT, .timeRemaining
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../game/diggle_game.dart';
 import '../game/systems/xp_points_system.dart';
 import '../game/systems/boost_manager.dart';
@@ -35,13 +57,15 @@ class PremiumStoreOverlay extends StatefulWidget {
 class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String? _message;
-  bool _isSuccess = true;
+  String? _statusMessage;
+  bool _loadingPrices = true;
+  bool _pricesAvailable = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadPrices();
   }
 
   @override
@@ -50,105 +74,110 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
     super.dispose();
   }
 
+  Future<void> _loadPrices() async {
+    setState(() => _loadingPrices = true);
+    try {
+      await widget.boostManager.refreshStoreConfig();
+      setState(() {
+        _pricesAvailable = widget.boostManager.isStoreLoaded;
+        _loadingPrices = false;
+      });
+      if (_pricesAvailable) {
+        _showStatus(AppLocalizations.of(context)!.onChainLoaded);
+      } else {
+        _showStatus(AppLocalizations.of(context)!.usingDefaultPrices);
+      }
+    } catch (e) {
+      setState(() {
+        _pricesAvailable = false;
+        _loadingPrices = false;
+      });
+      _showStatus(AppLocalizations.of(context)!.usingDefaultPrices);
+    }
+  }
+
+  void _showStatus(String msg) {
+    setState(() => _statusMessage = msg);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _statusMessage = null);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Container(
       color: Colors.black.withOpacity(0.92),
       child: SafeArea(
         child: Column(
           children: [
-            _buildHeader(),
-            _buildStatsBar(),
-            _buildActiveBoosts(),
-            _buildTabBar(),
+            _buildHeader(l10n),
+            _buildPlayerBar(l10n),
+            _buildActiveBoosts(l10n),
+            _buildTabBar(l10n),
             Expanded(
-              child: TabBarView(
+              child: _loadingPrices
+                  ? const Center(
+                  child: CircularProgressIndicator(color: Colors.purple))
+                  : TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildPointsStore(),
-                  _buildPremiumStore(),
-                  _buildNFTSection(),
+                  _buildPointsTab(l10n),
+                  _buildSolTab(l10n),
+                  _buildNFTTab(l10n),
                 ],
               ),
             ),
-            if (_message != null) _buildMessage(),
-            _buildCloseButton(),
+            if (_statusMessage != null)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.purple.shade900.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline,
+                        color: Colors.purple, size: 16),
+                    const SizedBox(width: 8),
+                    Text(_statusMessage!,
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12)),
+                  ],
+                ),
+              ),
+            _buildCloseButton(l10n),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.purple.shade900, Colors.indigo.shade900],
-        ),
+        gradient: LinearGradient(colors: [
+          Colors.purple.shade900,
+          Colors.deepPurple.shade800,
+        ]),
         border: Border(
-          bottom: BorderSide(color: Colors.purple.shade400, width: 2),
-        ),
+            bottom: BorderSide(color: Colors.purple.shade400, width: 2)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.storefront, color: Colors.purple, size: 32),
+          const Text('💎', style: TextStyle(fontSize: 28)),
           const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'PREMIUM STORE',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 2,
-                ),
-              ),
-              // On-chain status indicator
-              ListenableBuilder(
-                listenable: widget.boostManager,
-                builder: (context, _) {
-                  final isOnChain = widget.boostManager.isStoreLoaded;
-                  return Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: isOnChain ? Colors.green : Colors.orange,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        isOnChain ? 'On-chain prices loaded' : 'Using default prices',
-                        style: TextStyle(
-                          color: isOnChain
-                              ? Colors.green.shade300
-                              : Colors.orange.shade300,
-                          fontSize: 10,
-                        ),
-                      ),
-                      if (!isOnChain) ...[
-                        const SizedBox(width: 4),
-                        GestureDetector(
-                          onTap: () => widget.boostManager.refreshStoreConfig(),
-                          child: Icon(
-                            Icons.refresh,
-                            color: Colors.orange.shade300,
-                            size: 14,
-                          ),
-                        ),
-                      ],
-                    ],
-                  );
-                },
-              ),
-            ],
+          Expanded(
+            child: Text(l10n.premiumStore,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2)),
           ),
-          const Spacer(),
           IconButton(
             onPressed: () => widget.game.overlays.remove('premiumStore'),
             icon: const Icon(Icons.close, color: Colors.white),
@@ -158,38 +187,26 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
     );
   }
 
-  Widget _buildStatsBar() {
+  Widget _buildPlayerBar(AppLocalizations l10n) {
     return ListenableBuilder(
       listenable: widget.xpSystem,
       builder: (context, _) {
         return Container(
           margin: const EdgeInsets.all(8),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: Colors.grey.shade900,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _StatChip(
-                icon: '⭐',
-                label: 'Level',
-                value: '${widget.xpSystem.level}',
-                color: Colors.amber,
-              ),
-              _StatChip(
-                icon: '✨',
-                label: 'XP',
-                value: '${widget.xpSystem.totalXP}',
-                color: Colors.blue,
-              ),
-              _StatChip(
-                icon: '💎',
-                label: 'Points',
-                value: '${widget.xpSystem.points}',
-                color: Colors.purple,
-              ),
+              _buildStatCol(
+                  '⭐', l10n.level, '${widget.xpSystem.level}', Colors.amber),
+              _buildStatCol(
+                  '✨', l10n.xp, '${widget.xpSystem.totalXP}', Colors.blue),
+              _buildStatCol('💎', l10n.points, '${widget.xpSystem.points}',
+                  Colors.purple),
             ],
           ),
         );
@@ -197,63 +214,91 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
     );
   }
 
-  Widget _buildActiveBoosts() {
+  Widget _buildStatCol(
+      String icon, String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(icon, style: const TextStyle(fontSize: 18)),
+        const SizedBox(height: 2),
+        Text(label,
+            style: TextStyle(
+                color: color.withOpacity(0.7),
+                fontSize: 10,
+                fontWeight: FontWeight.bold)),
+        Text(value,
+            style: TextStyle(
+                color: color,
+                fontSize: 16,
+                fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _buildActiveBoosts(AppLocalizations l10n) {
     return ListenableBuilder(
       listenable: widget.boostManager,
       builder: (context, _) {
-        final boosters = widget.boostManager.activeBoosters;
-        if (boosters.isEmpty && !widget.boostManager.hasNFT) {
-          return const SizedBox.shrink();
-        }
+        final boosts = widget.boostManager.activeBoosters;
+        if (boosts.isEmpty) return const SizedBox.shrink();
 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 8),
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.green.shade900.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.green.shade700),
+            color: Colors.amber.shade900.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.amber.shade700.withOpacity(0.5)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.bolt, color: Colors.green, size: 16),
-                  SizedBox(width: 4),
-                  Text(
-                    'ACTIVE BOOSTS',
-                    style: TextStyle(
-                      color: Colors.green,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  const Text('⚡', style: TextStyle(fontSize: 14)),
+                  const SizedBox(width: 6),
+                  Text(l10n.activeBoosts,
+                      style: const TextStyle(
+                          color: Colors.amber,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1)),
                 ],
               ),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 6,
                 runSpacing: 4,
-                children: [
-                  if (widget.boostManager.hasNFT)
-                    _BoostChip(
-                      icon: '🏆',
-                      label:
-                      'NFT: ${widget.boostManager.nftCollection.xpMultiplier}x',
-                      color: Colors.amber,
-                      timeRemaining: 'Permanent',
+                children: boosts.map((b) {
+                  return Container(
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: b.isFromNFT
+                          ? Colors.amber.shade900.withOpacity(0.5)
+                          : Colors.purple.shade900.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(6),
                     ),
-                  ...boosters.map((b) => _BoostChip(
-                    icon: b.type.icon,
-                    label:
-                    '${b.type.displayName}: ${b.multiplierDisplay}',
-                    color: b.onChainAddress != null
-                        ? Colors.cyan
-                        : Colors.green,
-                    timeRemaining: b.timeRemainingDisplay,
-                  )),
-                ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(b.type.icon, style: const TextStyle(fontSize: 12)),
+                        const SizedBox(width: 4),
+                        Text(b.type.displayName,
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 11)),
+                        const SizedBox(width: 4),
+                        if (b.isFromNFT)
+                          Text('∞',
+                              style: TextStyle(
+                                  color: Colors.amber.shade300, fontSize: 12))
+                        else
+                          Text(_formatDuration(b.timeRemaining),
+                              style: const TextStyle(
+                                  color: Colors.white54, fontSize: 10)),
+                      ],
+                    ),
+                  );
+                }).toList(),
               ),
             ],
           ),
@@ -262,769 +307,456 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
     );
   }
 
-  Widget _buildTabBar() {
+  Widget _buildTabBar(AppLocalizations l10n) {
     return Container(
+      margin: const EdgeInsets.only(top: 8),
       color: Colors.grey.shade900,
-      margin: const EdgeInsets.only(top: 4),
       child: TabBar(
         controller: _tabController,
         indicatorColor: Colors.purple,
         labelColor: Colors.purple,
         unselectedLabelColor: Colors.white54,
-        tabs: const [
-          Tab(icon: Icon(Icons.diamond, size: 20), text: 'Points'),
-          Tab(icon: Icon(Icons.currency_exchange, size: 20), text: 'SOL'),
-          Tab(icon: Icon(Icons.collections, size: 20), text: 'NFT'),
+        tabs: [
+          Tab(icon: Icon(Icons.diamond, size: 20),
+              text: l10n.pointsTab),
+          Tab(icon: Icon(Icons.currency_exchange, size: 20),
+              text: l10n.solTab),
+          Tab(icon: Icon(Icons.collections, size: 20),
+              text: l10n.nftTab),
         ],
       ),
     );
   }
 
-  /// Points store - purchasable with earned points
-  Widget _buildPointsStore() {
+  // ── Points Tab ─────────────────────────────────────────────────
+
+  Widget _buildPointsTab(AppLocalizations l10n) {
+    final items = BoostManager.pointsStoreItems;
+
     return ListView.builder(
       padding: const EdgeInsets.all(12),
-      itemCount: BoostManager.pointsStoreItems.length,
-      itemBuilder: (context, index) {
-        final item = BoostManager.pointsStoreItems[index];
-        return _buildStoreItemCard(
-          item: item,
-          priceWidget: Row(
-            mainAxisSize: MainAxisSize.min,
+      itemCount: items.length,
+      itemBuilder: (context, i) {
+        final item = items[i];
+        final canBuy = widget.xpSystem.points >= item.priceInPoints;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade900.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+                color: canBuy
+                    ? Colors.purple.withOpacity(0.5)
+                    : Colors.grey.shade800),
+          ),
+          child: Row(
             children: [
-              const Text('💎', style: TextStyle(fontSize: 16)),
-              const SizedBox(width: 4),
-              Text(
-                '${item.priceInPoints}',
-                style: const TextStyle(
-                  color: Colors.purple,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+              Text(item.icon, style: const TextStyle(fontSize: 28)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.name,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold)),
+                    Text(item.description,
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12)),
+                  ],
+                ),
+              ),
+              ElevatedButton(
+                onPressed: canBuy ? () => _buyWithPoints(item) : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple.shade700,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey.shade800,
+                ),
+                child: Column(
+                  children: [
+                    Text('💎 ${item.priceInPoints}',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 13)),
+                    Text(l10n.buy,
+                        style: const TextStyle(fontSize: 10)),
+                  ],
                 ),
               ),
             ],
           ),
-          canAfford: widget.xpSystem.canAffordPoints(item.priceInPoints),
-          onPurchase: () {
-            if (widget.boostManager.purchaseWithPoints(item)) {
-              _showMessage('${item.name} activated!', true);
-            } else {
-              _showMessage('Not enough points!', false);
-            }
-          },
         );
       },
     );
   }
 
-  /// Premium SOL store - on-chain purchases (only shows on-chain prices)
-  Widget _buildPremiumStore() {
-    return Consumer<WalletService>(
-      builder: (context, wallet, _) {
-        if (!wallet.isConnected) {
-          return _buildWalletPrompt();
-        }
+  // ── SOL Tab ────────────────────────────────────────────────────
 
-        return ListenableBuilder(
-          listenable: widget.boostManager,
-          builder: (context, _) {
-            // Only show items when on-chain store config is loaded
-            if (!widget.boostManager.isStoreLoaded) {
-              return _buildStoreNotLoaded();
-            }
+  Widget _buildSolTab(AppLocalizations l10n) {
+    final wallet = context.watch<WalletService>();
 
-            return ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: BoostManager.premiumStoreItems.length,
-              itemBuilder: (context, index) {
-                final item = BoostManager.premiumStoreItems[index];
-                final price =
-                widget.boostManager.getPremiumItemPrice(item);
+    if (!wallet.isConnected) {
+      return _buildWalletRequired(l10n);
+    }
 
-                return _buildStoreItemCard(
-                  item: item,
-                  priceWidget: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Image.network(
-                        'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
-                        width: 18,
-                        height: 18,
-                        errorBuilder: (_, __, ___) => const Text('◎',
-                            style: TextStyle(fontSize: 16)),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${price.toStringAsFixed(price < 0.01 ? 4 : 3)} SOL',
+    if (!_pricesAvailable && !widget.boostManager.isStoreLoaded) {
+      return _buildPricesUnavailable(l10n);
+    }
+
+    final items = BoostManager.premiumStoreItems;
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: items.length,
+      itemBuilder: (context, i) {
+        final item = items[i];
+        final price = widget.boostManager.getPremiumItemPrice(item);
+        final isPointsPack = item.onChainPackType != null;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade900.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.purple.withOpacity(0.5)),
+          ),
+          child: Row(
+            children: [
+              Text(item.icon, style: const TextStyle(fontSize: 28)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.name,
                         style: const TextStyle(
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold)),
+                    Text(item.description,
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12)),
+                    if (isPointsPack)
+                      Text(l10n.permanent,
+                          style: const TextStyle(
+                              color: Colors.amber, fontSize: 10)),
+                  ],
+                ),
+              ),
+              ElevatedButton(
+                onPressed: widget.boostManager.isLoading
+                    ? null
+                    : () => _buyWithSOL(item),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple.shade700,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey.shade800,
+                ),
+                child: widget.boostManager.isLoading
+                    ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white),
+                )
+                    : Column(
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.network(
+                          'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
+                          width: 14,
+                          height: 14,
+                          errorBuilder: (_, __, ___) => const Text('◎',
+                              style: TextStyle(fontSize: 14)),
                         ),
-                      ),
+                        const SizedBox(width: 4),
+                        Text(price.toStringAsFixed(3),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 13)),
+                      ],
+                    ),
+                    Text(l10n.buy,
+                        style: const TextStyle(fontSize: 10)),
+                  ],
+                ),
+
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ── NFT Tab ────────────────────────────────────────────────────
+
+  Widget _buildNFTTab(AppLocalizations l10n) {
+    final wallet = context.watch<WalletService>();
+
+    if (!wallet.isConnected) {
+      return _buildWalletRequired(l10n);
+    }
+
+    return ListenableBuilder(
+      listenable: widget.candyMachineService,
+      builder: (context, _) {
+        final cmInfo = widget.candyMachineService.info;
+        final nftCol = widget.boostManager.nftCollection;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // NFT preview card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.amber.shade900.withOpacity(0.3),
+                      Colors.purple.shade900.withOpacity(0.3),
                     ],
                   ),
-                  canAfford: true,
-                  isLoading: widget.boostManager.isLoading,
-                  onPurchase: () async {
-                    final sig =
-                    await widget.boostManager.purchaseWithSOL(item);
-                    if (sig != null) {
-                      _showMessage(
-                          '${item.name} purchased! TX: ${sig.substring(0, 8)}...',
-                          true);
-                    } else {
-                      _showMessage(
-                          widget.boostManager.error ?? 'Purchase failed',
-                          false);
-                    }
-                  },
-                );
-              },
-            );
-          },
+                  borderRadius: BorderRadius.circular(16),
+                  border:
+                  Border.all(color: Colors.amber.shade700.withOpacity(0.5)),
+                ),
+                child: Column(
+                  children: [
+                    const Text('⛏️', style: TextStyle(fontSize: 64)),
+                    const SizedBox(height: 12),
+                    Text(l10n.diggleDrillMachine,
+                        style: const TextStyle(
+                            color: Colors.amber,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 2)),
+                    const SizedBox(height: 4),
+                    Text(l10n.permanentBoostNft,
+                        style: TextStyle(
+                            color: Colors.white.withOpacity(0.6),
+                            fontSize: 12)),
+                    const SizedBox(height: 16),
+
+                    // Benefits
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(l10n.holderBenefits,
+                              style: TextStyle(
+                                  color: Colors.amber.shade300,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1)),
+                          const SizedBox(height: 8),
+                          _buildBenefitRow('⚡', l10n.permanentXpBoost,
+                              '+${((nftCol.xpMultiplier - 1) * 100).toInt()}% XP'),
+                          _buildBenefitRow('💎', l10n.permanentPointsBoost,
+                              '+${((nftCol.pointsMultiplier - 1) * 100).toInt()}% Points'),
+                          _buildBenefitRow(
+                            '🏆',
+                            l10n.limitedSupply,
+                            '${cmInfo?.itemsRedeemed ?? nftCol.currentSupply}'
+                                '/${cmInfo?.itemsAvailable ?? nftCol.maxSupply}',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Mint status / action
+              if (cmInfo?.isSoldOut == true || nftCol.isSoldOut)
+                _buildMintStatus(
+                    l10n.soldOut, l10n.allNftsMinted, Colors.red)
+              else if (cmInfo != null && !cmInfo.isMintLive)
+                _buildMintStatus(
+                    l10n.mintOpensSoon, l10n.checkBackLater, Colors.orange)
+              else if (widget.candyMachineService.hasNFT)
+                  _buildMintStatus(
+                      l10n.nftMinted, l10n.boostsActive, Colors.green)
+                else
+                  _buildMintButton(l10n),
+
+              if (widget.candyMachineService.mintStatus != MintStatus.idle) ...[
+                const SizedBox(height: 12),
+                _buildMintProgress(
+                    l10n, widget.candyMachineService.mintStatus),
+              ],
+            ],
+          ),
         );
       },
     );
   }
 
-  /// Shown when on-chain store config hasn't loaded yet
-  Widget _buildStoreNotLoaded() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.cloud_off_rounded,
-              color: Colors.orange.shade400,
-              size: 56,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Store Prices Unavailable',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Unable to load on-chain pricing.\nPlease check your connection and try again.',
-              style: TextStyle(color: Colors.white.withOpacity(0.5)),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => widget.boostManager.refreshStoreConfig(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('RETRY'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange.shade700,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 32, vertical: 14),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ============================================================
-  // NFT SECTION — CANDY MACHINE MINT
-  // ============================================================
-
-  Widget _buildNFTSection() {
-    return Consumer<WalletService>(
-      builder: (context, wallet, _) {
-        if (!wallet.isConnected) {
-          return _buildWalletPrompt();
-        }
-
-        return ListenableBuilder(
-          listenable: widget.candyMachineService,
-          builder: (context, _) {
-            final cms = widget.candyMachineService;
-
-            // Already owns an NFT — show owned state
-            if (cms.hasNFT) {
-              return _buildNFTOwned(cms);
-            }
-
-            // Show mint UI
-            return _buildNFTMint(cms);
-          },
-        );
-      },
-    );
-  }
-
-  /// Shows the mint interface when user doesn't own an NFT yet
-  Widget _buildNFTMint(CandyMachineService cms) {
-    final info = cms.info;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
+  Widget _buildBenefitRow(String icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
         children: [
-          // NFT Preview
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  Colors.amber.shade900.withOpacity(0.3),
-                  Colors.transparent,
-                ],
-              ),
-            ),
-            child: Center(
-              child: Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade900,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.amber.shade700.withOpacity(0.5),
-                    width: 2,
-                  ),
-                ),
-                child: const Center(
-                  child: Text('💎', style: TextStyle(fontSize: 32)),
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Title
-          ShaderMask(
-            shaderCallback: (bounds) => LinearGradient(
-              colors: [
-                Colors.amber.shade300,
-                Colors.amber.shade600,
-                Colors.orange.shade700,
-              ],
-            ).createShader(bounds),
-            child: const Text(
-              'DIGGLE DRILL MACHINE',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 2,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          Text(
-            'Permanent boost NFT — one per player',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.5),
-              fontSize: 13,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Benefits
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.04),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.amber.withOpacity(0.15)),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  'HOLDER BENEFITS',
-                  style: TextStyle(
-                    color: Colors.amber.shade600,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                _buildBenefitRow('⚡', 'Permanent XP Boost', '+25% XP'),
-                const SizedBox(height: 6),
-                _buildBenefitRow('💎', 'Permanent Points Boost', '+25% Points'),
-                const SizedBox(height: 6),
-                _buildBenefitRow('🏆', 'Limited Supply',
-                    info != null ? '${info.itemsRemaining}/${info.itemsAvailable}' : '...'),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Mint info / status
-          if (cms.isLoadingInfo)
-            const Padding(
-              padding: EdgeInsets.all(12),
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.amber,
-              ),
-            )
-          else if (info == null)
-            _buildMintInfoError(cms)
-          else if (info.isSoldOut)
-              _buildSoldOut()
-            else if (!info.isMintLive)
-                _buildMintNotLive(info)
-              else
-                _buildMintButton(cms, info),
-
-          // Mint status feedback
-          if (cms.mintStatus != MintStatus.idle)
-            _buildMintStatusFeedback(cms),
-
-          const SizedBox(height: 8),
-
-          // Refresh button
-          TextButton.icon(
-            onPressed: cms.isLoadingInfo ? null : () {
-              cms.fetchMintInfo();
-              cms.checkNFTOwnership();
-            },
-            icon: Icon(Icons.refresh, size: 16,
-                color: Colors.white.withOpacity(0.4)),
-            label: Text('Refresh',
-                style: TextStyle(color: Colors.white.withOpacity(0.4),
-                    fontSize: 12)),
-          ),
+          Text(icon, style: const TextStyle(fontSize: 16)),
+          const SizedBox(width: 8),
+          Text(label,
+              style: const TextStyle(color: Colors.white70, fontSize: 13)),
+          const Spacer(),
+          Text(value,
+              style: const TextStyle(
+                  color: Colors.amber,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13)),
         ],
       ),
     );
   }
 
-  Widget _buildMintButton(CandyMachineService cms, CandyMachineInfo info) {
-    final isMinting = cms.isMinting;
-    final price = info.mintPriceSol;
+  Widget _buildMintStatus(String title, String subtitle, Color color) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Column(
+        children: [
+          Text(title,
+              style: TextStyle(
+                  color: color,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1)),
+          const SizedBox(height: 4),
+          Text(subtitle,
+              style: TextStyle(
+                  color: color.withOpacity(0.7), fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMintButton(AppLocalizations l10n) {
+    final cmInfo = widget.candyMachineService.info;
+    final nftCol = widget.boostManager.nftCollection;
+    final mintPrice = cmInfo?.mintPriceSol ?? nftCol.mintPriceSOL;
+    final isMinting = widget.candyMachineService.isMinting;
 
     return SizedBox(
       width: double.infinity,
+      height: 56,
       child: ElevatedButton(
-        onPressed: isMinting ? null : () => _handleMint(cms),
+        onPressed: isMinting ? null : () => _mintNFT(),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.amber.shade700,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: Colors.grey.shade800,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          foregroundColor: Colors.black,
+          shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
         child: isMinting
             ? const SizedBox(
-          width: 20,
-          height: 20,
+          width: 24,
+          height: 24,
           child: CircularProgressIndicator(
-              strokeWidth: 2, color: Colors.white),
+              strokeWidth: 2, color: Colors.black),
         )
-            : Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('💎', style: TextStyle(fontSize: 18)),
-            const SizedBox(width: 8),
-            Text(
-              price != null
-                  ? 'MINT — ${price.toStringAsFixed(price < 0.01 ? 4 : 2)} SOL'
-                  : 'MINT NFT',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1,
-              ),
-            ),
-          ],
+            : Text(
+          l10n.mintCost(mintPrice.toStringAsFixed(3)),
+          style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              letterSpacing: 1),
         ),
       ),
     );
   }
 
-  Future<void> _handleMint(CandyMachineService cms) async {
-    final sig = await cms.mint();
-    if (sig != null) {
-      _showMessage('NFT Minted! 🎉', true);
-    } else if (cms.error != null) {
-      _showMessage(cms.error!, false);
-    }
-  }
+  Widget _buildMintProgress(AppLocalizations l10n, MintStatus status) {
+    final (label, color) = switch (status) {
+      MintStatus.idle                => ('', Colors.transparent), // Added safe fallback
+      MintStatus.fetchingTransaction => (l10n.mintStatusPreparing, Colors.white70),
+      MintStatus.awaitingSignature   => (l10n.mintStatusApprove, Colors.amber),
+      MintStatus.sending             => (l10n.mintStatusSending, Colors.blue),
+      MintStatus.confirming          => (l10n.mintStatusConfirming, Colors.purple),
+      MintStatus.success             => (l10n.mintStatusSuccess, Colors.green),
+      MintStatus.error               => (l10n.mintStatusError, Colors.red),
+    };
 
-  Widget _buildMintStatusFeedback(CandyMachineService cms) {
-    String message;
-    Color color;
-    IconData icon;
+    if (status == MintStatus.idle) return const SizedBox.shrink();
 
-    switch (cms.mintStatus) {
-      case MintStatus.fetchingTransaction:
-        message = 'Preparing transaction...';
-        color = Colors.blue;
-        icon = Icons.cloud_download;
-        break;
-      case MintStatus.awaitingSignature:
-        message = 'Approve in your wallet app...';
-        color = Colors.orange;
-        icon = Icons.fingerprint;
-        break;
-      case MintStatus.sending:
-        message = 'Sending transaction...';
-        color = Colors.cyan;
-        icon = Icons.send;
-        break;
-      case MintStatus.confirming:
-        message = 'Confirming on-chain...';
-        color = Colors.purple;
-        icon = Icons.hourglass_top;
-        break;
-      case MintStatus.success:
-        message = 'Minted successfully!';
-        color = Colors.green;
-        icon = Icons.check_circle;
-        break;
-      case MintStatus.error:
-        message = cms.error ?? 'Mint failed';
-        color = Colors.red;
-        icon = Icons.error;
-        break;
-      default:
-        return const SizedBox.shrink();
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: TextStyle(color: color, fontSize: 13),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (cms.mintStatus == MintStatus.error ||
-                cms.mintStatus == MintStatus.success)
-              GestureDetector(
-                onTap: () => cms.resetMintStatus(),
-                child: Icon(Icons.close, color: color, size: 16),
-              ),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
-    );
-  }
-
-  /// Shows the "already owned" state
-  Widget _buildNFTOwned(CandyMachineService cms) {
-    final nft = cms.ownedNFT;
-    final imageUri = nft?.imageUri;
-    final nftName = nft?.name ?? 'DRILL MACHINE HOLDER';
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
+      child: Row(
         children: [
-          // NFT image or fallback checkmark
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.green.shade400.withOpacity(0.6),
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.green.withOpacity(0.2),
-                  blurRadius: 20,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: imageUri != null
-                  ? Image.network(
-                imageUri,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    color: Colors.green.shade900.withOpacity(0.3),
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.green,
-                      ),
-                    ),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.green.shade900.withOpacity(0.3),
-                    child: const Center(
-                      child: Text('💎', style: TextStyle(fontSize: 40)),
-                    ),
-                  );
-                },
-              )
-                  : Container(
-                color: Colors.green.shade900.withOpacity(0.3),
-                child: const Center(
-                  child: Text('💎', style: TextStyle(fontSize: 40)),
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          Text(
-            nftName.toUpperCase(),
-            style: const TextStyle(
-              color: Colors.green,
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 2,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          const SizedBox(height: 8),
-
-          Text(
-            'Your boosts are permanently active!',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.5),
-              fontSize: 14,
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Active boosts
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.06),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.green.withOpacity(0.2)),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  'ACTIVE BOOSTS',
-                  style: TextStyle(
-                    color: Colors.green.shade400,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildBenefitRow('⚡', 'XP Boost', '+25% XP',
-                    activeColor: Colors.green),
-                const SizedBox(height: 8),
-                _buildBenefitRow('💎', 'Points Boost', '+25% Points',
-                    activeColor: Colors.green),
-              ],
-            ),
-          ),
-
-          if (cms.ownedNFT != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              'Mint: ${cms.ownedNFT!.mintAddress.substring(0, 8)}...',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.3),
-                fontSize: 11,
-                fontFamily: 'monospace',
-              ),
-            ),
-          ],
+          if (status != MintStatus.success && status != MintStatus.error)
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: color),
+            )
+          else
+            Icon(
+                status == MintStatus.success
+                    ? Icons.check_circle
+                    : Icons.error,
+                color: color,
+                size: 16),
+          const SizedBox(width: 10),
+          Text(label, style: TextStyle(color: color, fontSize: 13)),
         ],
       ),
     );
   }
 
-  Widget _buildMintInfoError(CandyMachineService cms) {
-    return Column(
-      children: [
-        Icon(Icons.cloud_off, color: Colors.orange.shade400, size: 36),
-        const SizedBox(height: 8),
-        Text(
-          cms.error ?? 'Unable to load mint info',
-          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 12),
-        ElevatedButton.icon(
-          onPressed: () {
-            cms.fetchMintInfo();
-            cms.checkNFTOwnership();
-          },
-          icon: const Icon(Icons.refresh, size: 16),
-          label: const Text('RETRY'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange.shade700,
-            foregroundColor: Colors.white,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSoldOut() {
-    return Column(
-      children: [
-        Text(
-          'SOLD OUT',
-          style: TextStyle(
-            color: Colors.red.shade400,
-            fontSize: 24,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 3,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'All Diggle Drill NFTs have been minted!',
-          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMintNotLive(CandyMachineInfo info) {
-    return Column(
-      children: [
-        Icon(Icons.schedule, color: Colors.amber.shade400, size: 36),
-        const SizedBox(height: 8),
-        const Text(
-          'MINT OPENS SOON',
-          style: TextStyle(
-            color: Colors.amber,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          info.startDate != null
-              ? 'Starts: ${_formatDate(info.startDate!)}'
-              : 'Check back later!',
-          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
-        ),
-      ],
-    );
-  }
-
-  String _formatDate(DateTime dt) {
-    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-'
-        '${dt.day.toString().padLeft(2, '0')} '
-        '${dt.hour.toString().padLeft(2, '0')}:'
-        '${dt.minute.toString().padLeft(2, '0')} UTC';
-  }
-
-  Widget _buildBenefitRow(String icon, String title, String value,
-      {Color? activeColor}) {
-    return Row(
-      children: [
-        Text(icon, style: const TextStyle(fontSize: 18)),
-        const SizedBox(width: 12),
-        Text(title,
-            style: TextStyle(
-                color: (activeColor ?? Colors.white).withOpacity(0.6),
-                fontSize: 13)),
-        const Spacer(),
-        Text(
-          value,
-          style: TextStyle(
-            color: activeColor ?? Colors.amber.shade400,
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildWalletPrompt() {
+  Widget _buildWalletRequired(AppLocalizations l10n) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.account_balance_wallet,
-              color: Colors.purple,
-              size: 64,
-            ),
+            const Icon(Icons.account_balance_wallet_outlined,
+                color: Colors.purple, size: 48),
             const SizedBox(height: 16),
-            const Text(
-              'Wallet Required',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Text(l10n.walletRequired,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            const Text(
-              'Connect your Solana wallet to access premium items.\nAll purchases are on-chain transactions.',
-              style: TextStyle(color: Colors.white54),
-              textAlign: TextAlign.center,
-            ),
+            Text(l10n.walletRequiredMessage,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white54, fontSize: 13)),
             const SizedBox(height: 24),
-            Consumer<WalletService>(
-              builder: (context, wallet, _) {
-                return ElevatedButton.icon(
-                  onPressed:
-                  wallet.isConnecting ? null : () => wallet.connect(),
-                  icon: wallet.isConnecting
-                      ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child:
-                    CircularProgressIndicator(strokeWidth: 2),
-                  )
-                      : const Icon(Icons.account_balance_wallet),
-                  label: Text(wallet.isConnecting
-                      ? 'Connecting...'
-                      : 'CONNECT WALLET'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purple,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 32, vertical: 16),
-                  ),
-                );
-              },
+            ElevatedButton.icon(
+              onPressed: () => context.read<WalletService>().connect(),
+              icon: const Icon(Icons.account_balance_wallet),
+              label: Text(l10n.connectWallet),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purple.shade700,
+                foregroundColor: Colors.white,
+              ),
             ),
           ],
         ),
@@ -1032,249 +764,106 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
     );
   }
 
-  Widget _buildStoreItemCard({
-    required StoreItem item,
-    required Widget priceWidget,
-    required bool canAfford,
-    required VoidCallback onPurchase,
-    bool isLoading = false,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade900,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: item.requiresWallet
-              ? Colors.cyan.shade800
-              : Colors.grey.shade700,
+  Widget _buildPricesUnavailable(AppLocalizations l10n) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off, color: Colors.orange, size: 48),
+            const SizedBox(height: 16),
+            Text(l10n.storePricesUnavailable,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(l10n.storePricesUnavailableMessage,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white54, fontSize: 13)),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _loadPrices,
+              icon: const Icon(Icons.refresh),
+              label: Text(l10n.retry),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange.shade700,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
         ),
       ),
-      child: Row(
-        children: [
-          // Icon
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.purple.shade900.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Center(
-              child: Text(item.icon, style: const TextStyle(fontSize: 24)),
-            ),
-          ),
-
-          const SizedBox(width: 12),
-
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        item.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (item.requiresWallet) ...[
-                      const SizedBox(width: 4),
-                      Icon(Icons.link, color: Colors.cyan.shade400, size: 14),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  item.description,
-                  style: const TextStyle(
-                      color: Colors.white54, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-
-          // Price + Buy
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              priceWidget,
-              const SizedBox(height: 6),
-              SizedBox(
-                height: 32,
-                child: ElevatedButton(
-                  onPressed:
-                  (canAfford && !isLoading) ? onPurchase : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purple.shade700,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 4),
-                    textStyle: const TextStyle(fontSize: 12),
-                  ),
-                  child: isLoading
-                      ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                      : const Text('BUY'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 
-  Widget _buildMessage() {
-    return Container(
-      margin: const EdgeInsets.all(8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: _isSuccess
-            ? Colors.green.shade900.withOpacity(0.8)
-            : Colors.red.shade900.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            _isSuccess ? Icons.check_circle : Icons.error,
-            color: _isSuccess ? Colors.green : Colors.red,
-            size: 20,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              _message!,
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCloseButton() {
+  Widget _buildCloseButton(AppLocalizations l10n) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
-      child: ElevatedButton(
+      child: ElevatedButton.icon(
         onPressed: () => widget.game.overlays.remove('premiumStore'),
+        icon: const Icon(Icons.close),
+        label: Text(l10n.closeStore),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.grey.shade800,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14),
         ),
-        child: const Text('CLOSE STORE'),
       ),
     );
   }
 
-  void _showMessage(String message, bool success) {
-    setState(() {
-      _message = message;
-      _isSuccess = success;
-    });
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) setState(() => _message = null);
-    });
+  // ── Actions ──────────────────────────────────────────────────
+
+  Future<void> _buyWithPoints(StoreItem item) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final success = widget.boostManager.purchaseWithPoints(item);
+      if (success) {
+        _showStatus(l10n.activated(item.name));
+      } else {
+        _showStatus(l10n.notEnoughPoints);
+      }
+    } catch (e) {
+      _showStatus(l10n.purchaseFailed);
+    }
   }
-}
 
-// ============================================================
-// HELPER WIDGETS
-// ============================================================
-
-class _StatChip extends StatelessWidget {
-  final String icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  const _StatChip({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(icon, style: const TextStyle(fontSize: 18)),
-        Text(label,
-            style:
-            TextStyle(color: color.withOpacity(0.7), fontSize: 10)),
-        Text(
-          value,
-          style: TextStyle(
-            color: color,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
+  Future<void> _buyWithSOL(StoreItem item) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final tx = await widget.boostManager.purchaseWithSOL(item);
+      if (tx != null) {
+        _showStatus(l10n.purchasedTx(item.name, tx.substring(0, 8)));
+      } else {
+        // Check if BoostManager set an error message
+        final err = widget.boostManager.error;
+        _showStatus(err ?? l10n.purchaseFailed);
+      }
+    } catch (e) {
+      _showStatus(l10n.purchaseFailed);
+    }
   }
-}
 
-class _BoostChip extends StatelessWidget {
-  final String icon;
-  final String label;
-  final Color color;
-  final String timeRemaining;
+  Future<void> _mintNFT() async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final result = await widget.candyMachineService.mint();
+      if (result != null) {
+        // Refresh NFT ownership status in BoostManager
+        await widget.boostManager.checkForNFT();
+        _showStatus(l10n.nftMinted);
+      }
+    } catch (e) {
+      _showStatus(l10n.purchaseFailed);
+    }
+  }
 
-  const _BoostChip({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.timeRemaining,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.5)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(icon, style: const TextStyle(fontSize: 14)),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-                color: color,
-                fontSize: 11,
-                fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            timeRemaining,
-            style:
-            TextStyle(color: color.withOpacity(0.7), fontSize: 10),
-          ),
-        ],
-      ),
-    );
+  String _formatDuration(Duration d) {
+    if (d.inHours > 0) return '${d.inHours}h ${d.inMinutes % 60}m';
+    if (d.inMinutes > 0) return '${d.inMinutes}m';
+    return '${d.inSeconds}s';
   }
 }

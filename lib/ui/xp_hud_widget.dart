@@ -1,15 +1,13 @@
 /// xp_hud_widget.dart
 /// Compact XP/level display widget for the in-game HUD.
-/// Shows level, XP progress bar, points, and active boost indicators.
-///
-/// Designed to sit below the existing top bar in hud_overlay.dart
+/// Minimal localization needed — mostly numeric displays.
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../game/systems/xp_points_system.dart';
 import '../game/systems/boost_manager.dart';
 
-/// Compact XP bar for the HUD
 class XPHudWidget extends StatelessWidget {
   final XPPointsSystem xpSystem;
   final BoostManager boostManager;
@@ -24,6 +22,8 @@ class XPHudWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return ListenableBuilder(
       listenable: xpSystem,
       builder: (context, _) {
@@ -56,7 +56,6 @@ class XPHudWidget extends StatelessWidget {
                   ),
                 ),
               ),
-
               const SizedBox(width: 8),
 
               // XP progress bar
@@ -69,7 +68,7 @@ class XPHudWidget extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'XP: ${xpSystem.totalXP}/${xpSystem.xpForNextLevel}',
+                          l10n.xpLabel(xpSystem.totalXP, xpSystem.xpForNextLevel),
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 9,
@@ -92,7 +91,10 @@ class XPHudWidget extends StatelessWidget {
                         child: Container(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [Colors.blue.shade600, Colors.purple.shade400],
+                              colors: [
+                                Colors.blue.shade600,
+                                Colors.purple.shade400,
+                              ],
                             ),
                             borderRadius: BorderRadius.circular(3),
                           ),
@@ -102,14 +104,14 @@ class XPHudWidget extends StatelessWidget {
                   ],
                 ),
               ),
-
               const SizedBox(width: 8),
 
               // Points display
               GestureDetector(
                 onTap: onTapStore,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.purple.shade900.withOpacity(0.5),
                     borderRadius: BorderRadius.circular(6),
@@ -158,10 +160,7 @@ class XPHudWidget extends StatelessWidget {
           ));
         }
 
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: boosts,
-        );
+        return Row(mainAxisSize: MainAxisSize.min, children: boosts);
       },
     );
   }
@@ -244,7 +243,8 @@ class _XPGainNotificationState extends State<XPGainNotification>
                     fontSize: 14,
                   ),
                 ),
-              if (widget.event.finalXP > 0 && widget.event.finalPoints > 0)
+              if (widget.event.finalXP > 0 &&
+                  widget.event.finalPoints > 0)
                 const SizedBox(width: 8),
               if (widget.event.finalPoints > 0)
                 Text(
@@ -258,10 +258,7 @@ class _XPGainNotificationState extends State<XPGainNotification>
               if (widget.event.xpMultiplier > 1.0)
                 Text(
                   ' (${widget.event.xpMultiplier}x)',
-                  style: const TextStyle(
-                    color: Colors.yellow,
-                    fontSize: 11,
-                  ),
+                  style: const TextStyle(color: Colors.yellow, fontSize: 11),
                 ),
             ],
           ),

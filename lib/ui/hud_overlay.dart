@@ -1,9 +1,11 @@
 /// hud_overlay.dart
-/// In-game HUD with HP bar, fuel, cargo, item bar, and controls
+/// In-game HUD with HP bar, fuel, cargo, item bar, and controls.
+/// All user-facing strings localized via AppLocalizations.
 
 import 'dart:async';
 import 'package:diggle/ui/xp_hud_widget.dart';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../game/diggle_game.dart';
 import '../game/player/drill_component.dart';
 import '../game/systems/item_system.dart';
@@ -36,6 +38,8 @@ class _HudOverlayState extends State<HudOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return SafeArea(
       child: Stack(
         children: [
@@ -44,11 +48,11 @@ class _HudOverlayState extends State<HudOverlay> {
             top: 0,
             left: 0,
             right: 0,
-            child: _buildTopBar(),
+            child: _buildTopBar(l10n),
           ),
           // XP bar
           Positioned(
-            top: 90, // Below existing top bar (adjust based on your layout)
+            top: 90,
             left: 0,
             right: 0,
             child: XPHudWidget(
@@ -58,12 +62,12 @@ class _HudOverlayState extends State<HudOverlay> {
             ),
           ),
 
-          // Item bar (below stats)
+          // Item bar
           Positioned(
             top: 150,
             left: 0,
             right: 0,
-            child: _buildItemBar(),
+            child: _buildItemBar(l10n),
           ),
 
           // Pause button
@@ -78,30 +82,27 @@ class _HudOverlayState extends State<HudOverlay> {
                   color: Colors.black.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(
-                  Icons.pause,
-                  color: Colors.white,
-                  size: 24,
-                ),
+                child: const Icon(Icons.pause, color: Colors.white, size: 24),
               ),
             ),
           ),
 
-          /* Controls at bottom*/
+          // Controls
           Positioned(
             bottom: 30,
             left: 0,
             right: 0,
             child: _buildControls(),
           ),
-          // premium shop
+
+          // Premium store
           Positioned(
             top: 210,
             left: 16,
             child: ElevatedButton.icon(
               onPressed: () => widget.game.openPremiumStore(),
               icon: const Text('💎', style: TextStyle(fontSize: 16)),
-              label: const Text('STORE'),
+              label: Text(l10n.store),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.purple.shade700,
               ),
@@ -116,11 +117,12 @@ class _HudOverlayState extends State<HudOverlay> {
               child: ElevatedButton.icon(
                 onPressed: () => widget.game.openShop(),
                 icon: const Icon(Icons.store),
-                label: const Text('SHOP'),
+                label: Text(l10n.shop),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green.shade700,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
             ),
@@ -129,7 +131,7 @@ class _HudOverlayState extends State<HudOverlay> {
     );
   }
 
-  Widget _buildTopBar() {
+  Widget _buildTopBar(AppLocalizations l10n) {
     final fuel = widget.game.fuelSystem;
     final hull = widget.game.hullSystem;
     final economy = widget.game.economySystem;
@@ -145,14 +147,12 @@ class _HudOverlayState extends State<HudOverlay> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // HP and Fuel bars row
           Row(
             children: [
-              // HP Bar
               Expanded(
                 child: _buildBar(
                   icon: Icons.shield,
-                  label: 'HP',
+                  label: l10n.hp,
                   value: hull.hull,
                   max: hull.maxHull,
                   color: hull.isCritical
@@ -163,11 +163,10 @@ class _HudOverlayState extends State<HudOverlay> {
                 ),
               ),
               const SizedBox(width: 12),
-              // Fuel Bar
               Expanded(
                 child: _buildBar(
                   icon: Icons.local_gas_station,
-                  label: 'FUEL',
+                  label: l10n.fuel,
                   value: fuel.fuel,
                   max: fuel.maxFuel,
                   color: fuel.isCritical
@@ -180,33 +179,33 @@ class _HudOverlayState extends State<HudOverlay> {
             ],
           ),
           const SizedBox(height: 8),
-          // Stats row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Cargo
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.inventory_2,
-                      color: economy.isCargoFull ? Colors.red : Colors.white70,
+                      color:
+                      economy.isCargoFull ? Colors.red : Colors.white70,
                       size: 16),
                   const SizedBox(width: 4),
                   Text(
                     '${economy.cargoCount}/${economy.maxCapacity}',
                     style: TextStyle(
-                      color: economy.isCargoFull ? Colors.red : Colors.white,
+                      color:
+                      economy.isCargoFull ? Colors.red : Colors.white,
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
               ),
-              // Cash
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.attach_money, color: Colors.amber, size: 16),
+                  const Icon(Icons.attach_money,
+                      color: Colors.amber, size: 16),
                   Text(
                     '${economy.cash}',
                     style: const TextStyle(
@@ -217,13 +216,13 @@ class _HudOverlayState extends State<HudOverlay> {
                   ),
                 ],
               ),
-              // Depth
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.height, color: Colors.white70, size: 16),
+                  const Icon(Icons.height,
+                      color: Colors.white70, size: 16),
                   Text(
-                    '${depth}m',
+                    l10n.depthMeter(depth),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 13,
@@ -257,7 +256,8 @@ class _HudOverlayState extends State<HudOverlay> {
             const SizedBox(width: 4),
             Text(
               '$label: ${value.toInt()}/${max.toInt()}',
-              style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: color, fontSize: 11, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -283,13 +283,11 @@ class _HudOverlayState extends State<HudOverlay> {
     );
   }
 
-  Widget _buildItemBar() {
+  Widget _buildItemBar(AppLocalizations l10n) {
     final items = widget.game.itemSystem;
     final slots = items.itemSlots;
 
-    if (slots.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    if (slots.isEmpty) return const SizedBox.shrink();
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -301,11 +299,13 @@ class _HudOverlayState extends State<HudOverlay> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text(
-            'ITEMS: ',
-            style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
-          ),
-          ...slots.map((type) => _buildItemSlot(type, items.getQuantity(type))),
+          Text(l10n.items,
+              style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold)),
+          ...slots.map(
+                  (type) => _buildItemSlot(type, items.getQuantity(type))),
         ],
       ),
     );
@@ -315,9 +315,7 @@ class _HudOverlayState extends State<HudOverlay> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: GestureDetector(
-        onTap: () {
-          widget.game.useItem(type);
-        },
+        onTap: () => widget.game.useItem(type),
         child: Container(
           width: 50,
           height: 40,
@@ -328,14 +326,7 @@ class _HudOverlayState extends State<HudOverlay> {
           ),
           child: Stack(
             children: [
-              // Item icon
-              Center(
-                child: Text(
-                  type.icon,
-                  style: const TextStyle(fontSize: 20),
-                ),
-              ),
-              // Quantity badge
+              Center(child: Text(type.icon, style: const TextStyle(fontSize: 20))),
               Positioned(
                 right: 2,
                 bottom: 2,
@@ -345,14 +336,11 @@ class _HudOverlayState extends State<HudOverlay> {
                     color: Colors.blue.shade700,
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: Text(
-                    'x$quantity',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: Text('x$quantity',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -368,7 +356,6 @@ class _HudOverlayState extends State<HudOverlay> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Left / Right
           Row(
             children: [
               _DirectionButton(
@@ -384,7 +371,6 @@ class _HudOverlayState extends State<HudOverlay> {
               ),
             ],
           ),
-          // Up / Down
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -456,11 +442,7 @@ class _DirectionButtonState extends State<_DirectionButton> {
             width: 2,
           ),
         ),
-        child: Icon(
-          widget.icon,
-          color: Colors.white,
-          size: 36,
-        ),
+        child: Icon(widget.icon, color: Colors.white, size: 36),
       ),
     );
   }

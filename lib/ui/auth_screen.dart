@@ -1,13 +1,10 @@
 /// auth_screen.dart
-/// Authentication screen with three sign-in methods:
-/// - Email (sign up / sign in)
-/// - Web3 Wallet (Sign In With Solana)
-/// - Guest (anonymous auth)
-///
-/// Shown on first launch or when no valid session exists.
+/// Authentication screen with three sign-in methods.
+/// All user-facing strings localized via AppLocalizations.
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../services/supabase_service.dart';
 import '../solana/wallet_service.dart';
 
@@ -22,13 +19,13 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMixin {
+class _AuthScreenState extends State<AuthScreen>
+    with SingleTickerProviderStateMixin {
   AuthMode _mode = AuthMode.landing;
   bool _loading = false;
   String? _error;
   String? _successMessage;
 
-  // Email form
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -69,11 +66,12 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
 
   Future<void> _emailSignIn() async {
     _clearMessages();
+    final l10n = AppLocalizations.of(context)!;
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
-      _setError('Please enter your email and password');
+      _setError(l10n.pleaseFillFields);
       return;
     }
 
@@ -91,30 +89,32 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
 
   Future<void> _emailSignUp() async {
     _clearMessages();
+    final l10n = AppLocalizations.of(context)!;
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     final confirmPassword = _confirmPasswordController.text;
 
     if (email.isEmpty || password.isEmpty) {
-      _setError('Please enter your email and password');
+      _setError(l10n.pleaseFillFields);
       return;
     }
     if (password.length < 6) {
-      _setError('Password must be at least 6 characters');
+      _setError(l10n.passwordTooShort);
       return;
     }
     if (password != confirmPassword) {
-      _setError('Passwords do not match');
+      _setError(l10n.passwordsNoMatch);
       return;
     }
 
     setState(() => _loading = true);
 
     try {
-      final needsConfirmation = await SupabaseService.instance.signUpWithEmail(email, password);
+      final needsConfirmation =
+      await SupabaseService.instance.signUpWithEmail(email, password);
       if (needsConfirmation) {
         setState(() {
-          _successMessage = 'Check your email to confirm your account!';
+          _successMessage = l10n.checkEmailConfirm;
           _loading = false;
           _mode = AuthMode.emailSignIn;
         });
@@ -130,37 +130,35 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
 
   Future<void> _walletSignIn() async {
     _clearMessages();
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _loading = true);
 
     try {
       final wallet = context.read<WalletService>();
 
-      // Step 1: Connect wallet if not connected
       if (!wallet.isConnected) {
         final connected = await wallet.connect();
         if (!connected) {
-          _setError('Wallet connection cancelled');
+          _setError(l10n.walletConnectionCancelled);
           return;
         }
       }
 
       final pubkey = wallet.publicKey;
       if (pubkey == null) {
-        _setError('Could not get wallet address');
+        _setError(l10n.couldNotGetWalletAddress);
         return;
       }
 
-      // Step 2: Get sign-in message from server
-      final message = await SupabaseService.instance.getWalletSignInMessage(pubkey);
+      final message =
+      await SupabaseService.instance.getWalletSignInMessage(pubkey);
 
-      // Step 3: Sign message via MWA
       final signedBytes = await wallet.signMessage(message);
       if (signedBytes == null) {
-        _setError('Message signing was cancelled');
+        _setError(l10n.signingCancelled);
         return;
       }
 
-      // Step 4: Verify signature and get session
       await SupabaseService.instance.verifyWalletSignature(
         walletAddress: pubkey,
         signature: signedBytes,
@@ -188,13 +186,14 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
   }
 
   String _friendlyAuthError(dynamic e) {
+    final l10n = AppLocalizations.of(context)!;
     final msg = e.toString().toLowerCase();
-    if (msg.contains('invalid login')) return 'Invalid email or password';
-    if (msg.contains('user already registered')) return 'An account with this email already exists';
-    if (msg.contains('email not confirmed')) return 'Please confirm your email first';
-    if (msg.contains('network') || msg.contains('socket')) return 'Network error — check your connection';
-    if (msg.contains('rate limit')) return 'Too many attempts — try again later';
-    if (msg.contains('cancelled') || msg.contains('canceled')) return 'Cancelled';
+    if (msg.contains('invalid login')) return l10n.invalidEmailPassword;
+    if (msg.contains('user already registered')) return l10n.emailAlreadyRegistered;
+    if (msg.contains('email not confirmed')) return l10n.pleaseConfirmEmail;
+    if (msg.contains('network') || msg.contains('socket')) return l10n.networkError;
+    if (msg.contains('rate limit')) return l10n.tooManyAttempts;
+    if (msg.contains('cancelled') || msg.contains('canceled')) return l10n.cancelled;
     final str = e.toString();
     return str.length > 80 ? '${str.substring(0, 80)}...' : str;
   }
@@ -221,21 +220,19 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     );
   }
 
-  // ── Landing (method selection) ───────────────────────────────
+  // ── Landing ──────────────────────────────────────────────────
 
   Widget _buildLanding() {
+    final l10n = AppLocalizations.of(context)!;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Logo / Title
-        const Text(
-          '⛏',
-          style: TextStyle(fontSize: 56),
-        ),
+        const Text('⛏', style: TextStyle(fontSize: 56)),
         const SizedBox(height: 12),
-        const Text(
-          'DIGGLE',
-          style: TextStyle(
+        Text(
+          l10n.appTitle.toUpperCase(),
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 36,
             fontWeight: FontWeight.w900,
@@ -244,63 +241,52 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         ),
         const SizedBox(height: 8),
         Text(
-          'Mine deep. Earn rewards.',
+          l10n.mineDeepEarnRewards,
           style: TextStyle(
             color: Colors.white.withOpacity(0.4),
             fontSize: 14,
             letterSpacing: 1,
           ),
         ),
-
         const SizedBox(height: 48),
 
-        // Email sign in
         _buildAuthButton(
-          label: 'SIGN IN WITH EMAIL',
+          label: l10n.signInWithEmail,
           icon: Icons.email_outlined,
           color: const Color(0xFF2563eb),
           onTap: () => setState(() => _mode = AuthMode.emailSignIn),
         ),
-
         const SizedBox(height: 12),
 
-        // Wallet sign in
         _buildAuthButton(
-          label: 'SIGN IN WITH WALLET',
+          label: l10n.signInWithWallet,
           icon: Icons.account_balance_wallet_outlined,
           color: const Color(0xFF9333ea),
           onTap: _loading ? null : _walletSignIn,
           loading: _loading,
         ),
-
         const SizedBox(height: 24),
 
-        // Divider
         Row(
           children: [
             Expanded(child: Divider(color: Colors.white.withOpacity(0.1))),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'OR',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.3),
-                  fontSize: 12,
-                  letterSpacing: 2,
-                ),
-              ),
+              child: Text(l10n.or,
+                  style: TextStyle(
+                      color: Colors.white.withOpacity(0.3),
+                      fontSize: 12,
+                      letterSpacing: 2)),
             ),
             Expanded(child: Divider(color: Colors.white.withOpacity(0.1))),
           ],
         ),
-
         const SizedBox(height: 24),
 
-        // Guest
         TextButton(
           onPressed: _loading ? null : _guestSignIn,
           child: Text(
-            'Play as Guest',
+            l10n.playAsGuest,
             style: TextStyle(
               color: Colors.white.withOpacity(0.5),
               fontSize: 14,
@@ -310,15 +296,8 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           ),
         ),
 
-        if (_error != null) ...[
-          const SizedBox(height: 16),
-          _buildErrorBanner(),
-        ],
-
-        if (_successMessage != null) ...[
-          const SizedBox(height: 16),
-          _buildSuccessBanner(),
-        ],
+        if (_error != null) ...[const SizedBox(height: 16), _buildErrorBanner()],
+        if (_successMessage != null) ...[const SizedBox(height: 16), _buildSuccessBanner()],
       ],
     );
   }
@@ -326,13 +305,13 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
   // ── Email Form ───────────────────────────────────────────────
 
   Widget _buildEmailForm() {
+    final l10n = AppLocalizations.of(context)!;
     final isSignUp = _mode == AuthMode.emailSignUp;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Back button
         Align(
           alignment: Alignment.centerLeft,
           child: IconButton(
@@ -343,11 +322,10 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
             icon: Icon(Icons.arrow_back, color: Colors.white.withOpacity(0.6)),
           ),
         ),
-
         const SizedBox(height: 8),
 
         Text(
-          isSignUp ? 'CREATE ACCOUNT' : 'SIGN IN',
+          isSignUp ? l10n.createAccount : l10n.signIn,
           style: const TextStyle(
             color: Colors.white,
             fontSize: 24,
@@ -356,23 +334,19 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           ),
           textAlign: TextAlign.center,
         ),
-
         const SizedBox(height: 32),
 
-        // Email field
         _buildTextField(
           controller: _emailController,
-          hint: 'Email address',
+          hint: l10n.emailAddress,
           icon: Icons.email_outlined,
           keyboardType: TextInputType.emailAddress,
         ),
-
         const SizedBox(height: 12),
 
-        // Password field
         _buildTextField(
           controller: _passwordController,
-          hint: 'Password',
+          hint: l10n.password,
           icon: Icons.lock_outlined,
           obscure: _obscurePassword,
           suffix: IconButton(
@@ -381,7 +355,8 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
               color: Colors.white.withOpacity(0.3),
               size: 20,
             ),
-            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+            onPressed: () =>
+                setState(() => _obscurePassword = !_obscurePassword),
           ),
         ),
 
@@ -389,49 +364,43 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           const SizedBox(height: 12),
           _buildTextField(
             controller: _confirmPasswordController,
-            hint: 'Confirm password',
+            hint: l10n.confirmPassword,
             icon: Icons.lock_outlined,
             obscure: true,
           ),
         ],
-
         const SizedBox(height: 24),
 
-        // Submit button
         SizedBox(
           height: 50,
           child: ElevatedButton(
-            onPressed: _loading ? null : (isSignUp ? _emailSignUp : _emailSignIn),
+            onPressed:
+            _loading ? null : (isSignUp ? _emailSignUp : _emailSignIn),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2563eb),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              disabledBackgroundColor: const Color(0xFF2563eb).withOpacity(0.5),
+              disabledBackgroundColor:
+              const Color(0xFF2563eb).withOpacity(0.5),
             ),
             child: _loading
                 ? const SizedBox(
               width: 20,
               height: 20,
               child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
+                  strokeWidth: 2, color: Colors.white),
             )
                 : Text(
-              isSignUp ? 'CREATE ACCOUNT' : 'SIGN IN',
+              isSignUp ? l10n.createAccount : l10n.signIn,
               style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.5,
-              ),
+                  fontWeight: FontWeight.bold, letterSpacing: 1.5),
             ),
           ),
         ),
-
         const SizedBox(height: 16),
 
-        // Toggle sign in / sign up
         TextButton(
           onPressed: () {
             _clearMessages();
@@ -440,25 +409,14 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
             });
           },
           child: Text(
-            isSignUp
-                ? 'Already have an account? Sign in'
-                : "Don't have an account? Sign up",
+            isSignUp ? l10n.alreadyHaveAccount : l10n.noAccount,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.5),
-              fontSize: 13,
-            ),
+                color: Colors.white.withOpacity(0.5), fontSize: 13),
           ),
         ),
 
-        if (_error != null) ...[
-          const SizedBox(height: 12),
-          _buildErrorBanner(),
-        ],
-
-        if (_successMessage != null) ...[
-          const SizedBox(height: 12),
-          _buildSuccessBanner(),
-        ],
+        if (_error != null) ...[const SizedBox(height: 12), _buildErrorBanner()],
+        if (_successMessage != null) ...[const SizedBox(height: 12), _buildSuccessBanner()],
       ],
     );
   }
@@ -481,8 +439,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           foregroundColor: Colors.white,
           side: BorderSide(color: color.withOpacity(0.4)),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+              borderRadius: BorderRadius.circular(12)),
           elevation: 0,
         ),
         child: loading
@@ -490,23 +447,18 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           width: 20,
           height: 20,
           child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: color.withOpacity(0.8),
-          ),
+              strokeWidth: 2, color: color.withOpacity(0.8)),
         )
             : Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, size: 20, color: color),
             const SizedBox(width: 10),
-            Text(
-              label,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1,
-                fontSize: 13,
-              ),
-            ),
+            Text(label,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1,
+                    fontSize: 13)),
           ],
         ),
       ),
@@ -529,7 +481,8 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
-        prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.3), size: 20),
+        prefixIcon:
+        Icon(icon, color: Colors.white.withOpacity(0.3), size: 20),
         suffixIcon: suffix,
         filled: true,
         fillColor: Colors.white.withOpacity(0.05),
@@ -545,7 +498,8 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xFF2563eb)),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );
   }
@@ -563,10 +517,8 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           Icon(Icons.error_outline, color: Colors.red.shade300, size: 18),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              _error!,
-              style: TextStyle(color: Colors.red.shade300, fontSize: 13),
-            ),
+            child: Text(_error!,
+                style: TextStyle(color: Colors.red.shade300, fontSize: 13)),
           ),
         ],
       ),
@@ -583,13 +535,13 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       ),
       child: Row(
         children: [
-          Icon(Icons.check_circle_outline, color: Colors.green.shade300, size: 18),
+          Icon(Icons.check_circle_outline,
+              color: Colors.green.shade300, size: 18),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              _successMessage!,
-              style: TextStyle(color: Colors.green.shade300, fontSize: 13),
-            ),
+            child: Text(_successMessage!,
+                style:
+                TextStyle(color: Colors.green.shade300, fontSize: 13)),
           ),
         ],
       ),

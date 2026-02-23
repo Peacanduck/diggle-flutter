@@ -1,14 +1,9 @@
 /// save_slots_screen.dart
-/// Save slot selection screen for New Game and Load Game flows.
-///
-/// Shows 3 save slots with:
-/// - Slot summary (depth, playtime, date)
-/// - New Game: picks an empty slot or overwrites
-/// - Load Game: loads an existing save
-/// - Delete: clears a save slot
+/// Save slot selection screen. All strings localized via AppLocalizations.
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../services/world_save_service.dart';
 import '../services/game_lifecycle_manager.dart';
 
@@ -92,11 +87,10 @@ class _SaveSlotsScreenState extends State<SaveSlotsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isNew = widget.mode == SaveSlotMode.newGame;
-    final title = isNew ? 'NEW GAME' : 'LOAD GAME';
-    final subtitle = isNew
-        ? 'Choose a save slot for your new adventure'
-        : 'Select a save to continue your journey';
+    final title = isNew ? l10n.newGameTitle : l10n.loadGameTitle;
+    final subtitle = isNew ? l10n.newGameSubtitle : l10n.loadGameSubtitle;
 
     return Scaffold(
       body: Container(
@@ -114,7 +108,6 @@ class _SaveSlotsScreenState extends State<SaveSlotsScreen>
         child: SafeArea(
           child: Column(
             children: [
-              // Header
               Padding(
                 padding:
                 const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
@@ -152,17 +145,15 @@ class _SaveSlotsScreenState extends State<SaveSlotsScreen>
                   ],
                 ),
               ),
-
               const SizedBox(height: 16),
-
-              // Slots
               Expanded(
                 child: _loading
                     ? const Center(
-                  child: CircularProgressIndicator(color: Colors.amber),
-                )
+                    child:
+                    CircularProgressIndicator(color: Colors.amber))
                     : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 20),
                   itemCount: 3,
                   itemBuilder: (context, index) {
                     return _buildSlotCard(index, _slots[index]);
@@ -180,8 +171,6 @@ class _SaveSlotsScreenState extends State<SaveSlotsScreen>
     final isNew = widget.mode == SaveSlotMode.newGame;
     final isEmpty = save == null;
     final isDeleting = _confirmDeleteSlot == slot;
-
-    // In load mode, empty slots are disabled
     final isDisabled = !isNew && isEmpty;
 
     return AnimatedBuilder(
@@ -228,20 +217,23 @@ class _SaveSlotsScreenState extends State<SaveSlotsScreen>
         ),
         child: isDeleting
             ? _buildDeleteConfirmation(slot, save)
-            : _buildSlotContent(slot, save, isNew, isEmpty, isDisabled),
+            : _buildSlotContent(
+            slot, save, isNew, isEmpty, isDisabled),
       ),
     );
   }
 
-  Widget _buildSlotContent(
-      int slot, WorldSaveSummary? save, bool isNew, bool isEmpty, bool isDisabled) {
+  Widget _buildSlotContent(int slot, WorldSaveSummary? save, bool isNew,
+      bool isEmpty, bool isDisabled) {
+    final l10n = AppLocalizations.of(context)!;
+
     return InkWell(
       onTap: isDisabled
           ? null
           : () {
         if (isEmpty) {
-          widget.onSlotSelected(
-              slot, DateTime.now().millisecondsSinceEpoch & 0x7FFFFFFF);
+          widget.onSlotSelected(slot,
+              DateTime.now().millisecondsSinceEpoch & 0x7FFFFFFF);
         } else if (isNew) {
           _showOverwriteConfirm(slot);
         } else {
@@ -253,7 +245,6 @@ class _SaveSlotsScreenState extends State<SaveSlotsScreen>
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            // Slot number badge
             Container(
               width: 52,
               height: 52,
@@ -289,30 +280,27 @@ class _SaveSlotsScreenState extends State<SaveSlotsScreen>
                 ),
               ),
             ),
-
             const SizedBox(width: 16),
-
-            // Slot info
             Expanded(
               child: isEmpty
                   ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Slot ${slot + 1} — Empty',
+                    l10n.slotEmpty(slot + 1),
                     style: TextStyle(
-                      color: Colors.white.withOpacity(isDisabled ? 0.3 : 0.7),
+                      color: Colors.white
+                          .withOpacity(isDisabled ? 0.3 : 0.7),
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    isNew
-                        ? 'Tap to start a new adventure'
-                        : 'No save data',
+                    isNew ? l10n.tapToStart : l10n.noSaveData,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(isDisabled ? 0.2 : 0.4),
+                      color: Colors.white
+                          .withOpacity(isDisabled ? 0.2 : 0.4),
                       fontSize: 12,
                     ),
                   ),
@@ -322,7 +310,7 @@ class _SaveSlotsScreenState extends State<SaveSlotsScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Slot ${slot + 1}',
+                    l10n.slot(slot + 1),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -332,8 +320,8 @@ class _SaveSlotsScreenState extends State<SaveSlotsScreen>
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      _buildMiniStat(
-                          Icons.height, '${save!.depthReached}m'),
+                      _buildMiniStat(Icons.height,
+                          '${save!.depthReached}m'),
                       const SizedBox(width: 12),
                       _buildMiniStat(Icons.timer,
                           _formatPlaytime(save.playtimeSeconds)),
@@ -341,7 +329,7 @@ class _SaveSlotsScreenState extends State<SaveSlotsScreen>
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Saved ${_formatDate(save.savedAt)}',
+                    l10n.savedAgo(_formatDate(context, save.savedAt)),
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.35),
                       fontSize: 10,
@@ -350,18 +338,14 @@ class _SaveSlotsScreenState extends State<SaveSlotsScreen>
                 ],
               ),
             ),
-
-            // Delete button
             if (!isEmpty)
               IconButton(
                 onPressed: () =>
                     setState(() => _confirmDeleteSlot = slot),
                 icon: Icon(Icons.delete_outline,
-                    color: Colors.red.shade300.withOpacity(0.6), size: 22),
-                tooltip: 'Delete save',
+                    color: Colors.red.shade300.withOpacity(0.6),
+                    size: 22),
               ),
-
-            // Arrow indicator
             if (!isDisabled)
               Icon(
                 Icons.chevron_right_rounded,
@@ -375,6 +359,8 @@ class _SaveSlotsScreenState extends State<SaveSlotsScreen>
   }
 
   Widget _buildDeleteConfirmation(int slot, WorldSaveSummary? save) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -383,7 +369,7 @@ class _SaveSlotsScreenState extends State<SaveSlotsScreen>
               color: Colors.red, size: 36),
           const SizedBox(height: 8),
           Text(
-            'Delete Slot ${slot + 1}?',
+            l10n.deleteSlotConfirm(slot + 1),
             style: const TextStyle(
               color: Colors.red,
               fontSize: 18,
@@ -393,15 +379,13 @@ class _SaveSlotsScreenState extends State<SaveSlotsScreen>
           if (save != null) ...[
             const SizedBox(height: 4),
             Text(
-              'Depth: ${save.depthReached}m • ${_formatPlaytime(save.playtimeSeconds)} played',
+              '${l10n.depthReached(save.depthReached)} • ${_formatPlaytime(save.playtimeSeconds)}',
               style: const TextStyle(color: Colors.white54, fontSize: 12),
             ),
           ],
           const SizedBox(height: 4),
-          const Text(
-            'This cannot be undone.',
-            style: TextStyle(color: Colors.red, fontSize: 12),
-          ),
+          Text(l10n.cannotBeUndone,
+              style: const TextStyle(color: Colors.red, fontSize: 12)),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -413,15 +397,14 @@ class _SaveSlotsScreenState extends State<SaveSlotsScreen>
                   foregroundColor: Colors.white70,
                   side: const BorderSide(color: Colors.white24),
                 ),
-                child: const Text('CANCEL'),
+                child: Text(l10n.cancel.toUpperCase()),
               ),
               const SizedBox(width: 16),
               ElevatedButton(
                 onPressed: () => _deleteSlot(slot),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.shade700,
-                ),
-                child: const Text('DELETE'),
+                    backgroundColor: Colors.red.shade700),
+                child: Text(l10n.delete),
               ),
             ],
           ),
@@ -431,32 +414,34 @@ class _SaveSlotsScreenState extends State<SaveSlotsScreen>
   }
 
   void _showOverwriteConfirm(int slot) {
+    final l10n = AppLocalizations.of(context)!;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1a1a2e),
-        title: const Text('Overwrite Save?',
-            style: TextStyle(color: Colors.amber)),
+        title: Text(l10n.overwriteSaveTitle,
+            style: const TextStyle(color: Colors.amber)),
         content: Text(
-          'Slot ${slot + 1} already has a save. Starting a new game here will overwrite it.',
+          l10n.overwriteSaveMessage(slot + 1),
           style: const TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('CANCEL'),
+            child: Text(l10n.cancel.toUpperCase()),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
               _deleteSlot(slot).then((_) {
-                widget.onSlotSelected(
-                    slot, DateTime.now().millisecondsSinceEpoch & 0x7FFFFFFF);
+                widget.onSlotSelected(slot,
+                    DateTime.now().millisecondsSinceEpoch & 0x7FFFFFFF);
               });
             },
-            style:
-            ElevatedButton.styleFrom(backgroundColor: Colors.amber.shade700),
-            child: const Text('OVERWRITE'),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber.shade700),
+            child: Text(l10n.overwrite),
           ),
         ],
       ),
@@ -469,10 +454,8 @@ class _SaveSlotsScreenState extends State<SaveSlotsScreen>
       children: [
         Icon(icon, color: Colors.white54, size: 14),
         const SizedBox(width: 3),
-        Text(
-          value,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
-        ),
+        Text(value,
+            style: const TextStyle(color: Colors.white70, fontSize: 12)),
       ],
     );
   }
@@ -485,13 +468,14 @@ class _SaveSlotsScreenState extends State<SaveSlotsScreen>
     return '${h}h ${m % 60}m';
   }
 
-  String _formatDate(DateTime date) {
+  String _formatDate(BuildContext context, DateTime date) {
+    final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final diff = now.difference(date);
-    if (diff.inMinutes < 1) return 'just now';
-    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
-    if (diff.inDays < 1) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    if (diff.inMinutes < 1) return l10n.justNow;
+    if (diff.inHours < 1) return l10n.minutesAgo(diff.inMinutes);
+    if (diff.inDays < 1) return l10n.hoursAgo(diff.inHours);
+    if (diff.inDays < 7) return l10n.daysAgo(diff.inDays);
     return '${date.month}/${date.day}/${date.year}';
   }
 }

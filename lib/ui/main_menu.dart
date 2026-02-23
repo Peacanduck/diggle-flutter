@@ -1,13 +1,10 @@
 /// main_menu.dart
-/// Redesigned main menu with traditional game-style navigation:
-/// - New Game → Save Slots (new game mode) → Game
-/// - Continue → loads most recent save directly
-/// - Load Game → Save Slots (load mode) → Game
-/// - Account → Profile, wallet, stats
-/// - Settings → Game settings (placeholder)
-/// - How to Play → Tutorial/instructions (placeholder)
+/// Redesigned main menu with traditional game-style navigation.
+/// All user-facing strings are localized via AppLocalizations.
 
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
+
 
 class MainMenu extends StatefulWidget {
   final VoidCallback onNewGame;
@@ -57,6 +54,8 @@ class _MainMenuState extends State<MainMenu>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -83,38 +82,31 @@ class _MainMenuState extends State<MainMenu>
                     child: Column(
                       children: [
                         const Spacer(flex: 2),
-
-                        // ── Game Title ──────────────────────────
-                        _buildTitle(),
-
+                        _buildTitle(l10n),
                         const Spacer(flex: 2),
 
-                        // ── Menu Buttons ────────────────────────
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 32),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Primary: New Game
                               _buildAnimatedButton(
                                 index: 0,
                                 child: _PrimaryMenuButton(
                                   icon: Icons.add_circle_outline,
-                                  label: 'NEW GAME',
+                                  label: l10n.newGame,
                                   color: Colors.amber,
                                   onPressed: widget.onNewGame,
                                 ),
                               ),
-
                               const SizedBox(height: 12),
 
-                              // Continue — only if saves exist
                               if (widget.hasSaves) ...[
                                 _buildAnimatedButton(
                                   index: 1,
                                   child: _PrimaryMenuButton(
                                     icon: Icons.play_arrow_rounded,
-                                    label: 'CONTINUE',
+                                    label: l10n.continueGame,
                                     color: Colors.green,
                                     onPressed: widget.onContinue,
                                   ),
@@ -122,21 +114,21 @@ class _MainMenuState extends State<MainMenu>
                                 const SizedBox(height: 12),
                               ],
 
-                              // Load Game
                               _buildAnimatedButton(
                                 index: widget.hasSaves ? 2 : 1,
                                 child: _SecondaryMenuButton(
                                   icon: Icons.folder_open,
-                                  label: 'LOAD GAME',
+                                  label: l10n.loadGame,
                                   color: Colors.cyan,
                                   onPressed: widget.onLoadGame,
                                   enabled: widget.hasSaves,
+                                  disabledSuffix: l10n.noSaves,
                                 ),
                               ),
 
                               const SizedBox(height: 24),
 
-                              // ── Divider ──────────────────────
+                              // Divider
                               Row(
                                 children: [
                                   Expanded(
@@ -163,12 +155,11 @@ class _MainMenuState extends State<MainMenu>
 
                               const SizedBox(height: 24),
 
-                              // Account
                               _buildAnimatedButton(
                                 index: widget.hasSaves ? 3 : 2,
                                 child: _SecondaryMenuButton(
                                   icon: Icons.person,
-                                  label: 'ACCOUNT',
+                                  label: l10n.account,
                                   color: Colors.purple,
                                   onPressed: widget.onAccount,
                                 ),
@@ -176,7 +167,6 @@ class _MainMenuState extends State<MainMenu>
 
                               const SizedBox(height: 12),
 
-                              // Bottom row: Settings + How to Play
                               _buildAnimatedButton(
                                 index: widget.hasSaves ? 4 : 3,
                                 child: Row(
@@ -184,17 +174,17 @@ class _MainMenuState extends State<MainMenu>
                                     Expanded(
                                       child: _CompactMenuButton(
                                         icon: Icons.settings,
-                                        label: 'Settings',
+                                        label: l10n.settings,
                                         onPressed: widget.onSettings ??
                                                 () => _showComingSoon(
-                                                context, 'Settings'),
+                                                context, l10n.settings),
                                       ),
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: _CompactMenuButton(
                                         icon: Icons.help_outline,
-                                        label: 'How to Play',
+                                        label: l10n.howToPlay,
                                         onPressed: widget.onHowToPlay ??
                                                 () => _showHowToPlayDialog(context),
                                       ),
@@ -207,9 +197,7 @@ class _MainMenuState extends State<MainMenu>
                         ),
 
                         const Spacer(flex: 3),
-
-                        // ── Version / Footer ───────────────────
-                        _buildFooter(),
+                        _buildFooter(l10n),
                         const SizedBox(height: 16),
                       ],
                     ),
@@ -223,9 +211,7 @@ class _MainMenuState extends State<MainMenu>
     );
   }
 
-  // ── Title ─────────────────────────────────────────────────────
-
-  Widget _buildTitle() {
+  Widget _buildTitle(AppLocalizations l10n) {
     return AnimatedBuilder(
       animation: _animController,
       builder: (context, child) {
@@ -239,14 +225,12 @@ class _MainMenuState extends State<MainMenu>
       },
       child: Column(
         children: [
-          // Pickaxe icon
           Icon(
             Icons.construction,
             color: Colors.amber.shade400,
             size: 48,
           ),
           const SizedBox(height: 8),
-          // Game name
           ShaderMask(
             shaderCallback: (bounds) => LinearGradient(
               colors: [
@@ -255,9 +239,9 @@ class _MainMenuState extends State<MainMenu>
                 Colors.orange.shade700,
               ],
             ).createShader(bounds),
-            child: const Text(
-              'DIGGLE',
-              style: TextStyle(
+            child: Text(
+              l10n.appTitle.toUpperCase(),
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 52,
                 fontWeight: FontWeight.w900,
@@ -268,7 +252,7 @@ class _MainMenuState extends State<MainMenu>
           ),
           const SizedBox(height: 6),
           Text(
-            'DIG DEEP  •  MINE RICHES  •  GO FURTHER',
+            l10n.tagline,
             style: TextStyle(
               color: Colors.white.withOpacity(0.35),
               fontSize: 10,
@@ -279,8 +263,6 @@ class _MainMenuState extends State<MainMenu>
       ),
     );
   }
-
-  // ── Animated Button Wrapper ───────────────────────────────────
 
   Widget _buildAnimatedButton({required int index, required Widget child}) {
     return AnimatedBuilder(
@@ -300,13 +282,11 @@ class _MainMenuState extends State<MainMenu>
     );
   }
 
-  // ── Footer ────────────────────────────────────────────────────
-
-  Widget _buildFooter() {
+  Widget _buildFooter(AppLocalizations l10n) {
     return Column(
       children: [
         Text(
-          'PyroLabs',
+          l10n.pyroLabs,
           style: TextStyle(
             color: Colors.white.withOpacity(0.2),
             fontSize: 11,
@@ -315,7 +295,7 @@ class _MainMenuState extends State<MainMenu>
         ),
         const SizedBox(height: 2),
         Text(
-          'v0.1.0-alpha',
+          l10n.version,
           style: TextStyle(
             color: Colors.white.withOpacity(0.12),
             fontSize: 9,
@@ -325,12 +305,11 @@ class _MainMenuState extends State<MainMenu>
     );
   }
 
-  // ── Coming Soon Dialog ────────────────────────────────────────
-
   void _showComingSoon(BuildContext context, String feature) {
+    final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$feature coming soon!'),
+        content: Text(l10n.comingSoon(feature)),
         backgroundColor: Colors.blueGrey.shade700,
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
@@ -339,20 +318,18 @@ class _MainMenuState extends State<MainMenu>
   }
 }
 
-// How to play Dialog
 void _showHowToPlayDialog(BuildContext context) {
+  final l10n = AppLocalizations.of(context)!;
+
   showDialog(
     context: context,
     builder: (context) => AlertDialog(
       backgroundColor: const Color(0xFF1a1a2e),
-      title: const Row(
+      title: Row(
         children: [
-          Icon(Icons.help_outline, color: Colors.amber),
-          SizedBox(width: 8),
-          Text(
-            'How to Play',
-            style: TextStyle(color: Colors.white),
-          ),
+          const Icon(Icons.help_outline, color: Colors.amber),
+          const SizedBox(width: 8),
+          Text(l10n.howToPlay, style: const TextStyle(color: Colors.white)),
         ],
       ),
       content: SingleChildScrollView(
@@ -360,37 +337,19 @@ void _showHowToPlayDialog(BuildContext context) {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildHelpSection(
-              '⛏️ Mining',
-              'Use the arrow controls to move your drill. Dig through dirt and rock to find valuable ores.',
-            ),
-            _buildHelpSection(
-              '⛽ Fuel',
-              'Moving and digging consumes fuel. Return to the surface before running out!',
-            ),
-            _buildHelpSection(
-              '🛡️ Hull',
-              'Falling too far damages your hull. Watch your HP!',
-            ),
-            _buildHelpSection(
-              '💰 Selling',
-              'Return to the surface and visit the SHOP to sell your ore for cash.',
-            ),
-            _buildHelpSection(
-              '🔧 Upgrades',
-              'Use cash to upgrade your fuel tank, cargo bay, and hull armor.',
-            ),
-            _buildHelpSection(
-              '⚠️ Hazards',
-              'Watch out for lava (instant death) and gas pockets (damage)!',
-            ),
+            _buildHelpSection(l10n.helpMiningTitle, l10n.helpMiningBody),
+            _buildHelpSection(l10n.helpFuelTitle, l10n.helpFuelBody),
+            _buildHelpSection(l10n.helpHullTitle, l10n.helpHullBody),
+            _buildHelpSection(l10n.helpSellingTitle, l10n.helpSellingBody),
+            _buildHelpSection(l10n.helpUpgradesTitle, l10n.helpUpgradesBody),
+            _buildHelpSection(l10n.helpHazardsTitle, l10n.helpHazardsBody),
           ],
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('GOT IT!'),
+          child: Text(l10n.gotIt),
         ),
       ],
     ),
@@ -403,18 +362,12 @@ Widget _buildHelpSection(String title, String description) {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            color: Colors.amber,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        Text(title,
+            style: const TextStyle(
+                color: Colors.amber, fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
-        Text(
-          description,
-          style: const TextStyle(color: Colors.white70, fontSize: 13),
-        ),
+        Text(description,
+            style: const TextStyle(color: Colors.white70, fontSize: 13)),
       ],
     ),
   );
@@ -424,7 +377,6 @@ Widget _buildHelpSection(String title, String description) {
 // Menu Button Widgets
 // ═══════════════════════════════════════════════════════════════════
 
-/// Full-width primary action button (New Game, Continue)
 class _PrimaryMenuButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -459,15 +411,12 @@ class _PrimaryMenuButton extends StatelessWidget {
           children: [
             Icon(icon, size: 22),
             const SizedBox(width: 10),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.5,
-                color: color,
-              ),
-            ),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                    color: color)),
           ],
         ),
       ),
@@ -475,13 +424,13 @@ class _PrimaryMenuButton extends StatelessWidget {
   }
 }
 
-/// Full-width secondary action button (Load Game, Account)
 class _SecondaryMenuButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
   final VoidCallback onPressed;
   final bool enabled;
+  final String? disabledSuffix;
 
   const _SecondaryMenuButton({
     required this.icon,
@@ -489,6 +438,7 @@ class _SecondaryMenuButton extends StatelessWidget {
     required this.color,
     required this.onPressed,
     this.enabled = true,
+    this.disabledSuffix,
   });
 
   @override
@@ -514,24 +464,17 @@ class _SecondaryMenuButton extends StatelessWidget {
           children: [
             Icon(icon, size: 18, color: effectiveColor),
             const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1,
-                color: effectiveColor,
-              ),
-            ),
-            if (!enabled) ...[
-              const SizedBox(width: 6),
-              Text(
-                '(no saves)',
+            Text(label,
                 style: TextStyle(
-                  fontSize: 10,
-                  color: Colors.white.withOpacity(0.2),
-                ),
-              ),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1,
+                    color: effectiveColor)),
+            if (!enabled && disabledSuffix != null) ...[
+              const SizedBox(width: 6),
+              Text(disabledSuffix!,
+                  style: TextStyle(
+                      fontSize: 10, color: Colors.white.withOpacity(0.2))),
             ],
           ],
         ),
@@ -540,7 +483,6 @@ class _SecondaryMenuButton extends StatelessWidget {
   }
 }
 
-/// Compact half-width button for Settings / How to Play
 class _CompactMenuButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -571,10 +513,9 @@ class _CompactMenuButton extends StatelessWidget {
           children: [
             Icon(icon, size: 16),
             const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-            ),
+            Text(label,
+                style:
+                const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
           ],
         ),
       ),

@@ -1,83 +1,30 @@
 /// shop_overlay.dart
-/// Surface shop overlay for:
-/// - Selling collected ore
-/// - Refueling
-/// - Purchasing upgrades (fuel, cargo, hull, drillbit, engine, cooling)
-/// - Buying items
-///
-/// Only accessible when player is at surface.
+/// Surface shop overlay. All strings localized via AppLocalizations.
 
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../game/diggle_game.dart';
 import '../game/systems/economy_system.dart';
 import '../game/systems/item_system.dart';
 import '../game/world/tile.dart';
 
-/// Paints a single sprite from the sprite sheet.
-class _SpritePainter extends CustomPainter {
-  final ui.Image spriteSheet;
-  final int row;
-  final int col;
-  static const double _tx = 32.0;
-
-  _SpritePainter({required this.spriteSheet, required this.row, required this.col});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final src = Rect.fromLTWH((col - 1) * _tx, (row - 1) * _tx, _tx, _tx);
-    final dst = Rect.fromLTWH(0, 0, size.width, size.height);
-    canvas.drawImageRect(spriteSheet, src, dst, Paint()..filterQuality = FilterQuality.none);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SpritePainter old) =>
-      old.row != row || old.col != col;
-}
-
-/// Shop overlay widget
 class ShopOverlay extends StatefulWidget {
   final DiggleGame game;
-
   const ShopOverlay({super.key, required this.game});
 
   @override
   State<ShopOverlay> createState() => _ShopOverlayState();
 }
 
-class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStateMixin {
-  /// Message to display after action
+class _ShopOverlayState extends State<ShopOverlay>
+    with SingleTickerProviderStateMixin {
   String? _message;
-
-  /// Tab controller for shop sections
   late TabController _tabController;
-
-  /// Cached sprite sheet image for ore icons
-  ui.Image? _spriteSheetImage;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadSpriteSheet();
-  }
-
-  /// Load the sprite sheet image from the game's image cache.
-  void _loadSpriteSheet() {
-    // The game has already loaded this image, so we can grab it from the cache.
-    try {
-      _spriteSheetImage = widget.game.images.fromCache('TerrainSpriteSheet.png');
-      if (mounted) setState(() {});
-    } catch (_) {
-      // If not cached yet, load it asynchronously
-      widget.game.images.load('TerrainSpriteSheet.png').then((image) {
-        if (mounted) {
-          setState(() {
-            _spriteSheetImage = image;
-          });
-        }
-      });
-    }
   }
 
   @override
@@ -86,66 +33,37 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
     super.dispose();
   }
 
-  /// Builds a tile sprite icon widget using TileType.spriteRow / spriteCol,
-  /// falling back to a colored box if the sprite sheet isn't loaded or the
-  /// tile type has no sprite mapping.
-  Widget _buildTileIcon(TileType tileType, {double size = 28}) {
-    final row = tileType.spriteRow;
-    final col = tileType.spriteCol;
-    if (_spriteSheetImage != null && row != null && col != null) {
-      return SizedBox(
-        width: size,
-        height: size,
-        child: CustomPaint(
-          painter: _SpritePainter(
-            spriteSheet: _spriteSheetImage!,
-            row: row,
-            col: col,
-          ),
-        ),
-      );
-    }
-    // Fallback: colored box (original behavior)
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: tileType.color,
-        borderRadius: BorderRadius.circular(4),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Container(
       color: Colors.black.withOpacity(0.85),
       child: SafeArea(
         child: Column(
           children: [
-            _buildHeader(),
-            _buildPlayerStats(),
-            _buildTabBar(),
+            _buildHeader(l10n),
+            _buildPlayerStats(l10n),
+            _buildTabBar(l10n),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildServicesTab(),
-                  _buildUpgradesTab(),
-                  _buildItemsTab(),
+                  _buildServicesTab(l10n),
+                  _buildUpgradesTab(l10n),
+                  _buildItemsTab(l10n),
                 ],
               ),
             ),
             if (_message != null) _buildMessage(),
-            _buildReturnButton(),
+            _buildReturnButton(l10n),
           ],
         ),
       ),
     );
   }
 
-  /// Header bar
-  Widget _buildHeader() {
+  Widget _buildHeader(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -158,14 +76,11 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
         children: [
           const Icon(Icons.store, color: Colors.amber, size: 32),
           const SizedBox(width: 12),
-          const Text(
-            'MINING SUPPLY CO.',
-            style: TextStyle(
-              color: Colors.amber,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(l10n.miningSupplyCo,
+              style: const TextStyle(
+                  color: Colors.amber,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold)),
           const Spacer(),
           IconButton(
             onPressed: () => widget.game.closeShop(),
@@ -176,8 +91,7 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
     );
   }
 
-  /// Player stats display
-  Widget _buildPlayerStats() {
+  Widget _buildPlayerStats(AppLocalizations l10n) {
     return ListenableBuilder(
       listenable: widget.game.economySystem,
       builder: (context, _) {
@@ -193,26 +107,31 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
             children: [
               _buildStatItem(
                 icon: Icons.attach_money,
-                label: 'Cash',
+                label: l10n.cash,
                 value: '\$${widget.game.economySystem.cash}',
                 color: Colors.amber,
               ),
               _buildStatItem(
                 icon: Icons.shield,
-                label: 'Hull',
-                value: '${widget.game.hullSystem.hull.toInt()}/${widget.game.hullSystem.maxHull.toInt()}',
-                color: widget.game.hullSystem.isCritical ? Colors.red : Colors.green,
+                label: l10n.hull,
+                value:
+                '${widget.game.hullSystem.hull.toInt()}/${widget.game.hullSystem.maxHull.toInt()}',
+                color: widget.game.hullSystem.isCritical
+                    ? Colors.red
+                    : Colors.green,
               ),
               _buildStatItem(
                 icon: Icons.local_gas_station,
-                label: 'Fuel',
-                value: '${widget.game.fuelSystem.fuel.toInt()}/${widget.game.fuelSystem.maxFuel.toInt()}',
+                label: l10n.fuelLabel,
+                value:
+                '${widget.game.fuelSystem.fuel.toInt()}/${widget.game.fuelSystem.maxFuel.toInt()}',
                 color: Colors.cyan,
               ),
               _buildStatItem(
                 icon: Icons.inventory_2,
-                label: 'Cargo',
-                value: '${widget.game.economySystem.cargoCount}/${widget.game.economySystem.maxCapacity}',
+                label: l10n.cargo,
+                value:
+                '${widget.game.economySystem.cargoCount}/${widget.game.economySystem.maxCapacity}',
                 color: Colors.blue,
               ),
             ],
@@ -232,24 +151,16 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
       children: [
         Icon(icon, color: color, size: 24),
         const SizedBox(height: 2),
-        Text(
-          label,
-          style: TextStyle(color: color.withOpacity(0.7), fontSize: 10),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            color: color,
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        Text(label,
+            style: TextStyle(color: color.withOpacity(0.7), fontSize: 10)),
+        Text(value,
+            style: TextStyle(
+                color: color, fontSize: 14, fontWeight: FontWeight.bold)),
       ],
     );
   }
 
-  /// Tab bar
-  Widget _buildTabBar() {
+  Widget _buildTabBar(AppLocalizations l10n) {
     return Container(
       color: Colors.grey.shade900,
       child: TabBar(
@@ -257,55 +168,52 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
         indicatorColor: Colors.amber,
         labelColor: Colors.amber,
         unselectedLabelColor: Colors.white54,
-        tabs: const [
-          Tab(icon: Icon(Icons.handshake), text: 'Services'),
-          Tab(icon: Icon(Icons.upgrade), text: 'Upgrades'),
-          Tab(icon: Icon(Icons.backpack), text: 'Items'),
+        tabs: [
+          Tab(icon: const Icon(Icons.handshake), text: l10n.services),
+          Tab(icon: const Icon(Icons.upgrade), text: l10n.upgrades),
+          Tab(icon: const Icon(Icons.backpack), text: l10n.itemsTab),
         ],
       ),
     );
   }
 
-  /// Services tab (sell, refuel, repair)
-  Widget _buildServicesTab() {
+  Widget _buildServicesTab(AppLocalizations l10n) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(12),
       child: Column(
         children: [
-          _buildSellSection(),
+          _buildSellSection(l10n),
           const SizedBox(height: 12),
-          _buildRefuelSection(),
+          _buildRefuelSection(l10n),
           const SizedBox(height: 12),
-          _buildRepairSection(),
+          _buildRepairSection(l10n),
         ],
       ),
     );
   }
 
-  /// Upgrades tab
-  Widget _buildUpgradesTab() {
+  Widget _buildUpgradesTab(AppLocalizations l10n) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(12),
       child: Column(
         children: [
-          _buildDrillbitUpgrade(),
+          _buildDrillbitUpgrade(l10n),
           const SizedBox(height: 12),
-          _buildEngineUpgrade(),
+          _buildEngineUpgrade(l10n),
           const SizedBox(height: 12),
-          _buildCoolingUpgrade(),
+          _buildCoolingUpgrade(l10n),
           const SizedBox(height: 12),
-          _buildFuelUpgrade(),
+          _buildFuelUpgrade(l10n),
           const SizedBox(height: 12),
-          _buildCargoUpgrade(),
+          _buildCargoUpgrade(l10n),
           const SizedBox(height: 12),
-          _buildHullUpgrade(),
+          _buildHullUpgrade(l10n),
         ],
       ),
     );
   }
 
-  /// Items tab
-  Widget _buildItemsTab() {
+  Widget _buildItemsTab(AppLocalizations l10n) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -325,8 +233,10 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'Inventory: ${items.usedSlots}/${ItemSystem.maxSlots} slots',
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      l10n.inventorySlots(
+                          items.usedSlots, ItemSystem.maxSlots),
+                      style: const TextStyle(
+                          color: Colors.white70, fontSize: 12),
                     ),
                   ],
                 ),
@@ -339,8 +249,7 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
     );
   }
 
-  /// Sell ore section
-  Widget _buildSellSection() {
+  Widget _buildSellSection(AppLocalizations l10n) {
     return ListenableBuilder(
       listenable: widget.game.economySystem,
       builder: (context, _) {
@@ -348,34 +257,28 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
         final hasOre = economy.hasOre;
 
         return _buildSection(
-          title: 'SELL ORE',
+          title: l10n.sellOre,
           icon: Icons.sell,
           child: Column(
             children: [
               if (hasOre)
                 ...economy.cargoItems.map((item) => _buildCargoRow(item))
               else
-                const Text(
-                  'No ore to sell',
-                  style: TextStyle(color: Colors.white54),
-                ),
+                Text(l10n.noOreToSell,
+                    style: const TextStyle(color: Colors.white54)),
               if (hasOre) ...[
                 const Divider(color: Colors.white24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Total Value:',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                    Text(
-                      '\$${economy.cargoValue}',
-                      style: const TextStyle(
-                        color: Colors.amber,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Text(l10n.totalValue,
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 16)),
+                    Text('\$${economy.cargoValue}',
+                        style: const TextStyle(
+                            color: Colors.amber,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -387,7 +290,7 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
                       backgroundColor: Colors.amber.shade700,
                       foregroundColor: Colors.black,
                     ),
-                    child: const Text('SELL ALL'),
+                    child: Text(l10n.sellAll),
                   ),
                 ),
               ],
@@ -403,30 +306,29 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          // Use the actual ore sprite from the sprite sheet
-          _buildTileIcon(item.oreType, size: 28),
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: item.oreType.color,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
           const SizedBox(width: 12),
-          Text(
-            item.oreType.displayName,
-            style: const TextStyle(color: Colors.white),
-          ),
+          Text(item.oreType.displayName,
+              style: const TextStyle(color: Colors.white)),
           const SizedBox(width: 8),
-          Text(
-            'x${item.quantity}',
-            style: const TextStyle(color: Colors.white54),
-          ),
+          Text('x${item.quantity}',
+              style: const TextStyle(color: Colors.white54)),
           const Spacer(),
-          Text(
-            '\$${item.totalValue}',
-            style: const TextStyle(color: Colors.amber),
-          ),
+          Text('\$${item.totalValue}',
+              style: const TextStyle(color: Colors.amber)),
         ],
       ),
     );
   }
 
-  /// Refuel section
-  Widget _buildRefuelSection() {
+  Widget _buildRefuelSection(AppLocalizations l10n) {
     return ListenableBuilder(
       listenable: widget.game.fuelSystem,
       builder: (context, _) {
@@ -435,14 +337,18 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
         final canAfford = widget.game.economySystem.canAfford(cost);
 
         return _buildSection(
-          title: 'REFUEL',
+          title: l10n.refuel,
           icon: Icons.local_gas_station,
           child: Column(
             children: [
               _buildProgressBar(
                 value: fuel.fuel,
                 max: fuel.maxFuel,
-                color: fuel.isCritical ? Colors.red : fuel.isLow ? Colors.orange : Colors.green,
+                color: fuel.isCritical
+                    ? Colors.red
+                    : fuel.isLow
+                    ? Colors.orange
+                    : Colors.green,
               ),
               const SizedBox(height: 12),
               if (!fuel.isFull)
@@ -454,11 +360,12 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
                       backgroundColor: Colors.green.shade700,
                       foregroundColor: Colors.white,
                     ),
-                    child: Text('REFUEL (\$$cost)'),
+                    child: Text(l10n.refuelCost(cost)),
                   ),
                 )
               else
-                const Text('Tank is full!', style: TextStyle(color: Colors.green)),
+                Text(l10n.tankFull,
+                    style: const TextStyle(color: Colors.green)),
             ],
           ),
         );
@@ -466,8 +373,7 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
     );
   }
 
-  /// Repair section
-  Widget _buildRepairSection() {
+  Widget _buildRepairSection(AppLocalizations l10n) {
     return ListenableBuilder(
       listenable: widget.game.hullSystem,
       builder: (context, _) {
@@ -476,14 +382,18 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
         final canAfford = widget.game.economySystem.canAfford(cost);
 
         return _buildSection(
-          title: 'REPAIR',
+          title: l10n.repair,
           icon: Icons.build,
           child: Column(
             children: [
               _buildProgressBar(
                 value: hull.hull,
                 max: hull.maxHull,
-                color: hull.isCritical ? Colors.red : hull.isLow ? Colors.orange : Colors.green,
+                color: hull.isCritical
+                    ? Colors.red
+                    : hull.isLow
+                    ? Colors.orange
+                    : Colors.green,
               ),
               const SizedBox(height: 12),
               if (hull.isDamaged)
@@ -495,11 +405,12 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
                       backgroundColor: Colors.green.shade700,
                       foregroundColor: Colors.white,
                     ),
-                    child: Text('REPAIR HULL (\$$cost)'),
+                    child: Text(l10n.repairHullCost(cost)),
                   ),
                 )
               else
-                const Text('Hull is fully repaired!', style: TextStyle(color: Colors.green)),
+                Text(l10n.hullFullyRepaired,
+                    style: const TextStyle(color: Colors.green)),
             ],
           ),
         );
@@ -507,8 +418,9 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
     );
   }
 
-  /// Drillbit upgrade
-  Widget _buildDrillbitUpgrade() {
+  // ── Upgrades ─────────────────────────────────────────────────
+
+  Widget _buildDrillbitUpgrade(AppLocalizations l10n) {
     return ListenableBuilder(
       listenable: widget.game.drillbitSystem,
       builder: (context, _) {
@@ -516,25 +428,22 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
         final nextLevel = system.getNextUpgrade();
         final cost = system.getUpgradeCost();
         final canAfford = widget.game.economySystem.canAfford(cost);
-
-        return _buildUpgradeCard(
-          icon: system.icon,
-          title: 'Drill Bit',
-          currentLevel: system.name,
-          currentDescription: system.description,
-          nextLevel: nextLevel?.name,
-          nextDescription: nextLevel?.description,
-          cost: cost,
-          canAfford: canAfford,
-          onUpgrade: nextLevel != null ? _upgradeDrillbit : null,
-          accentColor: Colors.orange,
-        );
+        return _buildUpgradeCard(l10n,
+            icon: system.icon,
+            title: l10n.drillBit,
+            currentLevel: system.name,
+            currentDescription: system.description,
+            nextLevel: nextLevel?.name,
+            nextDescription: nextLevel?.description,
+            cost: cost,
+            canAfford: canAfford,
+            onUpgrade: nextLevel != null ? _upgradeDrillbit : null,
+            accentColor: Colors.orange);
       },
     );
   }
 
-  /// Engine upgrade
-  Widget _buildEngineUpgrade() {
+  Widget _buildEngineUpgrade(AppLocalizations l10n) {
     return ListenableBuilder(
       listenable: widget.game.engineSystem,
       builder: (context, _) {
@@ -542,25 +451,26 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
         final nextLevel = system.getNextUpgrade();
         final cost = system.getUpgradeCost();
         final canAfford = widget.game.economySystem.canAfford(cost);
-
-        return _buildUpgradeCard(
-          icon: system.icon,
-          title: 'Engine',
-          currentLevel: system.name,
-          currentDescription: 'Speed: ${(system.speedMultiplier * 100).toInt()}%',
-          nextLevel: nextLevel?.name,
-          nextDescription: nextLevel != null ? 'Speed: ${(nextLevel.speedMultiplier * 100).toInt()}%' : null,
-          cost: cost,
-          canAfford: canAfford,
-          onUpgrade: nextLevel != null ? _upgradeEngine : null,
-          accentColor: Colors.blue,
-        );
+        return _buildUpgradeCard(l10n,
+            icon: system.icon,
+            title: l10n.engine,
+            currentLevel: system.name,
+            currentDescription:
+            l10n.speedPercent((system.speedMultiplier * 100).toInt()),
+            nextLevel: nextLevel?.name,
+            nextDescription: nextLevel != null
+                ? l10n.speedPercent(
+                (nextLevel.speedMultiplier * 100).toInt())
+                : null,
+            cost: cost,
+            canAfford: canAfford,
+            onUpgrade: nextLevel != null ? _upgradeEngine : null,
+            accentColor: Colors.blue);
       },
     );
   }
 
-  /// Cooling upgrade
-  Widget _buildCoolingUpgrade() {
+  Widget _buildCoolingUpgrade(AppLocalizations l10n) {
     return ListenableBuilder(
       listenable: widget.game.coolingSystem,
       builder: (context, _) {
@@ -568,27 +478,26 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
         final nextLevel = system.getNextUpgrade();
         final cost = system.getUpgradeCost();
         final canAfford = widget.game.economySystem.canAfford(cost);
-
-        return _buildUpgradeCard(
-          icon: system.icon,
-          title: 'Cooling',
-          currentLevel: system.name,
-          currentDescription: system.savingsPercent > 0
-              ? 'Fuel savings: ${system.savingsPercent}%'
-              : 'No fuel savings',
-          nextLevel: nextLevel?.name,
-          nextDescription: nextLevel != null ? 'Fuel savings: ${nextLevel.savingsPercent}%' : null,
-          cost: cost,
-          canAfford: canAfford,
-          onUpgrade: nextLevel != null ? _upgradeCooling : null,
-          accentColor: Colors.cyan,
-        );
+        return _buildUpgradeCard(l10n,
+            icon: system.icon,
+            title: l10n.cooling,
+            currentLevel: system.name,
+            currentDescription: system.savingsPercent > 0
+                ? l10n.fuelSavingsPercent(system.savingsPercent)
+                : l10n.noFuelSavings,
+            nextLevel: nextLevel?.name,
+            nextDescription: nextLevel != null
+                ? l10n.fuelSavingsPercent(nextLevel.savingsPercent)
+                : null,
+            cost: cost,
+            canAfford: canAfford,
+            onUpgrade: nextLevel != null ? _upgradeCooling : null,
+            accentColor: Colors.cyan);
       },
     );
   }
 
-  /// Fuel tank upgrade
-  Widget _buildFuelUpgrade() {
+  Widget _buildFuelUpgrade(AppLocalizations l10n) {
     return ListenableBuilder(
       listenable: widget.game.fuelSystem,
       builder: (context, _) {
@@ -596,25 +505,25 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
         final nextLevel = fuel.getNextUpgrade();
         final cost = fuel.getUpgradeCost();
         final canAfford = widget.game.economySystem.canAfford(cost);
-
-        return _buildUpgradeCard(
-          icon: '⛽',
-          title: 'Fuel Tank',
-          currentLevel: fuel.tankLevel.name,
-          currentDescription: 'Capacity: ${fuel.maxFuel.toInt()}',
-          nextLevel: nextLevel?.name,
-          nextDescription: nextLevel != null ? 'Capacity: ${nextLevel.maxFuel.toInt()}' : null,
-          cost: cost,
-          canAfford: canAfford,
-          onUpgrade: nextLevel != null ? _upgradeFuel : null,
-          accentColor: Colors.green,
-        );
+        return _buildUpgradeCard(l10n,
+            icon: '⛽',
+            title: l10n.fuelTank,
+            currentLevel: fuel.tankLevel.name,
+            currentDescription:
+            l10n.capacityValue(fuel.maxFuel.toInt()),
+            nextLevel: nextLevel?.name,
+            nextDescription: nextLevel != null
+                ? l10n.capacityValue(nextLevel.maxFuel.toInt())
+                : null,
+            cost: cost,
+            canAfford: canAfford,
+            onUpgrade: nextLevel != null ? _upgradeFuel : null,
+            accentColor: Colors.green);
       },
     );
   }
 
-  /// Cargo upgrade
-  Widget _buildCargoUpgrade() {
+  Widget _buildCargoUpgrade(AppLocalizations l10n) {
     return ListenableBuilder(
       listenable: widget.game.economySystem,
       builder: (context, _) {
@@ -622,25 +531,25 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
         final nextLevel = economy.getNextCargoUpgrade();
         final cost = economy.getCargoUpgradeCost();
         final canAfford = economy.canAfford(cost);
-
-        return _buildUpgradeCard(
-          icon: '📦',
-          title: 'Cargo Bay',
-          currentLevel: economy.cargoLevel.name,
-          currentDescription: 'Capacity: ${economy.maxCapacity}',
-          nextLevel: nextLevel?.name,
-          nextDescription: nextLevel != null ? 'Capacity: ${nextLevel.maxCapacity}' : null,
-          cost: cost,
-          canAfford: canAfford,
-          onUpgrade: nextLevel != null ? _upgradeCargo : null,
-          accentColor: Colors.brown,
-        );
+        return _buildUpgradeCard(l10n,
+            icon: '📦',
+            title: l10n.cargoBay,
+            currentLevel: economy.cargoLevel.name,
+            currentDescription:
+            l10n.capacityValue(economy.maxCapacity),
+            nextLevel: nextLevel?.name,
+            nextDescription: nextLevel != null
+                ? l10n.capacityValue(nextLevel.maxCapacity)
+                : null,
+            cost: cost,
+            canAfford: canAfford,
+            onUpgrade: nextLevel != null ? _upgradeCargo : null,
+            accentColor: Colors.brown);
       },
     );
   }
 
-  /// Hull upgrade
-  Widget _buildHullUpgrade() {
+  Widget _buildHullUpgrade(AppLocalizations l10n) {
     return ListenableBuilder(
       listenable: widget.game.hullSystem,
       builder: (context, _) {
@@ -648,36 +557,37 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
         final nextLevel = hull.getNextUpgrade();
         final cost = hull.getUpgradeCost();
         final canAfford = widget.game.economySystem.canAfford(cost);
-
-        return _buildUpgradeCard(
-          icon: '🛡️',
-          title: 'Hull Armor',
-          currentLevel: hull.hullLevel.name,
-          currentDescription: 'Max HP: ${hull.maxHull.toInt()}',
-          nextLevel: nextLevel?.name,
-          nextDescription: nextLevel != null ? 'Max HP: ${nextLevel.maxHull.toInt()}' : null,
-          cost: cost,
-          canAfford: canAfford,
-          onUpgrade: nextLevel != null ? _upgradeHull : null,
-          accentColor: Colors.purple,
-        );
+        return _buildUpgradeCard(l10n,
+            icon: '🛡️',
+            title: l10n.hullArmor,
+            currentLevel: hull.hullLevel.name,
+            currentDescription:
+            l10n.maxHpValue(hull.maxHull.toInt()),
+            nextLevel: nextLevel?.name,
+            nextDescription: nextLevel != null
+                ? l10n.maxHpValue(nextLevel.maxHull.toInt())
+                : null,
+            cost: cost,
+            canAfford: canAfford,
+            onUpgrade: nextLevel != null ? _upgradeHull : null,
+            accentColor: Colors.purple);
       },
     );
   }
 
-  /// Generic upgrade card widget
-  Widget _buildUpgradeCard({
-    required String icon,
-    required String title,
-    required String currentLevel,
-    required String currentDescription,
-    String? nextLevel,
-    String? nextDescription,
-    required int cost,
-    required bool canAfford,
-    VoidCallback? onUpgrade,
-    required Color accentColor,
-  }) {
+  Widget _buildUpgradeCard(
+      AppLocalizations l10n, {
+        required String icon,
+        required String title,
+        required String currentLevel,
+        required String currentDescription,
+        String? nextLevel,
+        String? nextDescription,
+        required int cost,
+        required bool canAfford,
+        VoidCallback? onUpgrade,
+        required Color accentColor,
+      }) {
     final isMaxed = nextLevel == null;
 
     return Container(
@@ -694,26 +604,25 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
             children: [
               Text(icon, style: const TextStyle(fontSize: 24)),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  color: accentColor,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text(title,
+                  style: TextStyle(
+                      color: accentColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold)),
               const Spacer(),
               if (isMaxed)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.green.shade900,
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: const Text(
-                    'MAXED',
-                    style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
+                  child: Text(l10n.maxed,
+                      style: const TextStyle(
+                          color: Colors.green,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold)),
                 ),
             ],
           ),
@@ -730,14 +639,13 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        currentLevel,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        currentDescription,
-                        style: const TextStyle(color: Colors.white54, fontSize: 12),
-                      ),
+                      Text(currentLevel,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
+                      Text(currentDescription,
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 12)),
                     ],
                   ),
                 ),
@@ -753,19 +661,20 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
                     decoration: BoxDecoration(
                       color: accentColor.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: accentColor.withOpacity(0.5)),
+                      border: Border.all(
+                          color: accentColor.withOpacity(0.5)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          nextLevel!,
-                          style: TextStyle(color: accentColor, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          nextDescription ?? '',
-                          style: TextStyle(color: accentColor.withOpacity(0.7), fontSize: 12),
-                        ),
+                        Text(nextLevel!,
+                            style: TextStyle(
+                                color: accentColor,
+                                fontWeight: FontWeight.bold)),
+                        Text(nextDescription ?? '',
+                            style: TextStyle(
+                                color: accentColor.withOpacity(0.7),
+                                fontSize: 12)),
                       ],
                     ),
                   ),
@@ -784,7 +693,7 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
                   foregroundColor: Colors.white,
                   disabledBackgroundColor: Colors.grey.shade800,
                 ),
-                child: Text('UPGRADE - \$$cost'),
+                child: Text(l10n.upgradeCost(cost)),
               ),
             ),
           ],
@@ -817,36 +726,36 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      type.displayName,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      type.description,
-                      style: const TextStyle(color: Colors.white54, fontSize: 11),
-                    ),
+                    Text(type.displayName,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold)),
+                    Text(type.description,
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 11)),
                   ],
                 ),
               ),
               if (owned > 0)
                 Container(
                   margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.blue.shade700,
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: Text(
-                    'x$owned',
-                    style: const TextStyle(color: Colors.white, fontSize: 11),
-                  ),
+                  child: Text('x$owned',
+                      style: const TextStyle(
+                          color: Colors.white, fontSize: 11)),
                 ),
               ElevatedButton(
                 onPressed: canBuy ? () => _buyItem(type) : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green.shade700,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 8),
                 ),
                 child: Text('\$${type.price}'),
               ),
@@ -857,7 +766,6 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
     );
   }
 
-  /// Section wrapper
   Widget _buildSection({
     required String title,
     required IconData icon,
@@ -878,14 +786,11 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
             children: [
               Icon(icon, color: Colors.white70, size: 20),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text(title,
+                  style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold)),
             ],
           ),
           const Divider(color: Colors.white24),
@@ -895,7 +800,6 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
     );
   }
 
-  /// Progress bar widget
   Widget _buildProgressBar({
     required double value,
     required double max,
@@ -920,17 +824,15 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
             ),
           ),
           Center(
-            child: Text(
-              '${value.toInt()} / ${max.toInt()}',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
+            child: Text('${value.toInt()} / ${max.toInt()}',
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
   }
 
-  /// Action message display
   Widget _buildMessage() {
     return Container(
       margin: const EdgeInsets.all(8),
@@ -949,15 +851,14 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
     );
   }
 
-  /// Return to mining button
-  Widget _buildReturnButton() {
+  Widget _buildReturnButton(AppLocalizations l10n) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       child: ElevatedButton.icon(
         onPressed: () => widget.game.closeShop(),
         icon: const Icon(Icons.construction),
-        label: const Text('RETURN TO MINING'),
+        label: Text(l10n.returnToMining),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.brown.shade700,
           foregroundColor: Colors.white,
@@ -967,79 +868,63 @@ class _ShopOverlayState extends State<ShopOverlay> with SingleTickerProviderStat
     );
   }
 
-  // ============================================================
-  // ACTIONS
-  // ============================================================
+  // ── Actions ──────────────────────────────────────────────────
 
   void _sellOre() {
+    final l10n = AppLocalizations.of(context)!;
     final earned = widget.game.sellOre();
-    _showMessage('Sold ore for \$$earned!');
+    _showMessage(l10n.soldOreFor(earned));
   }
 
   void _refuel() {
-    if (widget.game.refuel()) {
-      _showMessage('Tank refueled!');
-    }
+    final l10n = AppLocalizations.of(context)!;
+    if (widget.game.refuel()) _showMessage(l10n.tankRefueled);
   }
 
   void _upgradeFuel() {
-    if (widget.game.upgradeFuelTank()) {
-      _showMessage('Fuel tank upgraded!');
-    }
+    final l10n = AppLocalizations.of(context)!;
+    if (widget.game.upgradeFuelTank()) _showMessage(l10n.fuelTankUpgraded);
   }
 
   void _upgradeCargo() {
-    if (widget.game.upgradeCargo()) {
-      _showMessage('Cargo bay upgraded!');
-    }
+    final l10n = AppLocalizations.of(context)!;
+    if (widget.game.upgradeCargo()) _showMessage(l10n.cargoBayUpgraded);
   }
 
   void _repairHull() {
-    if (widget.game.repairHull()) {
-      _showMessage('Hull repaired!');
-    }
+    final l10n = AppLocalizations.of(context)!;
+    if (widget.game.repairHull()) _showMessage(l10n.hullRepaired);
   }
 
   void _upgradeHull() {
-    if (widget.game.upgradeHull()) {
-      _showMessage('Hull armor upgraded!');
-    }
+    final l10n = AppLocalizations.of(context)!;
+    if (widget.game.upgradeHull()) _showMessage(l10n.hullArmorUpgraded);
   }
 
   void _upgradeDrillbit() {
-    if (widget.game.upgradeDrillbit()) {
-      _showMessage('Drill bit upgraded!');
-    }
+    final l10n = AppLocalizations.of(context)!;
+    if (widget.game.upgradeDrillbit()) _showMessage(l10n.drillBitUpgraded);
   }
 
   void _upgradeEngine() {
-    if (widget.game.upgradeEngine()) {
-      _showMessage('Engine upgraded!');
-    }
+    final l10n = AppLocalizations.of(context)!;
+    if (widget.game.upgradeEngine()) _showMessage(l10n.engineUpgraded);
   }
 
   void _upgradeCooling() {
-    if (widget.game.upgradeCooling()) {
-      _showMessage('Cooling system upgraded!');
-    }
+    final l10n = AppLocalizations.of(context)!;
+    if (widget.game.upgradeCooling()) _showMessage(l10n.coolingUpgraded);
   }
 
   void _buyItem(ItemType type) {
-    if (widget.game.buyItem(type)) {
-      _showMessage('Purchased ${type.displayName}!');
-    }
+    final l10n = AppLocalizations.of(context)!;
+    if (widget.game.buyItem(type)) _showMessage(l10n.purchased(type.displayName));
   }
 
   void _showMessage(String message) {
-    setState(() {
-      _message = message;
-    });
+    setState(() => _message = message);
     Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() {
-          _message = null;
-        });
-      }
+      if (mounted) setState(() => _message = null);
     });
   }
 }

@@ -6,6 +6,7 @@
 ///   Main Menu → Continue → loads most recent save → Game
 ///   Main Menu → Load Game → Save Slots (load) → Game
 ///   Main Menu → Account → Profile/wallet/stats
+///   Main Menu → Settings → Language selector
 ///   Game → Pause → Main Menu (saves first)
 ///
 /// Services initialized:
@@ -14,6 +15,7 @@
 ///   - CandyMachineService (NFT minting via Candy Machine)
 ///   - StatsService, WorldSaveService, PlayerService, PointsLedgerService
 ///   - GameLifecycleManager (orchestrates bootstrap + save/load)
+///   - LocaleProvider (language selection with persistence)
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -22,7 +24,9 @@ import 'package:provider/provider.dart';
 
 import 'game/diggle_game.dart';
 import 'game/systems/boost_manager.dart';
+import 'l10n/app_localizations.dart';
 import 'services/game_lifecycle_manager.dart';
+import 'services/locale_provider.dart';
 import 'services/player_service.dart';
 import 'services/points_ledger_service.dart';
 import 'services/stats_service.dart';
@@ -30,9 +34,12 @@ import 'services/supabase_service.dart';
 import 'services/world_save_service.dart';
 import 'solana/wallet_service.dart';
 import 'solana/candy_machine_service.dart';
+import 'services/update_service.dart';
+import 'ui/update_dialog.dart';
 import 'ui/main_menu.dart';
 import 'ui/save_slots_screen.dart';
 import 'ui/account_screen.dart';
+import 'ui/settings_screen.dart';
 import 'ui/premium_store_overlay.dart';
 import 'ui/xp_hud_widget.dart';
 import 'ui/hud_overlay.dart';
@@ -67,9 +74,6 @@ void main() async {
   await walletService.initialize();
 
   // ── Initialize Candy Machine Service ─────────────────────────
-  // Anon key is public/safe to embed — it only grants row-level access.
-  // The edge function was deployed with --no-verify-jwt so this is
-  // used only for routing, not authentication.
   final candyMachineService = CandyMachineService(
     wallet: walletService,
     supabaseUrl: 'https://vdcpbqsnkivokroqxelq.supabase.co',
@@ -93,13 +97,16 @@ void main() async {
     playerService: playerService,
   );
 
-  // Bootstrap happens after authentication (triggered by AuthScreen/AppNavigator)
+  // ── Initialize Locale Provider ───────────────────────────────
+  final localeProvider = LocaleProvider();
+  await localeProvider.load();
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: walletService),
         ChangeNotifierProvider.value(value: candyMachineService),
+        ChangeNotifierProvider.value(value: localeProvider),
         Provider.value(value: statsService),
         Provider.value(value: worldSaveService),
         Provider.value(value: playerService),
@@ -120,9 +127,17 @@ class DiggleApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localeProvider = context.watch<LocaleProvider>();
+
     return MaterialApp(
       title: 'Diggle',
       debugShowCheckedModeBanner: false,
+
+      // ── Localization ───────────────────────────────────────────
+      locale: localeProvider.locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.brown,
@@ -174,10 +189,10 @@ class _AppNavigatorState extends State<AppNavigator>
     // Determine starting screen based on auth state
     if (SupabaseService.instance.isAuthenticated) {
       _screen = AppScreen.mainMenu;
-      // Already authenticated from restored session — bootstrap
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _runBootstrap();
         _checkForSaves();
+        _checkForUpdate();
       });
     } else {
       _screen = AppScreen.auth;
@@ -199,6 +214,23 @@ class _AppNavigatorState extends State<AppNavigator>
     }
   }
 
+  Future<void> _checkForUpdate() async {
+    // Temporarily override in _checkForUpdate():
+    /* final status = UpdateStatus(
+      action: UpdateAction.optional,  // or .forced
+      currentVersion: '0.1.0',
+      latestVersion: '0.2.0',
+      message: 'Test update message',
+      dappStoreId: 'com.example.diggle',
+    );
+    UpdateDialog.show(context, status);
+*/
+    final status = await UpdateService.instance.checkForUpdate();
+    if (status.needsUpdate && mounted) {
+      UpdateDialog.show(context, status);
+    }
+  }
+
   // ── Save Detection ─────────────────────────────────────────────
 
   Future<void> _checkForSaves() async {
@@ -208,7 +240,6 @@ class _AppNavigatorState extends State<AppNavigator>
       if (!mounted) return;
 
       if (summaries.isNotEmpty) {
-        // Find the most recently saved slot
         summaries.sort((a, b) => b.savedAt.compareTo(a.savedAt));
         final mostRecent = summaries.first;
 
@@ -232,7 +263,6 @@ class _AppNavigatorState extends State<AppNavigator>
 
   // ── Navigation Actions ─────────────────────────────────────────
 
-  /// Run bootstrap (ensurePlayer + load stats) after authentication.
   Future<void> _runBootstrap() async {
     if (_bootstrapping) return;
     _bootstrapping = true;
@@ -246,21 +276,20 @@ class _AppNavigatorState extends State<AppNavigator>
     }
   }
 
-  /// Called when AuthScreen completes authentication.
   void _onAuthenticated() {
     setState(() => _screen = AppScreen.mainMenu);
     _runBootstrap();
     _checkForSaves();
+    _checkForUpdate();
   }
 
-  /// Open Save Slots in "New Game" mode
   void _onNewGame() {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => SaveSlotsScreen(
           mode: SaveSlotMode.newGame,
           onSlotSelected: (slot, seed) {
-            Navigator.of(context).pop(); // close save slots
+            Navigator.of(context).pop();
             _startGame(slot: slot, seed: seed, isNewGame: true);
           },
           onBack: () => Navigator.of(context).pop(),
@@ -269,21 +298,19 @@ class _AppNavigatorState extends State<AppNavigator>
     );
   }
 
-  /// Load most recent save directly (Continue)
   void _onContinue() {
     if (_mostRecentSlot != null && _mostRecentSeed != null) {
       _startGame(slot: _mostRecentSlot!, seed: _mostRecentSeed, isNewGame: false);
     }
   }
 
-  /// Open Save Slots in "Load Game" mode
   void _onLoadGame() {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => SaveSlotsScreen(
           mode: SaveSlotMode.loadGame,
           onSlotSelected: (slot, seed) {
-            Navigator.of(context).pop(); // close save slots
+            Navigator.of(context).pop();
             _startGame(slot: slot, seed: seed, isNewGame: false);
           },
           onBack: () => Navigator.of(context).pop(),
@@ -292,14 +319,13 @@ class _AppNavigatorState extends State<AppNavigator>
     );
   }
 
-  /// Open Account screen
   void _onAccount() {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AccountScreen(
           onBack: () => Navigator.of(context).pop(),
           onSignOut: () {
-            Navigator.of(context).pop(); // close account screen
+            Navigator.of(context).pop();
             _signOut();
           },
         ),
@@ -307,10 +333,19 @@ class _AppNavigatorState extends State<AppNavigator>
     );
   }
 
-  /// Sign out and return to auth screen
+  /// Open Settings screen
+  void _onSettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SettingsScreen(
+          onBack: () => Navigator.of(context).pop(),
+        ),
+      ),
+    );
+  }
+
   Future<void> _signOut() async {
     try {
-      // Reset lifecycle so next user can bootstrap fresh
       final lifecycle = context.read<GameLifecycleManager>();
       lifecycle.reset();
       await SupabaseService.instance.signOut();
@@ -330,7 +365,6 @@ class _AppNavigatorState extends State<AppNavigator>
     }
   }
 
-  /// Start the game with given slot and seed
   void _startGame({required int slot, int? seed, bool isNewGame = true}) {
     setState(() {
       _gameSeed = seed ?? (DateTime.now().millisecondsSinceEpoch & 0x7FFFFFFF);
@@ -340,7 +374,6 @@ class _AppNavigatorState extends State<AppNavigator>
     });
   }
 
-  /// Return to main menu from game
   void _returnToMenu() {
     setState(() {
       _screen = AppScreen.mainMenu;
@@ -348,8 +381,6 @@ class _AppNavigatorState extends State<AppNavigator>
       _gameSlot = null;
       _isNewGame = true;
     });
-
-    // Refresh save data for Continue button
     _checkForSaves();
   }
 
@@ -367,6 +398,7 @@ class _AppNavigatorState extends State<AppNavigator>
           onLoadGame: _onLoadGame,
           onContinue: _onContinue,
           onAccount: _onAccount,
+          onSettings: _onSettings,
           hasSaves: _hasSaves,
         );
 
@@ -412,10 +444,8 @@ class _GameScreenState extends State<GameScreen> {
   void initState() {
     super.initState();
 
-    // Create game
     _game = DiggleGame(seed: widget.seed);
 
-    // Initialize BoostManager with wallet + candy machine services
     final walletService = context.read<WalletService>();
     final candyMachineService = context.read<CandyMachineService>();
 
@@ -426,10 +456,8 @@ class _GameScreenState extends State<GameScreen> {
     );
     _game.boostManager = _boostManager;
 
-    // Attach services (stats bridge, restore XP state)
     _game.attachServices(context);
 
-    // Start periodic stats sync
     try {
       final statsService = context.read<StatsService>();
       statsService.startPeriodicSync();
@@ -437,13 +465,11 @@ class _GameScreenState extends State<GameScreen> {
       debugPrint('GameScreen: periodic sync start error: $e');
     }
 
-    // If loading an existing save, fetch and restore it
     if (!widget.isNewGame && widget.slot != null) {
       _loadSavedGame();
     }
   }
 
-  /// Fetch the saved world from DB and restore into the game.
   Future<void> _loadSavedGame() async {
     setState(() => _isLoading = true);
     try {
@@ -451,25 +477,19 @@ class _GameScreenState extends State<GameScreen> {
       final save = await lifecycle.loadWorld(slot: widget.slot!);
 
       if (save != null) {
-        // Restore tile map
         if (save.worldData != null && save.worldData!.isNotEmpty) {
           _game.importTileMapBytes(save.worldData!);
         }
-
-        // Restore game systems (fuel, hull, economy, upgrades, etc.)
         if (save.gameSystems != null) {
           _game.importGameSystems(save.gameSystems!);
         }
-
-        // Restore player position
         if (save.playerPosition != null) {
-          _game.drill.restorePosition(save.playerPosition!['x'] ?? 0, save.playerPosition!['y'] ?? 0);
-          // _game.drill.position.x = save.playerPosition!['x'] ?? 0;
-          // _game.drill.position.y = save.playerPosition!['y'] ?? 0;
+          _game.drill.restorePosition(
+              save.playerPosition!['x'] ?? 0, save.playerPosition!['y'] ?? 0);
         }
-
-        debugPrint('GameScreen: restored save from slot ${widget.slot} , pos: ${save.playerPosition!['x']} '
-            '(depth: ${save.depthReached}, seed: ${save.seed})');
+        debugPrint(
+            'GameScreen: restored save from slot ${widget.slot} , pos: ${save.playerPosition!['x']} '
+                '(depth: ${save.depthReached}, seed: ${save.seed})');
       } else {
         debugPrint('GameScreen: no save found for slot ${widget.slot}');
       }
@@ -482,7 +502,6 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   void dispose() {
-    // Stop periodic sync
     try {
       final statsService = context.read<StatsService>();
       statsService.syncToServer();
@@ -499,10 +518,8 @@ class _GameScreenState extends State<GameScreen> {
       body: GameWidget(
         game: _game,
         overlayBuilderMap: {
-          'hud': (context, game) =>
-              HudOverlay(game: game as DiggleGame),
-          'shop': (context, game) =>
-              ShopOverlay(game: game as DiggleGame),
+          'hud': (context, game) => HudOverlay(game: game as DiggleGame),
+          'shop': (context, game) => ShopOverlay(game: game as DiggleGame),
           'premiumStore': (context, game) {
             final g = game as DiggleGame;
             return PremiumStoreOverlay(
@@ -521,12 +538,12 @@ class _GameScreenState extends State<GameScreen> {
             );
           },
           'gameOver': (context, game) =>
-              _buildGameOverOverlay(game as DiggleGame),
+              _buildGameOverOverlay(context, game as DiggleGame),
           'pause': (context, game) =>
-              _buildPauseOverlay(game as DiggleGame),
+              _buildPauseOverlay(context, game as DiggleGame),
         },
-        loadingBuilder: (context) => _buildLoadingScreen(),
-        errorBuilder: (context, error) => _buildErrorScreen(error),
+        loadingBuilder: (context) => _buildLoadingScreen(context),
+        errorBuilder: (context, error) => _buildErrorScreen(context, error),
         backgroundBuilder: (context) =>
             Container(color: const Color(0xFF1a1a2e)),
       ),
@@ -535,7 +552,9 @@ class _GameScreenState extends State<GameScreen> {
 
   // ── Pause Overlay ──────────────────────────────────────────────
 
-  Widget _buildPauseOverlay(DiggleGame game) {
+  Widget _buildPauseOverlay(BuildContext context, DiggleGame game) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Container(
       color: Colors.black.withOpacity(0.85),
       child: SafeArea(
@@ -543,9 +562,9 @@ class _GameScreenState extends State<GameScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'PAUSED',
-                style: TextStyle(
+              Text(
+                l10n.paused,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 36,
                   fontWeight: FontWeight.bold,
@@ -561,7 +580,7 @@ class _GameScreenState extends State<GameScreen> {
                   game.resume();
                 },
                 icon: const Icon(Icons.play_arrow),
-                label: const Text('RESUME'),
+                label: Text(l10n.resume),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green.shade700,
                   minimumSize: const Size(200, 50),
@@ -569,7 +588,7 @@ class _GameScreenState extends State<GameScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Save Game (if we have a slot)
+              // Save Game
               if (widget.slot != null) ...[
                 ElevatedButton.icon(
                   onPressed: () async {
@@ -589,7 +608,7 @@ class _GameScreenState extends State<GameScreen> {
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Saved to Slot ${widget.slot! + 1}'),
+                          content: Text(l10n.savedToSlot(widget.slot! + 1)),
                           backgroundColor: Colors.green.shade800,
                           duration: const Duration(seconds: 2),
                         ),
@@ -597,7 +616,7 @@ class _GameScreenState extends State<GameScreen> {
                     }
                   },
                   icon: const Icon(Icons.save),
-                  label: const Text('SAVE GAME'),
+                  label: Text(l10n.saveGame),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue.shade700,
                     minimumSize: const Size(200, 50),
@@ -613,14 +632,13 @@ class _GameScreenState extends State<GameScreen> {
                   backgroundColor: Colors.orange.shade700,
                   minimumSize: const Size(200, 50),
                 ),
-                child: const Text('RESTART'),
+                child: Text(l10n.restart),
               ),
               const SizedBox(height: 16),
 
               // Main Menu
               ElevatedButton(
                 onPressed: () {
-                  // Auto-save before returning if we have a slot
                   if (widget.slot != null) {
                     final lifecycle = context.read<GameLifecycleManager>();
                     lifecycle.saveWorld(
@@ -643,7 +661,7 @@ class _GameScreenState extends State<GameScreen> {
                   backgroundColor: Colors.red.shade700,
                   minimumSize: const Size(200, 50),
                 ),
-                child: const Text('MAIN MENU'),
+                child: Text(l10n.mainMenu),
               ),
             ],
           ),
@@ -654,7 +672,9 @@ class _GameScreenState extends State<GameScreen> {
 
   // ── Game Over Overlay ──────────────────────────────────────────
 
-  Widget _buildGameOverOverlay(DiggleGame game) {
+  Widget _buildGameOverOverlay(BuildContext context, DiggleGame game) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Container(
       color: Colors.black.withOpacity(0.9),
       child: SafeArea(
@@ -665,9 +685,9 @@ class _GameScreenState extends State<GameScreen> {
               const Icon(Icons.warning_amber_rounded,
                   color: Colors.red, size: 64),
               const SizedBox(height: 16),
-              const Text(
-                'GAME OVER',
-                style: TextStyle(
+              Text(
+                l10n.gameOver,
+                style: const TextStyle(
                   color: Colors.red,
                   fontSize: 36,
                   fontWeight: FontWeight.bold,
@@ -676,16 +696,15 @@ class _GameScreenState extends State<GameScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Depth reached: ${game.drill.depth}m',
+                l10n.depthReached(game.drill.depth),
                 style: const TextStyle(color: Colors.white70, fontSize: 16),
               ),
               const SizedBox(height: 32),
 
-              // Restart
               ElevatedButton.icon(
                 onPressed: () => game.restart(),
                 icon: const Icon(Icons.refresh),
-                label: const Text('TRY AGAIN'),
+                label: Text(l10n.tryAgain),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange.shade700,
                   minimumSize: const Size(200, 50),
@@ -693,14 +712,13 @@ class _GameScreenState extends State<GameScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Main Menu
               ElevatedButton(
                 onPressed: widget.onReturnToMenu,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey.shade700,
                   minimumSize: const Size(200, 50),
                 ),
-                child: const Text('MAIN MENU'),
+                child: Text(l10n.mainMenu),
               ),
             ],
           ),
@@ -711,18 +729,20 @@ class _GameScreenState extends State<GameScreen> {
 
   // ── Loading / Error Screens ────────────────────────────────────
 
-  Widget _buildLoadingScreen() {
+  Widget _buildLoadingScreen(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Container(
       color: const Color(0xFF1a1a2e),
-      child: const Center(
+      child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: Colors.amber),
-            SizedBox(height: 20),
+            const CircularProgressIndicator(color: Colors.amber),
+            const SizedBox(height: 20),
             Text(
-              'Loading Diggle...',
-              style: TextStyle(color: Colors.white70, fontSize: 16),
+              l10n.loadingDiggle,
+              style: const TextStyle(color: Colors.white70, fontSize: 16),
             ),
           ],
         ),
@@ -730,7 +750,9 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Widget _buildErrorScreen(Object error) {
+  Widget _buildErrorScreen(BuildContext context, Object error) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Container(
       color: const Color(0xFF1a1a2e),
       child: Center(
@@ -740,14 +762,14 @@ class _GameScreenState extends State<GameScreen> {
             const Icon(Icons.error, color: Colors.red, size: 48),
             const SizedBox(height: 16),
             Text(
-              'Failed to load game:\n$error',
+              l10n.failedToLoadGame(error.toString()),
               style: const TextStyle(color: Colors.red),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: widget.onReturnToMenu,
-              child: const Text('Back to Menu'),
+              child: Text(l10n.backToMenu),
             ),
           ],
         ),
