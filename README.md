@@ -54,36 +54,19 @@ lib/
 │   ├── world/          # Procedural tile generation and rendering
 │   └── diggle_game.dart # Main FlameGame loop
 ├── solana/
+│   ├── candy_machine_service.dart # Nft minting
+│   ├── diggle_mart_client.dart # Client for the Solana store 
 │   └── wallet_service.dart # Wallet connection and MWA logic
 ├── ui/                 # Flutter overlays (HUD, Shop, Main Menu)
 └── main.dart           # Entry point and app wiring
 ```
 
 ## Todo
-The core game loop is complete, but the following features are currently in development:
-
-* On-Chain Store Integration:
-
-* Connect the BoostManager UI to a deployed Anchor program.
-
-* Replace simulated transaction signatures with actual SOL transfers/Smart Contract calls.
-
-* NFT Store & Minting:
-
-* Implement Metaplex interaction to fetch NFT metadata for the "Diamond Drill" collection.
-
-* Finalize the Candy Machine integration for the mintNFT function.
 
 * Persistence (Save System):
 
-* Implement local storage (using shared_preferences or hive) to save:
+* Implement local storage for guest only (using shared_preferences or hive) to save:
 
 * Current Cash & Points.
-
-[ ] Upgrade Levels.
-
-[ ] XP and Player Level.
-
-[ ] World Generation:
 
 [ ] Add distinct biomes or layers with unique hardness properties.
