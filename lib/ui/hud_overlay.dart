@@ -9,6 +9,7 @@ import '../l10n/app_localizations.dart';
 import '../game/diggle_game.dart';
 import '../game/player/drill_component.dart';
 import '../game/systems/item_system.dart';
+import 'quest_overlay.dart';
 
 class HudOverlay extends StatefulWidget {
   final DiggleGame game;
@@ -94,7 +95,35 @@ class _HudOverlayState extends State<HudOverlay> {
             right: 0,
             child: _buildControls(),
           ),
-
+          Positioned(
+            top: 250,
+            left: 16,
+            child: Stack(
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => widget.game.openQuests(),
+                  icon: const Text('📋', style: TextStyle(fontSize: 16)),
+                  label: Text(l10n.quests),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.indigo.shade700,
+                  ),
+                ),
+                if (widget.game.questSystem.hasUnclaimedRewards)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      width: 12, height: 12,
+                      decoration: BoxDecoration(
+                        color: Colors.amber,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.black, width: 1),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
           // Premium store
           Positioned(
             top: 210,

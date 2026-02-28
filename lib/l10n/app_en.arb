@@ -316,5 +316,115 @@
   "requiredVersionLabel": "Required",
   "updateNow": "UPDATE NOW",
   "updateLater": "Later",
-   "updateOpenStoreFailed": "Could not open the dApp Store. Please update manually."
+   "updateOpenStoreFailed": "Could not open the dApp Store. Please update manually.",
+
+   "@@comment_light": "=== LIGHT SYSTEM ===",
+     "light": "Light",
+     "lightUpgraded": "Light system upgraded!",
+     "revealRadiusValue": "Reveal: {radius} tiles",
+     "@revealRadiusValue": {
+       "placeholders": {
+         "radius": {
+           "type": "int"
+         }
+       }
+     },
+     "@@comment_quests": "=== QUESTS ===",
+     "questsTitle": "QUESTS",
+     "questsSubtitle": "Complete quests to earn XP & points",
+     "questsDailyTab": "Daily",
+     "questsSocialTab": "Social",
+     "questsClaim": "CLAIM",
+     "questsClaimed": "✓ Claimed",
+     "questsGo": "GO",
+     "questsClose": "CLOSE",
+     "questsNoDailyQuests": "No daily quests available",
+     "questsSocialInfo": "Complete social actions to earn one-time rewards. Tap GO to open the link.",
+     "quests": "QUESTS",
+     "questMineOreTitle": "Mine {count} Ores",
+     "@questMineOreTitle": {
+       "placeholders": {
+         "count": {
+           "type": "int"
+         }
+       }
+     },
+     "questMineOreDesc": "Mine {count} ore tiles in a single day",
+     "@questMineOreDesc": {
+       "placeholders": {
+         "count": {
+           "type": "int"
+         }
+       }
+     },
+     "questReachDepthTitle": "Reach {depth}m Depth",
+     "@questReachDepthTitle": {
+       "placeholders": {
+         "depth": {
+           "type": "int"
+         }
+       }
+     },
+     "questReachDepthDesc": "Reach a depth of {depth}m or more",
+     "@questReachDepthDesc": {
+       "placeholders": {
+         "depth": {
+           "type": "int"
+         }
+       }
+     },
+     "questSellOreTitle": "Sell ${value} Worth",
+     "@questSellOreTitle": {
+       "placeholders": {
+         "value": {
+           "type": "int"
+         }
+       }
+     },
+     "questSellOreDesc": "Sell ore worth a total of ${value}",
+     "@questSellOreDesc": {
+       "placeholders": {
+         "value": {
+           "type": "int"
+         }
+       }
+     },
+     "questRepairTitle": "Repair {amount} HP",
+     "@questRepairTitle": {
+       "placeholders": {
+         "amount": {
+           "type": "int"
+         }
+       }
+     },
+     "questRepairDesc": "Repair a total of {amount} hull HP",
+     "@questRepairDesc": {
+       "placeholders": {
+         "amount": {
+           "type": "int"
+         }
+       }
+     },
+     "questUseItemsTitle": "Use {count} Items",
+     "@questUseItemsTitle": {
+       "placeholders": {
+         "count": {
+           "type": "int"
+         }
+       }
+     },
+     "questUseItemsDesc": "Use {count} items from your inventory",
+     "@questUseItemsDesc": {
+       "placeholders": {
+         "count": {
+           "type": "int"
+         }
+       }
+     },
+     "questFollowTwitterTitle": "Follow on X",
+     "questFollowTwitterDesc": "Follow @DiggleGame on X (Twitter)",
+     "questJoinDiscordTitle": "Join Discord",
+     "questJoinDiscordDesc": "Join the Diggle Discord community",
+     "questPostTweetTitle": "Share on X",
+     "questPostTweetDesc": "Post a tweet about Diggle"
 }

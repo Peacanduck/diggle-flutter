@@ -1659,6 +1659,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not open the dApp Store. Please update manually.'**
   String get updateOpenStoreFailed;
+
+  /// No description provided for @light.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get light;
+
+  /// No description provided for @lightUpgraded.
+  ///
+  /// In en, this message translates to:
+  /// **'Light system upgraded!'**
+  String get lightUpgraded;
+
+  /// No description provided for @revealRadiusValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Reveal: {radius} tiles'**
+  String revealRadiusValue(int radius);
+
+  /// No description provided for @questsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'QUESTS'**
+  String get questsTitle;
+
+  /// No description provided for @questsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete quests to earn XP & points'**
+  String get questsSubtitle;
+
+  /// No description provided for @questsDailyTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get questsDailyTab;
+
+  /// No description provided for @questsSocialTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Social'**
+  String get questsSocialTab;
+
+  /// No description provided for @questsClaim.
+  ///
+  /// In en, this message translates to:
+  /// **'CLAIM'**
+  String get questsClaim;
+
+  /// No description provided for @questsClaimed.
+  ///
+  /// In en, this message translates to:
+  /// **'✓ Claimed'**
+  String get questsClaimed;
+
+  /// No description provided for @questsGo.
+  ///
+  /// In en, this message translates to:
+  /// **'GO'**
+  String get questsGo;
+
+  /// No description provided for @questsClose.
+  ///
+  /// In en, this message translates to:
+  /// **'CLOSE'**
+  String get questsClose;
+
+  /// No description provided for @questsNoDailyQuests.
+  ///
+  /// In en, this message translates to:
+  /// **'No daily quests available'**
+  String get questsNoDailyQuests;
+
+  /// No description provided for @questsSocialInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete social actions to earn one-time rewards. Tap GO to open the link.'**
+  String get questsSocialInfo;
+
+  /// No description provided for @quests.
+  ///
+  /// In en, this message translates to:
+  /// **'QUESTS'**
+  String get quests;
+
+  /// No description provided for @questMineOreTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mine {count} Ores'**
+  String questMineOreTitle(int count);
+
+  /// No description provided for @questMineOreDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Mine {count} ore tiles in a single day'**
+  String questMineOreDesc(int count);
+
+  /// No description provided for @questReachDepthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach {depth}m Depth'**
+  String questReachDepthTitle(int depth);
+
+  /// No description provided for @questReachDepthDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach a depth of {depth}m or more'**
+  String questReachDepthDesc(int depth);
+
+  /// No description provided for @questSellOreTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell \${value} Worth'**
+  String questSellOreTitle(int value);
+
+  /// No description provided for @questSellOreDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell ore worth a total of \${value}'**
+  String questSellOreDesc(int value);
+
+  /// No description provided for @questRepairTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Repair {amount} HP'**
+  String questRepairTitle(int amount);
+
+  /// No description provided for @questRepairDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Repair a total of {amount} hull HP'**
+  String questRepairDesc(int amount);
+
+  /// No description provided for @questUseItemsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use {count} Items'**
+  String questUseItemsTitle(int count);
+
+  /// No description provided for @questUseItemsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Use {count} items from your inventory'**
+  String questUseItemsDesc(int count);
+
+  /// No description provided for @questFollowTwitterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow on X'**
+  String get questFollowTwitterTitle;
+
+  /// No description provided for @questFollowTwitterDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow @DiggleGame on X (Twitter)'**
+  String get questFollowTwitterDesc;
+
+  /// No description provided for @questJoinDiscordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Join Discord'**
+  String get questJoinDiscordTitle;
+
+  /// No description provided for @questJoinDiscordDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Join the Diggle Discord community'**
+  String get questJoinDiscordDesc;
+
+  /// No description provided for @questPostTweetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share on X'**
+  String get questPostTweetTitle;
+
+  /// No description provided for @questPostTweetDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Post a tweet about Diggle'**
+  String get questPostTweetDesc;
 }
 
 class _AppLocalizationsDelegate

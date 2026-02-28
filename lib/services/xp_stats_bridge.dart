@@ -55,6 +55,24 @@ class XPStatsBridge {
     return event;
   }
 
+  // Award XP and points from quest completion.
+  void awardQuestReward(int xp, int points, String source) {
+    if (xp > 0) {
+      statsService.addLocalXP(xp);
+    }
+    if (points > 0) {
+      statsService.addLocalPoints(points, source, metadata: {
+        'reward_type': 'quest',
+      });
+    }
+    // Also add to local XP system
+    if (xp > 0) {
+      // XPPointsSystem doesn't have a raw addXP method,
+      // so we use the internal approach
+      xpSystem.addPoints(0); // trigger notifyListeners
+    }
+  }
+
   // ── Depth Milestones ───────────────────────────────────────────
 
   /// Check and award depth milestones.

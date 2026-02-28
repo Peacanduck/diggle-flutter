@@ -17,6 +17,7 @@
 ///   - GameLifecycleManager (orchestrates bootstrap + save/load)
 ///   - LocaleProvider (language selection with persistence)
 
+import 'package:diggle/ui/quest_overlay.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flame/game.dart';
@@ -520,6 +521,10 @@ class _GameScreenState extends State<GameScreen> {
         overlayBuilderMap: {
           'hud': (context, game) => HudOverlay(game: game as DiggleGame),
           'shop': (context, game) => ShopOverlay(game: game as DiggleGame),
+          'quests': (context, game) => QuestOverlay(
+            questSystem: (game as DiggleGame).questSystem,
+            onClose: () => (game as DiggleGame).closeQuests(),
+          ),
           'premiumStore': (context, game) {
             final g = game as DiggleGame;
             return PremiumStoreOverlay(

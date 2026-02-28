@@ -13,6 +13,7 @@ import '../systems/hull_system.dart';
 import '../systems/drillbit_system.dart';
 import '../systems/engine_system.dart';
 import '../systems/cooling_system.dart';
+import '../systems/light_system.dart';
 import '../diggle_game.dart';
 
 enum MoveDirection { left, right, down, up, none }
@@ -104,7 +105,7 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     // Initialize Position
     position = tileMap.getSpawnPosition();
     _target = position.clone();
-    tileMap.revealAround(gridX, gridY);
+    tileMap.revealAround(gridX, gridY, radius: gameRef.lightSystem.revealRadius);
 
     // --- LOAD SPRITES ---
     final image = await gameRef.images.load('TerrainSpriteSheet.png');
@@ -190,7 +191,7 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
       } else {
         position += move;
       }
-      tileMap.revealAround(gridX, gridY);
+      tileMap.revealAround(gridX, gridY, radius: gameRef.lightSystem.revealRadius);
     } else {
       // Reached target
       position = _target.clone();
@@ -371,6 +372,7 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
         } else {
           gameRef.xpPointsSystem.awardForMining(result, depth);
         }
+        gameRef.questSystem.onOreMined();
       }
       tileMap.revealAround(_digX, _digY);
       _target = _tileCenter(_digX, _digY);
@@ -443,7 +445,7 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     _currentFallY = 0;
     heldDirection = MoveDirection.none;
     _facing = MoveDirection.down;
-    tileMap.revealAround(gridX, gridY);
+    tileMap.revealAround(gridX, gridY, radius: gameRef.lightSystem.revealRadius);
   }
 
   void teleportToSurface() {
@@ -453,7 +455,7 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     _isFalling = false;
     _fallStartY = 0;
     _currentFallY = 0;
-    tileMap.revealAround(gridX, gridY);
+    tileMap.revealAround(gridX, gridY, radius: gameRef.lightSystem.revealRadius);
   }
 
   void restorePosition(double x , y) {
@@ -463,6 +465,6 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     _isFalling = false;
     _fallStartY = 0;
     _currentFallY = 0;
-    tileMap.revealAround(gridX, gridY);
+    tileMap.revealAround(gridX, gridY, radius: gameRef.lightSystem.revealRadius);
   }
 }

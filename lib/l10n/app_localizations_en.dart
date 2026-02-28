@@ -868,4 +868,117 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get updateOpenStoreFailed =>
       'Could not open the dApp Store. Please update manually.';
+
+  @override
+  String get light => 'Light';
+
+  @override
+  String get lightUpgraded => 'Light system upgraded!';
+
+  @override
+  String revealRadiusValue(int radius) {
+    return 'Reveal: $radius tiles';
+  }
+
+  @override
+  String get questsTitle => 'QUESTS';
+
+  @override
+  String get questsSubtitle => 'Complete quests to earn XP & points';
+
+  @override
+  String get questsDailyTab => 'Daily';
+
+  @override
+  String get questsSocialTab => 'Social';
+
+  @override
+  String get questsClaim => 'CLAIM';
+
+  @override
+  String get questsClaimed => '✓ Claimed';
+
+  @override
+  String get questsGo => 'GO';
+
+  @override
+  String get questsClose => 'CLOSE';
+
+  @override
+  String get questsNoDailyQuests => 'No daily quests available';
+
+  @override
+  String get questsSocialInfo =>
+      'Complete social actions to earn one-time rewards. Tap GO to open the link.';
+
+  @override
+  String get quests => 'QUESTS';
+
+  @override
+  String questMineOreTitle(int count) {
+    return 'Mine $count Ores';
+  }
+
+  @override
+  String questMineOreDesc(int count) {
+    return 'Mine $count ore tiles in a single day';
+  }
+
+  @override
+  String questReachDepthTitle(int depth) {
+    return 'Reach ${depth}m Depth';
+  }
+
+  @override
+  String questReachDepthDesc(int depth) {
+    return 'Reach a depth of ${depth}m or more';
+  }
+
+  @override
+  String questSellOreTitle(int value) {
+    return 'Sell \$$value Worth';
+  }
+
+  @override
+  String questSellOreDesc(int value) {
+    return 'Sell ore worth a total of \$$value';
+  }
+
+  @override
+  String questRepairTitle(int amount) {
+    return 'Repair $amount HP';
+  }
+
+  @override
+  String questRepairDesc(int amount) {
+    return 'Repair a total of $amount hull HP';
+  }
+
+  @override
+  String questUseItemsTitle(int count) {
+    return 'Use $count Items';
+  }
+
+  @override
+  String questUseItemsDesc(int count) {
+    return 'Use $count items from your inventory';
+  }
+
+  @override
+  String get questFollowTwitterTitle => 'Follow on X';
+
+  @override
+  String get questFollowTwitterDesc => 'Follow @DiggleGame on X (Twitter)';
+
+  @override
+  String get questJoinDiscordTitle => 'Join Discord';
+
+  @override
+  String get questJoinDiscordDesc => 'Join the Diggle Discord community';
+
+  @override
+  String get questPostTweetTitle => 'Share on X';
+
+  @override
+  String get questPostTweetDesc => 'Post a tweet about Diggle';
 }

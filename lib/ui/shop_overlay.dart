@@ -203,6 +203,8 @@ class _ShopOverlayState extends State<ShopOverlay>
           const SizedBox(height: 12),
           _buildCoolingUpgrade(l10n),
           const SizedBox(height: 12),
+          _buildLightUpgrade(l10n),
+          const SizedBox(height: 12),
           _buildFuelUpgrade(l10n),
           const SizedBox(height: 12),
           _buildCargoUpgrade(l10n),
@@ -210,6 +212,32 @@ class _ShopOverlayState extends State<ShopOverlay>
           _buildHullUpgrade(l10n),
         ],
       ),
+    );
+  }
+
+  Widget _buildLightUpgrade(AppLocalizations l10n) {
+    return ListenableBuilder(
+      listenable: widget.game.lightSystem,
+      builder: (context, _) {
+        final system = widget.game.lightSystem;
+        final nextLevel = system.getNextUpgrade();
+        final cost = system.getUpgradeCost();
+        final canAfford = widget.game.economySystem.canAfford(cost);
+        return _buildUpgradeCard(l10n,
+            icon: system.icon,
+            title: l10n.light,
+            currentLevel: system.name,
+            currentDescription:
+            l10n.revealRadiusValue(system.revealRadius),
+            nextLevel: nextLevel?.name,
+            nextDescription: nextLevel != null
+                ? l10n.revealRadiusValue(nextLevel.revealRadius)
+                : null,
+            cost: cost,
+            canAfford: canAfford,
+            onUpgrade: nextLevel != null ? _upgradeLight : null,
+            accentColor: Colors.yellow);
+      },
     );
   }
 
@@ -914,6 +942,11 @@ class _ShopOverlayState extends State<ShopOverlay>
   void _upgradeCooling() {
     final l10n = AppLocalizations.of(context)!;
     if (widget.game.upgradeCooling()) _showMessage(l10n.coolingUpgraded);
+  }
+
+  void _upgradeLight() {
+    final l10n = AppLocalizations.of(context)!;
+    if (widget.game.upgradeLight()) _showMessage(l10n.lightUpgraded);
   }
 
   void _buyItem(ItemType type) {

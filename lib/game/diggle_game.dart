@@ -23,6 +23,8 @@ import 'systems/engine_system.dart';
 import 'systems/cooling_system.dart';
 import 'systems/xp_points_system.dart';
 import 'systems/boost_manager.dart';
+import 'systems/light_system.dart';
+import 'systems/quest_system.dart';
 
 enum GameState { playing, shopping, gameOver, paused }
 
@@ -39,15 +41,15 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   late HullSystem hullSystem;
   late ItemSystem itemSystem;
 
-  // New upgrade systems
   late DrillbitSystem drillbitSystem;
   late EngineSystem engineSystem;
   late CoolingSystem coolingSystem;
+  late LightSystem lightSystem;
+  late QuestSystem questSystem;
 
-  // NEW: XP and Points system
   late XPPointsSystem xpPointsSystem;
 
-  // NOTE: BoostManager is initialized in main.dart since it needs WalletService
+  // BoostManager is initialized in main.dart since it needs WalletService
   BoostManager? boostManager;
 
   GameState _state = GameState.playing;
@@ -116,6 +118,21 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     drillbitSystem = DrillbitSystem();
     engineSystem = EngineSystem();
     coolingSystem = CoolingSystem();
+    lightSystem = LightSystem();
+    questSystem = QuestSystem();
+// Initialize quests (loads from prefs, assigns dailies)
+    questSystem.initialize();
+// Wire quest reward callback
+    questSystem.onAwardReward = (xp, points, source) {
+      xpPointsSystem.addPoints(points);
+      if (statsBridge != null) {
+        statsBridge!.awardQuestReward(xp, points, source);
+      } else {
+        // Direct XP award via the _award-like pattern
+        xpPointsSystem.addPoints(points);
+        // XP is trickier without bridge — just add directly
+      }
+    };
 
     /* --- 1. Initialize Joystick ---
     joystick = JoystickComponent(
@@ -183,6 +200,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     // CHANGED: Use bridge instead of xpPointsSystem directly
     statsBridge?.checkDepthMilestone(drill.depth) ??
         xpPointsSystem.checkDepthMilestone(drill.depth);
+    questSystem.onDepthReached(drill.depth);
 
     // Track play time (sync every 60s)
     _playTimeAccumulator += dt;
@@ -234,6 +252,14 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     // if (joystick.parent == null) camera.viewport.add(joystick);
   }
 
+  void openQuests() {
+    overlays.add('quests');
+  }
+
+  void closeQuests() {
+    overlays.remove('quests');
+  }
+
   void restart() {
     // Reset all systems
     fuelSystem.reset();
@@ -244,6 +270,8 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     engineSystem.reset();
     coolingSystem.reset();
     xpPointsSystem.resetSession();
+    lightSystem.reset();
+    questSystem.reset();
 
     tileMap.reset();
     drill.reset();
@@ -259,6 +287,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     if (!overlays.isActive('hud')) {
       overlays.add('hud');
     }
+
     // Ensure joystick is visible
     // if (joystick.parent == null) camera.viewport.add(joystick);
   }
@@ -341,6 +370,9 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
       'cooling': {
         'level': coolingSystem.level.index,
       },
+      'light': {
+        'level': lightSystem.level.index,
+      },
       'xp': {
         'xp': xpPointsSystem.xp,
         'points': xpPointsSystem.points,
@@ -410,6 +442,12 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
         coolingSystem.restore(level: (c['level'] as num).toInt());
       }
 
+      // Light
+      if (data.containsKey('light')) {
+        final li = data['light'] as Map<String, dynamic>;
+        lightSystem.restore(level: (li['level'] as num).toInt());
+      }
+
       // XP / Points
       if (data.containsKey('xp')) {
         final x = data['xp'] as Map<String, dynamic>;
@@ -462,6 +500,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
       // xpPointsSystem.awardForSale(earned, economySystem.totalOreCollected);
       statsBridge?.awardForSale(earned, economySystem.totalOreCollected) ??
           xpPointsSystem.awardForSale(earned, economySystem.totalOreCollected);
+      questSystem.onOreSold(earned);
     }
     return earned;
   }
@@ -493,7 +532,9 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   bool repairHull() {
     final cost = hullSystem.getRepairCost();
     if (cost > 0 && economySystem.spend(cost)) {
+      final damageBefore = hullSystem.maxHull - hullSystem.hull;
       hullSystem.fullRepair();
+      questSystem.onHullRepaired(damageBefore.toInt());
       return true;
     }
     return false;
@@ -539,6 +580,16 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     return false;
   }
 
+  bool upgradeLight() {
+    final cost = lightSystem.getUpgradeCost();
+    if (cost > 0 && economySystem.spend(cost)) {
+      lightSystem.upgrade();
+      return true;
+    }
+    return false;
+  }
+
+
   // ============================================================
   // ITEM SHOP
   // ============================================================
@@ -578,6 +629,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     }
 
     itemSystem.useItem(type);
+    questSystem.onItemUsed();
     return true;
   }
 }
