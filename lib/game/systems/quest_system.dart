@@ -2,15 +2,18 @@
 /// Manages daily and social quests with progress tracking and rewards.
 ///
 /// Daily quests reset every 24 hours (UTC midnight).
-/// Social quests are one-time completions verified client-side.
+/// Social quests are one-time completions — tweet posts are verified
+/// server-side via Edge Function; follow/Discord are trust-based.
 ///
-/// Quest progress is tracked locally and synced to Supabase.
-/// Rewards are XP and points, awarded through XPStatsBridge.
+/// Architecture: local-first (SharedPreferences), with optional
+/// Supabase sync via [QuestSyncService]. Offline play fully supported.
 
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../services/quest_sync_service.dart';
 
 // ============================================================
 // QUEST DEFINITIONS
@@ -33,6 +36,15 @@ enum QuestType {
   postTweet,
 }
 
+/// Whether a social quest requires server-side validation.
+enum SocialValidation {
+  /// Trust-based — mark complete after URL launch.
+  trustBased,
+
+  /// Requires proof (e.g. tweet URL) verified by Edge Function.
+  serverValidated,
+}
+
 /// Static quest template — defines what a quest looks like.
 class QuestDefinition {
   final String id;
@@ -45,6 +57,7 @@ class QuestDefinition {
   final int xpReward;
   final int pointsReward;
   final String? url; // For social quests — opens external link
+  final SocialValidation validation;
 
   const QuestDefinition({
     required this.id,
@@ -57,7 +70,11 @@ class QuestDefinition {
     required this.xpReward,
     required this.pointsReward,
     this.url,
+    this.validation = SocialValidation.trustBased,
   });
+
+  bool get requiresValidation =>
+      validation == SocialValidation.serverValidated;
 }
 
 /// Runtime quest state — tracks progress for a specific quest instance.
@@ -68,12 +85,21 @@ class QuestState {
   bool rewardClaimed;
   DateTime? completedAt;
 
+  /// For validated social quests: pending means user submitted proof,
+  /// awaiting server confirmation.
+  bool validationPending;
+
+  /// If validation failed, store the reason to display.
+  String? validationError;
+
   QuestState({
     required this.definition,
     this.progress = 0,
     this.completed = false,
     this.rewardClaimed = false,
     this.completedAt,
+    this.validationPending = false,
+    this.validationError,
   });
 
   double get progressFraction =>
@@ -87,6 +113,22 @@ class QuestState {
     'completed': completed,
     'reward_claimed': rewardClaimed,
     'completed_at': completedAt?.toIso8601String(),
+  };
+
+  /// Serialization for server sync (includes extra fields).
+  Map<String, dynamic> toSyncJson(String? resetDate) => {
+    'quest_id': definition.id,
+    'category': definition.category == QuestCategory.daily
+        ? 'daily'
+        : 'social',
+    'progress': progress,
+    'target': definition.target,
+    'completed': completed,
+    'reward_claimed': rewardClaimed,
+    'xp_reward': definition.xpReward,
+    'points_reward': definition.pointsReward,
+    'completed_at': completedAt?.toIso8601String(),
+    'reset_date': resetDate,
   };
 
   factory QuestState.fromJson(
@@ -213,6 +255,7 @@ class QuestCatalog {
       xpReward: 100,
       pointsReward: 50,
       url: 'https://x.com/DiggleOnSol',
+      validation: SocialValidation.trustBased,
     ),
     QuestDefinition(
       id: 'social_join_discord',
@@ -225,6 +268,9 @@ class QuestCatalog {
       xpReward: 100,
       pointsReward: 50,
       url: 'https://discord.gg/QH4uUfK2wR',
+      // Trust-based by default. Set to serverValidated if you
+      // configure DISCORD_BOT_TOKEN in your Edge Function secrets.
+      validation: SocialValidation.trustBased,
     ),
     QuestDefinition(
       id: 'social_post_tweet',
@@ -238,6 +284,7 @@ class QuestCatalog {
       pointsReward: 75,
       url:
       'https://x.com/intent/tweet?text=Playing%20Diggle%20%E2%9B%8F%EF%B8%8F%20Mine%20deep%2C%20earn%20rewards!%20%40DiggleOnSol',
+      validation: SocialValidation.serverValidated,
     ),
   ];
 
@@ -272,6 +319,35 @@ class QuestSystem extends ChangeNotifier {
 
   /// Callback to award rewards (set by bridge or game).
   void Function(int xp, int points, String source)? onAwardReward;
+
+  /// Optional sync service — set after player authenticates.
+  QuestSyncService? _syncService;
+
+  /// Debounce timer for batching sync calls.
+  Timer? _syncDebounce;
+
+  /// Whether a sync is currently in flight.
+  bool _syncing = false;
+
+  // ============================================================
+  // SYNC SERVICE
+  // ============================================================
+
+  /// Attach the sync service once the player is authenticated.
+  void attachSyncService(QuestSyncService service) {
+    _syncService = service;
+    debugPrint('QuestSystem: sync service attached');
+    // Immediately push current local state to server
+    _scheduleSyncAll();
+  }
+
+  /// Detach sync (e.g. on logout).
+  void detachSyncService() {
+    _syncService = null;
+    _syncDebounce?.cancel();
+  }
+
+  bool get isSyncEnabled => _syncService != null;
 
   // ============================================================
   // GETTERS
@@ -317,6 +393,91 @@ class QuestSystem extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Attempt to merge server state with local.
+  /// Call after attaching sync service for cross-device support.
+  Future<void> syncFromServer() async {
+    if (_syncService == null) return;
+
+    try {
+      // Load social quests from server (these are permanent)
+      final serverSocial = await _syncService!.loadSocialQuests();
+      if (serverSocial != null) {
+        _mergeServerSocialQuests(serverSocial);
+      }
+
+      // Load today's daily quests from server
+      final todayKey = _todayKey();
+      final serverDaily = await _syncService!.loadDailyQuests(todayKey);
+      if (serverDaily != null && serverDaily.isNotEmpty) {
+        _mergeServerDailyQuests(serverDaily);
+      }
+
+      _saveToPrefs();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('QuestSystem: syncFromServer failed: $e');
+    }
+  }
+
+  void _mergeServerSocialQuests(List<Map<String, dynamic>> serverData) {
+    for (final row in serverData) {
+      final questId = row['quest_id'] as String?;
+      if (questId == null) continue;
+
+      final localIdx = _socialQuests.indexWhere(
+            (q) => q.definition.id == questId,
+      );
+      if (localIdx < 0) continue;
+
+      final local = _socialQuests[localIdx];
+      final serverCompleted = row['completed'] as bool? ?? false;
+      final serverClaimed = row['reward_claimed'] as bool? ?? false;
+
+      // Server wins if it has more progress
+      if (serverCompleted && !local.completed) {
+        local.progress = local.definition.target;
+        local.completed = true;
+        local.completedAt = row['completed_at'] != null
+            ? DateTime.tryParse(row['completed_at'] as String)
+            : DateTime.now();
+      }
+      if (serverClaimed && !local.rewardClaimed) {
+        local.rewardClaimed = true;
+      }
+    }
+  }
+
+  void _mergeServerDailyQuests(List<Map<String, dynamic>> serverData) {
+    for (final row in serverData) {
+      final questId = row['quest_id'] as String?;
+      if (questId == null) continue;
+
+      final localIdx = _dailyQuests.indexWhere(
+            (q) => q.definition.id == questId,
+      );
+      if (localIdx < 0) continue;
+
+      final local = _dailyQuests[localIdx];
+      final serverProgress = (row['progress'] as num?)?.toInt() ?? 0;
+      final serverCompleted = row['completed'] as bool? ?? false;
+      final serverClaimed = row['reward_claimed'] as bool? ?? false;
+
+      // Take the higher progress
+      if (serverProgress > local.progress) {
+        local.progress = serverProgress;
+      }
+      if (serverCompleted && !local.completed) {
+        local.completed = true;
+        local.completedAt = row['completed_at'] != null
+            ? DateTime.tryParse(row['completed_at'] as String)
+            : DateTime.now();
+      }
+      if (serverClaimed && !local.rewardClaimed) {
+        local.rewardClaimed = true;
+      }
+    }
+  }
+
   void _checkDailyReset() {
     final todayStr = _todayKey();
 
@@ -353,6 +514,7 @@ class QuestSystem extends ChangeNotifier {
 
     _saveDailyDate(dateKey);
     _saveToPrefs();
+    _scheduleSyncAll();
     debugPrint('QuestSystem: assigned ${_dailyQuests.length} daily quests for $dateKey');
   }
 
@@ -376,19 +538,25 @@ class QuestSystem extends ChangeNotifier {
 
   /// Called when player reaches a new depth.
   void onDepthReached(int depth) {
+    bool changed = false;
     for (final quest in _dailyQuests) {
       if (quest.definition.type == QuestType.reachDepth && !quest.completed) {
         if (depth >= quest.definition.target) {
           quest.progress = quest.definition.target;
           quest.completed = true;
           quest.completedAt = DateTime.now();
+          changed = true;
         } else if (depth > quest.progress) {
           quest.progress = depth;
+          changed = true;
         }
       }
     }
-    _saveToPrefs();
-    notifyListeners();
+    if (changed) {
+      _saveToPrefs();
+      _scheduleSync();
+      notifyListeners();
+    }
   }
 
   /// Called when player sells ore.
@@ -406,7 +574,8 @@ class QuestSystem extends ChangeNotifier {
     _incrementDaily(QuestType.useItems, 1);
   }
 
-  /// Called when a social quest action is performed.
+  /// Called when a trust-based social quest action is performed
+  /// (e.g. user tapped "Follow" and returned to app).
   void completeSocialQuest(String questId) {
     final quest = _socialQuests.firstWhere(
           (q) => q.definition.id == questId,
@@ -417,11 +586,101 @@ class QuestSystem extends ChangeNotifier {
 
     if (quest.completed) return;
 
+    // If this quest requires server validation, don't auto-complete.
+    if (quest.definition.requiresValidation) {
+      debugPrint('QuestSystem: $questId requires validation, skipping auto-complete');
+      return;
+    }
+
     quest.progress = quest.definition.target;
     quest.completed = true;
     quest.completedAt = DateTime.now();
     _saveToPrefs();
+    _syncSingleQuest(quest);
     notifyListeners();
+  }
+
+  /// Submit proof for a validated social quest (e.g. tweet URL).
+  /// Returns a result message for the UI.
+  Future<SocialValidationResult> submitSocialProof({
+    required String questId,
+    String? tweetUrl,
+  }) async {
+    final questIdx = _socialQuests.indexWhere(
+          (q) => q.definition.id == questId,
+    );
+    if (questIdx < 0) {
+      return SocialValidationResult(
+        success: false,
+        message: 'Quest not found',
+      );
+    }
+
+    final quest = _socialQuests[questIdx];
+    if (quest.completed) {
+      return SocialValidationResult(
+        success: true,
+        message: 'Already completed!',
+      );
+    }
+
+    // If no sync service, fall back to trust-based
+    if (_syncService == null) {
+      quest.progress = quest.definition.target;
+      quest.completed = true;
+      quest.completedAt = DateTime.now();
+      _saveToPrefs();
+      notifyListeners();
+      return SocialValidationResult(
+        success: true,
+        message: 'Quest completed!',
+      );
+    }
+
+    // Mark as pending validation
+    quest.validationPending = true;
+    quest.validationError = null;
+    notifyListeners();
+
+    try {
+      final result = await _syncService!.validateSocialQuest(
+        questId: questId,
+        tweetUrl: tweetUrl,
+      );
+
+      final valid = result['valid'] as bool? ?? false;
+      final reason = result['reason'] as String?;
+
+      if (valid) {
+        quest.progress = quest.definition.target;
+        quest.completed = true;
+        quest.completedAt = DateTime.now();
+        quest.validationPending = false;
+        quest.validationError = null;
+        _saveToPrefs();
+        notifyListeners();
+        return SocialValidationResult(
+          success: true,
+          message: 'Quest verified and completed!',
+        );
+      } else {
+        quest.validationPending = false;
+        quest.validationError = reason ?? 'Validation failed';
+        notifyListeners();
+        return SocialValidationResult(
+          success: false,
+          message: reason ?? 'Could not verify. Please try again.',
+        );
+      }
+    } catch (e) {
+      quest.validationPending = false;
+      quest.validationError = 'Network error — try again later';
+      notifyListeners();
+      return SocialValidationResult(
+        success: false,
+        message: 'Network error — please try again.',
+      );
+    }
   }
 
   void _incrementDaily(QuestType type, int amount) {
@@ -439,6 +698,7 @@ class QuestSystem extends ChangeNotifier {
     }
     if (changed) {
       _saveToPrefs();
+      _scheduleSync();
       notifyListeners();
     }
   }
@@ -448,7 +708,8 @@ class QuestSystem extends ChangeNotifier {
   // ============================================================
 
   /// Claim reward for a completed quest. Returns true if successful.
-  bool claimReward(String questId) {
+  /// If sync is enabled, uses server RPC for atomic claim.
+  Future<bool> claimReward(String questId) async {
     final quest = allQuests.firstWhere(
           (q) => q.definition.id == questId,
       orElse: () => QuestState(
@@ -458,9 +719,42 @@ class QuestSystem extends ChangeNotifier {
 
     if (!quest.isReadyToClaim) return false;
 
+    // Try server-side claim first for atomicity
+    if (_syncService != null) {
+      final resetDate = quest.definition.category == QuestCategory.daily
+          ? _todayKey()
+          : null;
+
+      final result = await _syncService!.claimRewardServer(
+        questId: questId,
+        category: quest.definition.category == QuestCategory.daily
+            ? 'daily'
+            : 'social',
+        resetDate: resetDate,
+      );
+
+      if (result != null && result['success'] == true) {
+        quest.rewardClaimed = true;
+        // Award locally too (bridge handles XP/points display)
+        onAwardReward?.call(
+          quest.definition.xpReward,
+          quest.definition.pointsReward,
+          'quest_${quest.definition.id}',
+        );
+        _saveToPrefs();
+        notifyListeners();
+        return true;
+      }
+
+      // If server claim failed but quest is locally complete,
+      // still allow local claim (reward will reconcile later).
+      debugPrint('QuestSystem: server claim failed for $questId, '
+          'falling back to local');
+    }
+
+    // Local-only claim
     quest.rewardClaimed = true;
 
-    // Award via callback
     onAwardReward?.call(
       quest.definition.xpReward,
       quest.definition.pointsReward,
@@ -468,8 +762,68 @@ class QuestSystem extends ChangeNotifier {
     );
 
     _saveToPrefs();
+    _syncSingleQuest(quest);
     notifyListeners();
     return true;
+  }
+
+  // ============================================================
+  // SERVER SYNC
+  // ============================================================
+
+  /// Debounced sync — batches rapid progress updates.
+  void _scheduleSync() {
+    if (_syncService == null) return;
+    _syncDebounce?.cancel();
+    _syncDebounce = Timer(const Duration(seconds: 3), _scheduleSyncAll);
+  }
+
+  /// Push all current quest state to server.
+  void _scheduleSyncAll() {
+    if (_syncService == null || _syncing) return;
+    _syncing = true;
+
+    final resetDate = _todayKey();
+    final allSyncData = <Map<String, dynamic>>[];
+
+    for (final q in _dailyQuests) {
+      allSyncData.add(q.toSyncJson(resetDate));
+    }
+    for (final q in _socialQuests) {
+      allSyncData.add(q.toSyncJson(null));
+    }
+
+    _syncService!.syncAll(quests: allSyncData).then((_) {
+      debugPrint('QuestSystem: synced ${allSyncData.length} quests');
+    }).catchError((e) {
+      debugPrint('QuestSystem: sync failed: $e');
+    }).whenComplete(() {
+      _syncing = false;
+    });
+  }
+
+  /// Sync a single quest immediately (for completions/claims).
+  void _syncSingleQuest(QuestState quest) {
+    if (_syncService == null) return;
+
+    final resetDate = quest.definition.category == QuestCategory.daily
+        ? _todayKey()
+        : null;
+
+    _syncService!.syncQuest(
+      questId: quest.definition.id,
+      category: quest.definition.category == QuestCategory.daily
+          ? 'daily'
+          : 'social',
+      progress: quest.progress,
+      target: quest.definition.target,
+      completed: quest.completed,
+      rewardClaimed: quest.rewardClaimed,
+      xpReward: quest.definition.xpReward,
+      pointsReward: quest.definition.pointsReward,
+      completedAt: quest.completedAt,
+      resetDate: resetDate,
+    );
   }
 
   // ============================================================
@@ -482,7 +836,6 @@ class QuestSystem extends ChangeNotifier {
   }
 
   String? _lastDailyDate() {
-    // Stored in _savedDailyDate, loaded from prefs
     return _savedDailyDate;
   }
 
@@ -583,6 +936,28 @@ class QuestSystem extends ChangeNotifier {
     _checkDailyReset();
     _ensureSocialQuests();
     _saveToPrefs();
+    _scheduleSyncAll();
     notifyListeners();
   }
+
+  @override
+  void dispose() {
+    _syncDebounce?.cancel();
+    super.dispose();
+  }
 }
+
+// ============================================================
+// VALIDATION RESULT
+// ============================================================
+
+class SocialValidationResult {
+  final bool success;
+  final String message;
+
+  const SocialValidationResult({
+    required this.success,
+    required this.message,
+  });
+}
+

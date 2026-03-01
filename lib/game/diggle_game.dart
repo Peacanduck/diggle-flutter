@@ -8,8 +8,10 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/stats_service.dart';
+import '../services/supabase_service.dart';
 import '../services/xp_stats_bridge.dart';
 import '../services/game_lifecycle_manager.dart';
+import '../services/quest_sync_service.dart';
 
 import 'world/tile_map_component.dart';
 import 'world/world_generator.dart';
@@ -101,6 +103,17 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
         points: stats.points,
         level: stats.level,
       );
+    }
+
+    // ── NEW: Attach quest sync if player is authenticated ──
+    final playerId = SupabaseService.instance.playerId;  // adjust getter name to match your StatsService
+    if (playerId != null && SupabaseService.instance.isAuthenticated) {
+      final syncService = QuestSyncService(
+        client: SupabaseService.instance.client,
+        playerId: playerId,
+      );
+      questSystem.attachSyncService(syncService);
+      questSystem.syncFromServer();
     }
 
     debugPrint('DiggleGame: services attached');

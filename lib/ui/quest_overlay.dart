@@ -24,6 +24,10 @@ class QuestOverlay extends StatefulWidget {
 class _QuestOverlayState extends State<QuestOverlay>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final _tweetUrlController = TextEditingController();
+
+  /// Track which quest is currently being claimed (for loading state).
+  String? _claimingQuestId;
 
   @override
   void initState() {
@@ -34,6 +38,7 @@ class _QuestOverlayState extends State<QuestOverlay>
   @override
   void dispose() {
     _tabController.dispose();
+    _tweetUrlController.dispose();
     super.dispose();
   }
 
@@ -251,8 +256,8 @@ class _QuestOverlayState extends State<QuestOverlay>
     final def = quest.definition;
     final isComplete = quest.completed;
     final canClaim = quest.isReadyToClaim;
+    final isClaiming = _claimingQuestId == def.id;
 
-    // Use localized strings with fallback
     final title = _getQuestTitle(l10n, def);
     final description = _getQuestDescription(l10n, def);
 
@@ -338,9 +343,15 @@ class _QuestOverlayState extends State<QuestOverlay>
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () => _claimReward(quest.definition.id),
-                icon: const Icon(Icons.card_giftcard, size: 18),
-                label: Text(l10n.questsClaim),
+                onPressed: isClaiming ? null : () => _claimReward(def.id),
+                icon: isClaiming
+                    ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.black))
+                    : const Icon(Icons.card_giftcard, size: 18),
+                label: Text(isClaiming ? '...' : l10n.questsClaim),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.amber.shade700,
                   foregroundColor: Colors.black,
@@ -367,8 +378,10 @@ class _QuestOverlayState extends State<QuestOverlay>
     final def = quest.definition;
     final isComplete = quest.completed;
     final canClaim = quest.isReadyToClaim;
+    final isClaiming = _claimingQuestId == def.id;
     final title = _getQuestTitle(l10n, def);
     final description = _getQuestDescription(l10n, def);
+    final isValidated = def.requiresValidation;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -387,56 +400,155 @@ class _QuestOverlayState extends State<QuestOverlay>
           width: canClaim ? 2 : 1,
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(def.icon, style: const TextStyle(fontSize: 28)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: TextStyle(
-                        color: isComplete ? Colors.green : Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold)),
-                const SizedBox(height: 2),
-                Text(description,
-                    style: TextStyle(
-                        color: Colors.white.withOpacity(0.5),
-                        fontSize: 12)),
-                const SizedBox(height: 4),
-                _buildRewardBadge(def),
-              ],
-            ),
+          Row(
+            children: [
+              Text(def.icon, style: const TextStyle(fontSize: 28)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: TextStyle(
+                            color: isComplete ? Colors.green : Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 2),
+                    Text(description,
+                        style: TextStyle(
+                            color: Colors.white.withOpacity(0.5),
+                            fontSize: 12)),
+                    const SizedBox(height: 4),
+                    _buildRewardBadge(def),
+                  ],
+                ),
+              ),
+              // Action button area for completed/claimable/trust-based
+              if (quest.rewardClaimed)
+                const Icon(Icons.check_circle, color: Colors.green, size: 28)
+              else if (canClaim)
+                ElevatedButton(
+                  onPressed: isClaiming ? null : () => _claimReward(def.id),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amber.shade700,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                  ),
+                  child: isClaiming
+                      ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.black))
+                      : Text(l10n.questsClaim,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                )
+              else if (!isValidated && !isComplete)
+                // Trust-based: single GO button
+                  ElevatedButton.icon(
+                    onPressed: () => _launchSocialQuest(def),
+                    icon: const Icon(Icons.open_in_new, size: 14),
+                    label: Text(l10n.questsGo,
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple.shade700,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                    ),
+                  ),
+            ],
           ),
-          if (quest.rewardClaimed)
-            const Icon(Icons.check_circle, color: Colors.green, size: 28)
-          else if (canClaim)
-            ElevatedButton(
-              onPressed: () => _claimReward(def.id),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber.shade700,
-                foregroundColor: Colors.black,
-                padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
-              child: Text(l10n.questsClaim,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-            )
-          else
-            ElevatedButton.icon(
-              onPressed: () => _launchSocialQuest(def),
-              icon: const Icon(Icons.open_in_new, size: 14),
-              label: Text(l10n.questsGo,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.purple.shade700,
-                foregroundColor: Colors.white,
-                padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+
+          // ── Validated quest: two-step post + verify flow ──
+          if (isValidated && !isComplete) ...[
+            const SizedBox(height: 12),
+            // Step 1: Post button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _launchUrl(def.url!),
+                icon: const Text('🐦', style: TextStyle(fontSize: 14)),
+                label: Text('Post on X',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade700,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
               ),
             ),
+            const SizedBox(height: 8),
+            // Step 2: Paste URL + verify
+            if (quest.validationPending) ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 8),
+                    Text('Verifying...',
+                        style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  ],
+                ),
+              ),
+            ] else ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _tweetUrlController,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: 'Paste your tweet URL here',
+                        hintStyle: TextStyle(
+                            color: Colors.white.withOpacity(0.3), fontSize: 13),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 10),
+                        filled: true,
+                        fillColor: Colors.grey.shade800,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none,
+                        ),
+                        errorText: quest.validationError,
+                        errorStyle: TextStyle(
+                            color: Colors.red.shade300, fontSize: 11),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () => _verifyTweet(quest),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade700,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                    ),
+                    child: const Text('Verify',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Post the tweet above, then paste the URL to verify',
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.3), fontSize: 11),
+              ),
+            ],
+          ],
         ],
       ),
     );
@@ -498,8 +610,13 @@ class _QuestOverlayState extends State<QuestOverlay>
 
   // ── Actions ──────────────────────────────────────────────────
 
-  void _claimReward(String questId) {
-    widget.questSystem.claimReward(questId);
+  Future<void> _claimReward(String questId) async {
+    setState(() => _claimingQuestId = questId);
+    try {
+      await widget.questSystem.claimReward(questId);
+    } finally {
+      if (mounted) setState(() => _claimingQuestId = null);
+    }
   }
 
   Future<void> _launchSocialQuest(QuestDefinition def) async {
@@ -508,10 +625,41 @@ class _QuestOverlayState extends State<QuestOverlay>
     final uri = Uri.parse(def.url!);
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-      // Mark as complete after launching (trust-based for social quests)
+      // Mark as complete after launching (trust-based only)
       widget.questSystem.completeSocialQuest(def.id);
     } catch (e) {
       debugPrint('QuestOverlay: failed to launch URL: $e');
+    }
+  }
+
+  Future<void> _launchUrl(String url) async {
+    try {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('QuestOverlay: failed to launch URL: $e');
+    }
+  }
+
+  Future<void> _verifyTweet(QuestState quest) async {
+    final url = _tweetUrlController.text.trim();
+    if (url.isEmpty) return;
+
+    final result = await widget.questSystem.submitSocialProof(
+      questId: quest.definition.id,
+      tweetUrl: url,
+    );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message),
+          backgroundColor: result.success ? Colors.green : Colors.red.shade700,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      if (result.success) {
+        _tweetUrlController.clear();
+      }
     }
   }
 
