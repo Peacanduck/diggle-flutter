@@ -270,7 +270,7 @@ class QuestCatalog {
       url: 'https://discord.gg/QH4uUfK2wR',
       // Trust-based by default. Set to serverValidated if you
       // configure DISCORD_BOT_TOKEN in your Edge Function secrets.
-      validation: SocialValidation.trustBased,
+      validation: SocialValidation.serverValidated,
     ),
     QuestDefinition(
       id: 'social_post_tweet',
@@ -308,8 +308,17 @@ class QuestCatalog {
 // ============================================================
 
 class QuestSystem extends ChangeNotifier {
-  static const String _prefsKey = 'diggle_quests';
-  static const String _dailyDateKey = 'diggle_quests_daily_date';
+  static const String _prefsPrefix = 'diggle_quests';
+  static const String _dailyDatePrefix = 'diggle_quests_daily_date';
+
+  /// The current player's ID — used to scope SharedPreferences keys.
+  /// null = no player (prefs won't save/load).
+  String? _playerId;
+
+  /// Scoped prefs keys
+  String get _prefsKey => '${_prefsPrefix}_${_playerId ?? 'default'}';
+  String get _dailyDateKey => '${_dailyDatePrefix}_${_playerId ?? 'default'}';
+
 
   /// Currently active daily quests.
   final List<QuestState> _dailyQuests = [];
@@ -334,11 +343,18 @@ class QuestSystem extends ChangeNotifier {
   // ============================================================
 
   /// Attach the sync service once the player is authenticated.
-  void attachSyncService(QuestSyncService service) {
+  /// Also scopes local prefs to the player's ID
+  void attachSyncService(QuestSyncService service, {String? playerId}) {
     _syncService = service;
-    debugPrint('QuestSystem: sync service attached');
-    // Immediately push current local state to server
-    _scheduleSyncAll();
+    debugPrint('QuestSystem: sync service attached (player: $playerId)');
+    // If a new player ID is provided, reload prefs scoped to that player
+    if (playerId != null && playerId != _playerId) {
+      // Fire-and-forget — switchPlayer loads prefs async
+      switchPlayer(playerId);
+    } else {
+      // Same player, just push current state
+      _scheduleSyncAll();
+    }
   }
 
   /// Detach sync (e.g. on logout).
@@ -386,11 +402,32 @@ class QuestSystem extends ChangeNotifier {
   // ============================================================
 
   /// Load quest state from local storage. Call at game start.
-  Future<void> initialize() async {
+  /// Pass [playerId] to scope prefs per account. If null, uses 'default'.
+  Future<void> initialize({String? playerId}) async {
+    _playerId = playerId;
+    _dailyQuests.clear();
+    _socialQuests.clear();
+    _savedDailyDate = null;
     await _loadFromPrefs();
     _checkDailyReset();
     _ensureSocialQuests();
     notifyListeners();
+  }
+
+  /// Switch to a different player's quest state.
+  /// Clears current state and reloads from the new player's prefs.
+  Future<void> switchPlayer(String? playerId) async {
+    _playerId = playerId;
+    _dailyQuests.clear();
+    _socialQuests.clear();
+    _savedDailyDate = null;
+    await _loadFromPrefs();
+    _checkDailyReset();
+    _ensureSocialQuests();
+    _scheduleSyncAll();
+    notifyListeners();
+    debugPrint('QuestSystem: switched to player $playerId '
+        '(${_dailyQuests.length} daily, ${_socialQuests.length} social)');
   }
 
   /// Attempt to merge server state with local.
@@ -683,6 +720,38 @@ class QuestSystem extends ChangeNotifier {
     }
   }
 
+  // ============================================================
+  // DISCORD OAUTH FLOW
+  // ============================================================
+  /// Get the Discord OAuth URL. Returns null if sync not available
+  /// or Discord OAuth not configured on the server.
+  Future<String?> getDiscordAuthUrl() async {
+    if (_syncService == null) return null;
+    return _syncService!.getDiscordAuthUrl();
+  }
+  /// Check if Discord quest was completed server-side (after OAuth flow).
+  /// Call this when the user returns to the app from the browser.
+  Future<bool> checkDiscordQuestCompleted() async {
+    if (_syncService == null) return false;
+    final completed = await _syncService!.checkDiscordQuestCompleted();
+    if (completed) {
+      final quest = _socialQuests.firstWhere(
+            (q) => q.definition.id == 'social_join_discord',
+        orElse: () => QuestState(definition: QuestCatalog.socialQuests[1]),
+      );
+
+      if (!quest.completed) {
+        quest.progress = quest.definition.target;
+        quest.completed = true;
+        quest.completedAt = DateTime.now();
+        _saveToPrefs();
+        notifyListeners();
+      }
+    }
+    return completed;
+  }
+
+
   void _incrementDaily(QuestType type, int amount) {
     bool changed = false;
     for (final quest in _dailyQuests) {
@@ -960,4 +1029,3 @@ class SocialValidationResult {
     required this.message,
   });
 }
-

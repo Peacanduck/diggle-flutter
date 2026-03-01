@@ -426,7 +426,7 @@
      "questJoinDiscordTitle": "Join Discord",
      "questJoinDiscordDesc": "Join the Diggle Discord community",
      "questPostTweetTitle": "Share on X",
-     "questPostTweetDesc": "Post a tweet about Diggle"
+     "questPostTweetDesc": "Post a tweet about Diggle",
      "questVerifyButton": "Verify",
      "questPasteTweetUrl": "Paste your tweet URL here",
      "questVerifying": "Verifying...",

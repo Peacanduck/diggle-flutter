@@ -29,6 +29,9 @@ class _QuestOverlayState extends State<QuestOverlay>
   /// Track which quest is currently being claimed (for loading state).
   String? _claimingQuestId;
 
+  /// Whether the Discord OAuth flow is in progress.
+  bool _discordVerifying = false;
+
   @override
   void initState() {
     super.initState();
@@ -382,6 +385,8 @@ class _QuestOverlayState extends State<QuestOverlay>
     final title = _getQuestTitle(l10n, def);
     final description = _getQuestDescription(l10n, def);
     final isValidated = def.requiresValidation;
+    final isDiscord = def.type == QuestType.joinDiscord;
+    final isTweet = def.type == QuestType.postTweet;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -464,8 +469,76 @@ class _QuestOverlayState extends State<QuestOverlay>
             ],
           ),
 
-          // ── Validated quest: two-step post + verify flow ──
-          if (isValidated && !isComplete) ...[
+          // ── Discord OAuth verification flow ──
+          if (isDiscord && isValidated && !isComplete) ...[
+            const SizedBox(height: 12),
+            // Step 1: Join server link
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _launchUrl(def.url!),
+                icon: const Text('💬', style: TextStyle(fontSize: 14)),
+                label: const Text('Join Discord Server',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF5865F2), // Discord blurple
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Step 2: Verify membership via OAuth
+            if (_discordVerifying) ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 8),
+                    Text('Checking membership...',
+                        style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  ],
+                ),
+              ),
+            ] else ...[
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _verifyDiscord(quest),
+                  icon: const Icon(Icons.verified_user, size: 16),
+                  label: const Text('Verify Membership',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF5865F2),
+                    side: const BorderSide(color: Color(0xFF5865F2)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                ),
+              ),
+              if (quest.validationError != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  quest.validationError!,
+                  style: TextStyle(color: Colors.red.shade300, fontSize: 11),
+                ),
+              ],
+              const SizedBox(height: 4),
+              Text(
+                'Join the server first, then tap Verify to confirm with Discord',
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.3), fontSize: 11),
+              ),
+            ],
+          ],
+
+          // ── Tweet verification flow ──
+          if (isTweet && isValidated && !isComplete) ...[
             const SizedBox(height: 12),
             // Step 1: Post button
             SizedBox(
@@ -473,8 +546,8 @@ class _QuestOverlayState extends State<QuestOverlay>
               child: ElevatedButton.icon(
                 onPressed: () => _launchUrl(def.url!),
                 icon: const Text('🐦', style: TextStyle(fontSize: 14)),
-                label: Text('Post on X',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                label: const Text('Post on X',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue.shade700,
                   foregroundColor: Colors.white,
@@ -660,6 +733,81 @@ class _QuestOverlayState extends State<QuestOverlay>
       if (result.success) {
         _tweetUrlController.clear();
       }
+    }
+  }
+
+  Future<void> _verifyDiscord(QuestState quest) async {
+    // Step 1: Get the OAuth URL from the server
+    setState(() => _discordVerifying = true);
+
+    final authUrl = await widget.questSystem.getDiscordAuthUrl();
+
+    if (authUrl == null) {
+      if (mounted) {
+        setState(() => _discordVerifying = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Discord verification not available. Try again later.'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Step 2: Open Discord OAuth in browser
+    try {
+      await launchUrl(Uri.parse(authUrl), mode: LaunchMode.externalApplication);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _discordVerifying = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Could not open Discord. Please try again.'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Step 3: Wait for user to return, then poll for completion.
+    // We poll a few times with delays since the user needs time to
+    // authorize in the browser and for the Edge Function to process.
+    await Future.delayed(const Duration(seconds: 3));
+
+    bool verified = false;
+    for (int attempt = 0; attempt < 10; attempt++) {
+      if (!mounted) return;
+
+      verified = await widget.questSystem.checkDiscordQuestCompleted();
+      if (verified) break;
+
+      // Wait before next check
+      await Future.delayed(const Duration(seconds: 2));
+    }
+
+    if (!mounted) return;
+
+    setState(() => _discordVerifying = false);
+
+    if (verified) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Discord membership verified! 🎉'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+              'Could not verify membership. Make sure you joined the server and authorized Discord.'),
+          backgroundColor: Colors.red.shade700,
+          duration: const Duration(seconds: 4),
+        ),
+      );
     }
   }
 

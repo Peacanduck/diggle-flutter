@@ -22,7 +22,8 @@ class QuestSyncService {
   // ============================================================
 
   /// Sync a single quest's progress to the server.
-  /// Uses upsert with the appropriate conflict target.
+  /// Uses select-then-insert/update because PostgREST's upsert
+  /// doesn't support partial unique indexes (WHERE category = ...).
   Future<bool> syncQuest({
     required String questId,
     required String category,
@@ -36,35 +37,64 @@ class QuestSyncService {
     String? resetDate, // 'YYYY-MM-DD' for daily, null for social
   }) async {
     try {
-      final row = {
-        'player_id': _playerId,
-        'quest_id': questId,
-        'category': category,
-        'progress': progress,
-        'target': target,
-        'completed': completed,
-        'reward_claimed': rewardClaimed,
-        'xp_reward': xpReward,
-        'points_reward': pointsReward,
-        'completed_at': completedAt?.toUtc().toIso8601String(),
-      };
-
-      // For daily quests, include reset_date so the trigger
-      // and unique index work correctly.
+      // Check if row already exists
+      Map<String, dynamic>? existing;
       if (category == 'daily' && resetDate != null) {
-        row['reset_date'] = resetDate;
-        row['reset_at'] = '${resetDate}T00:00:00Z';
+        final res = await _client
+            .from('player_quests')
+            .select('id')
+            .eq('player_id', _playerId)
+            .eq('quest_id', questId)
+            .eq('category', 'daily')
+            .eq('reset_date', resetDate)
+            .maybeSingle();
+        existing = res;
+      } else if (category == 'social') {
+        final res = await _client
+            .from('player_quests')
+            .select('id')
+            .eq('player_id', _playerId)
+            .eq('quest_id', questId)
+            .eq('category', 'social')
+            .maybeSingle();
+        existing = res;
       }
 
-      await _client.from('player_quests').upsert(
-        row,
-        // Supabase/PostgREST uses onConflict to determine the
-        // unique constraint for upserting.
-        onConflict: category == 'daily'
-            ? 'player_id,quest_id,reset_date'
-            : 'player_id,quest_id',
-      );
+      if (existing != null) {
+        // UPDATE existing row
+        await _client
+            .from('player_quests')
+            .update({
+          'progress': progress,
+          'target': target,
+          'completed': completed,
+          'reward_claimed': rewardClaimed,
+          'xp_reward': xpReward,
+          'points_reward': pointsReward,
+          'completed_at': completedAt?.toUtc().toIso8601String(),
+        })
+            .eq('id', existing['id']);
+      } else {
+        // INSERT new row
+        final row = <String, dynamic>{
+          'player_id': _playerId,
+          'quest_id': questId,
+          'category': category,
+          'progress': progress,
+          'target': target,
+          'completed': completed,
+          'reward_claimed': rewardClaimed,
+          'xp_reward': xpReward,
+          'points_reward': pointsReward,
+          'completed_at': completedAt?.toUtc().toIso8601String(),
+        };
 
+        if (category == 'daily' && resetDate != null) {
+          row['reset_date'] = resetDate;
+          row['reset_at'] = '${resetDate}T00:00:00Z';
+        }
+        await _client.from('player_quests').insert(row);
+      }
       return true;
     } catch (e) {
       debugPrint('QuestSync: failed to sync quest $questId: $e');
@@ -213,6 +243,55 @@ class QuestSyncService {
         'valid': false,
         'reason': 'Could not reach validation service',
       };
+    }
+  }
+
+  // ============================================================
+  // DISCORD OAUTH
+  // ============================================================
+
+  /// Get the Discord OAuth authorization URL from the Edge Function.
+  /// The Edge Function builds the URL with the correct client_id,
+  /// redirect_uri, and player_id in the state param.
+  Future<String?> getDiscordAuthUrl() async {
+    try {
+      final response = await _client.functions.invoke(
+        'discord-oauth-callback',
+        body: {
+          'player_id': _playerId,
+        },
+      );
+
+      if (response.status != 200) {
+        debugPrint('QuestSync: Discord auth URL request failed (${response.status})');
+        return null;
+      }
+
+      final data = response.data as Map<String, dynamic>;
+      return data['auth_url'] as String?;
+    } catch (e) {
+      debugPrint('QuestSync: getDiscordAuthUrl error: $e');
+      return null;
+    }
+  }
+
+  /// Check if the Discord quest was completed server-side.
+  /// Called after user returns from the OAuth flow.
+  Future<bool> checkDiscordQuestCompleted() async {
+    try {
+      final response = await _client
+          .from('player_quests')
+          .select('completed')
+          .eq('player_id', _playerId)
+          .eq('quest_id', 'social_join_discord')
+          .eq('category', 'social')
+          .maybeSingle();
+
+      if (response == null) return false;
+      return response['completed'] as bool? ?? false;
+    } catch (e) {
+      debugPrint('QuestSync: checkDiscordQuestCompleted error: $e');
+      return false;
     }
   }
 

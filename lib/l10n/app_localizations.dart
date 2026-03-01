@@ -1839,6 +1839,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Post a tweet about Diggle'**
   String get questPostTweetDesc;
+
+  /// No description provided for @questVerifyButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify'**
+  String get questVerifyButton;
+
+  /// No description provided for @questPasteTweetUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste your tweet URL here'**
+  String get questPasteTweetUrl;
+
+  /// No description provided for @questVerifying.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying...'**
+  String get questVerifying;
+
+  /// No description provided for @questVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Quest verified and completed!'**
+  String get questVerified;
+
+  /// No description provided for @questVerificationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not verify. Please try again.'**
+  String get questVerificationFailed;
 }
 
 class _AppLocalizationsDelegate

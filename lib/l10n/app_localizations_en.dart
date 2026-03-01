@@ -981,4 +981,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get questPostTweetDesc => 'Post a tweet about Diggle';
+
+  @override
+  String get questVerifyButton => 'Verify';
+
+  @override
+  String get questPasteTweetUrl => 'Paste your tweet URL here';
+
+  @override
+  String get questVerifying => 'Verifying...';
+
+  @override
+  String get questVerified => 'Quest verified and completed!';
+
+  @override
+  String get questVerificationFailed => 'Could not verify. Please try again.';
 }

@@ -78,6 +78,8 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     seed: seed,
   ){
     xpPointsSystem = XPPointsSystem();
+    lightSystem = LightSystem();
+    questSystem = QuestSystem();
   }
 
 
@@ -112,7 +114,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
         client: SupabaseService.instance.client,
         playerId: playerId,
       );
-      questSystem.attachSyncService(syncService);
+      questSystem.attachSyncService(syncService, playerId: playerId);
       questSystem.syncFromServer();
     }
 
@@ -131,8 +133,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     drillbitSystem = DrillbitSystem();
     engineSystem = EngineSystem();
     coolingSystem = CoolingSystem();
-    lightSystem = LightSystem();
-    questSystem = QuestSystem();
+
 // Initialize quests (loads from prefs, assigns dailies)
     questSystem.initialize();
 // Wire quest reward callback
