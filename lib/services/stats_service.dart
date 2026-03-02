@@ -16,6 +16,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import '../game/systems/xp_points_system.dart';
 import 'supabase_service.dart';
 
 /// Snapshot of player stats (mirrors player_stats table).
@@ -223,10 +224,12 @@ class StatsService {
     _xpDeltaSinceSync += amount;
     debugPrint('StatsService(${identityHashCode(this)}): +$amount XP → total ${_stats.xp}');
     // Level up check (exponential curve: 100 * level^1.5)
-    while (_stats.xp >= _xpForLevel(_stats.level + 1)) {
+    _stats.level = LevelThresholds.levelFromXP(_stats.xp);
+   /* while (_stats.xp >= _xpForLevel(_stats.level + 1)) {
       _stats.level++;
       debugPrint('StatsService: LEVEL UP! Now level ${_stats.level}');
-    }
+    }*/
+    debugPrint('StatsService: LEVEL UP! Now level ${_stats.level}');
   }
 
   /// Add points locally and queue a ledger entry.
@@ -435,43 +438,6 @@ class StatsService {
 
   // ── Helpers ────────────────────────────────────────────────────
 
-  /// XP required to reach a given level.
-  /// Curve: 100 * level^1.5 (same as xp_points_system.dart).
-  int _xpForLevel(int level) {
-    if (level <= 1) return 0;
-    return (100 * _pow(level.toDouble(), 1.5)).toInt();
-  }
-
-  double _pow(double base, double exp) {
-    // dart:math pow
-    return base <= 0 ? 0 : (base == 1 ? 1 : _fastPow(base, exp));
-  }
-
-  double _fastPow(double base, double exp) {
-    // Simple power function without importing dart:math at top
-    double result = 1.0;
-    // Use repeated multiplication for integer part
-    int intExp = exp.toInt();
-    double fracExp = exp - intExp;
-    for (int i = 0; i < intExp; i++) {
-      result *= base;
-    }
-    // Approximate fractional part: base^frac ≈ 1 + frac*ln(base)
-    if (fracExp > 0) {
-      // Good enough for level calculations
-      double ln = 0;
-      double term = (base - 1) / (base + 1);
-      double termSq = term * term;
-      double current = term;
-      for (int i = 0; i < 10; i++) {
-        ln += current / (2 * i + 1);
-        current *= termSq;
-      }
-      ln *= 2;
-      result *= (1.0 + fracExp * ln);
-    }
-    return result;
-  }
 
   /// Dispose resources.
   void dispose() {

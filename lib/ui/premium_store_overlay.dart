@@ -531,7 +531,7 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
                 ),
                 child: Column(
                   children: [
-                    const Text('⛏️', style: TextStyle(fontSize: 64)),
+                    _buildNFTImage(),
                     const SizedBox(height: 12),
                     Text(l10n.diggleDrillMachine,
                         style: const TextStyle(
@@ -602,6 +602,47 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildNFTImage() {
+    // Priority: owned NFT art > collection preview > emoji fallback
+    final ownedImageUri = widget.candyMachineService.ownedNFT?.imageUri;
+    final collectionImageUrl = widget.boostManager.nftCollection.imageUrl;
+    final imageUri = ownedImageUri ?? collectionImageUrl;
+
+
+    if (imageUri == null || imageUri.isEmpty) {
+      return const Text('⛏️', style: TextStyle(fontSize: 64));
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Image.network(
+        imageUri,
+        width: 120,
+        height: 120,
+        fit: BoxFit.contain,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return SizedBox(
+            width: 120,
+            height: 120,
+            child: Center(
+              child: CircularProgressIndicator(
+                value: progress.expectedTotalBytes != null
+                    ? progress.cumulativeBytesLoaded /
+                    progress.expectedTotalBytes!
+                    : null,
+                color: Colors.amber,
+                strokeWidth: 2,
+              ),
+            ),
+          );
+        },
+        errorBuilder: (_, __, ___) =>
+        const Text('⛏️', style: TextStyle(fontSize: 64)),
+      ),
     );
   }
 

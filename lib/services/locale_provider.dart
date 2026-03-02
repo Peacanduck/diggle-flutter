@@ -52,15 +52,15 @@ class LocaleProvider extends ChangeNotifier {
   // The first entry is the fallback.
 
   static const supportedLocales = <Locale>[
-    Locale('en'), // English  (template)
-    // Locale('es'), // Spanish  — uncomment when app_es.arb exists
+     Locale('en'), // English  (template)
+     Locale('es'), // Spanish  — uncomment when app_es.arb exists
     // Locale('pt'), // Portuguese
-    // Locale('fr'), // French
+     Locale('fr'), // French
     // Locale('de'), // German
-    // Locale('ja'), // Japanese
-    // Locale('zh'), // Chinese
-    // Locale('ko'), // Korean
-    // Locale('ru'), // Russian
+     Locale('ja'), // Japanese
+     Locale('zh'), // Chinese
+     Locale('ko'), // Korean
+     Locale('ru'), // Russian
     // Locale('ar'), // Arabic
   ];
 

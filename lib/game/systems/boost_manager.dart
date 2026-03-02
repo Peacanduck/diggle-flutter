@@ -148,6 +148,7 @@ class NFTCollectionInfo {
   final double pointsMultiplier;
   final int maxSupply;
   final double mintPriceSOL;
+  final String? imageUrl;
   // Fetched from chain
   final int currentSupply;
   final bool isActive;
@@ -159,6 +160,7 @@ class NFTCollectionInfo {
     required this.pointsMultiplier,
     required this.maxSupply,
     required this.mintPriceSOL,
+    this.imageUrl,
     this.currentSupply = 0,
     this.isActive = false,
     this.collectionMint,
@@ -304,6 +306,7 @@ class BoostManager extends ChangeNotifier {
     pointsMultiplier: 1.25,
     maxSupply: 10000,
     mintPriceSOL: 0.1,
+    imageUrl: 'https://gateway.irys.xyz/nrUUILfhG4NHoDG1e2c-Xky4veoRJEY2KgP24Cp_AAU?ext=png',
   );
 
   NFTCollectionInfo get nftCollection => _nftCollection;
@@ -708,6 +711,7 @@ class BoostManager extends ChangeNotifier {
         pointsMultiplier: _nftCollection.pointsMultiplier,
         maxSupply: cmInfo.itemsAvailable,
         mintPriceSOL: cmInfo.mintPriceSol ?? _nftCollection.mintPriceSOL,
+        imageUrl: _nftCollection.imageUrl,
         currentSupply: cmInfo.itemsRedeemed,
         isActive: cmInfo.isMintLive && !cmInfo.isSoldOut,
         collectionMint: CandyMachineService.collectionMint,
