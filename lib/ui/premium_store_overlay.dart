@@ -592,6 +592,39 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
                       l10n.nftMinted, l10n.boostsActive, Colors.green)
                 else
                   _buildMintButton(l10n),
+              // ── ADD THIS BLOCK ──
+              if (!widget.candyMachineService.hasNFT) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: widget.candyMachineService.isCheckingOwnership
+                        ? null
+                        : () => _checkNFTOwnership(),
+                    icon: widget.candyMachineService.isCheckingOwnership
+                        ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.amber),
+                    )
+                        : const Icon(Icons.search, size: 18),
+                    label: Text(
+                      widget.candyMachineService.isCheckingOwnership
+                          ? '🔎...'
+                          : '',
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.amber.shade300,
+                      side: BorderSide(color: Colors.amber.shade700.withOpacity(0.5)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ],
 
               if (widget.candyMachineService.mintStatus != MintStatus.idle) ...[
                 const SizedBox(height: 12),
@@ -885,6 +918,21 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
       }
     } catch (e) {
       _showStatus(l10n.purchaseFailed);
+    }
+  }
+
+  Future<void> _checkNFTOwnership() async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final found = await widget.candyMachineService.checkNFTOwnership();
+      if (found) {
+        await widget.boostManager.checkForNFT();
+        _showStatus('✅');
+      } else {
+        _showStatus('❌');
+      }
+    } catch (e) {
+      _showStatus('⚠️');
     }
   }
 
