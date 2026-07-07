@@ -113,11 +113,23 @@ class DrillbitSystem extends ChangeNotifier {
 
   DrillbitLevel get level => _level;
 
+  /// NFT gear bonuses (additive speed fraction + hardness override).
+  double _gearSpeedBonus = 0;
+  bool _gearHardnessOverride = false;
+
+  void setGearBonus({double speedBonus = 0, bool hardnessOverride = false}) {
+    _gearSpeedBonus = speedBonus.clamp(0.0, 1.0);
+    _gearHardnessOverride = hardnessOverride;
+    notifyListeners();
+  }
+
   /// Current dig speed multiplier
-  double get digSpeedMultiplier => _level.digSpeedMultiplier;
+  double get digSpeedMultiplier =>
+      _level.digSpeedMultiplier * (1 + _gearSpeedBonus);
 
   /// Maximum hardness this bit can mine
-  int get maxHardness => _level.maxHardness;
+  int get maxHardness =>
+      _gearHardnessOverride ? MaterialHardness.veryHard : _level.maxHardness;
 
   /// Display name
   String get name => _level.name;
@@ -134,12 +146,12 @@ class DrillbitSystem extends ChangeNotifier {
 
   /// Check if this drillbit can mine a material of given hardness
   bool canMine(int hardness) {
-    return hardness <= _level.maxHardness;
+    return hardness <= maxHardness;
   }
 
   /// Get effective dig time for a material (base time / speed multiplier)
   double getEffectiveDigTime(double baseDigTime) {
-    return baseDigTime / _level.digSpeedMultiplier;
+    return baseDigTime / digSpeedMultiplier;
   }
 
   // ============================================================

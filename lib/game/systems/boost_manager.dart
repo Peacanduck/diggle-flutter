@@ -714,7 +714,7 @@ class BoostManager extends ChangeNotifier {
         imageUrl: _nftCollection.imageUrl,
         currentSupply: cmInfo.itemsRedeemed,
         isActive: cmInfo.isMintLive && !cmInfo.isSoldOut,
-        collectionMint: CandyMachineService.collectionMint,
+        collectionMint: candyMachineService.collectionMint,
       );
     }
 

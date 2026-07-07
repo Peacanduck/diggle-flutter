@@ -13,6 +13,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flutter/foundation.dart'; // Required for compute
 import 'package:flutter/material.dart' show Colors, Paint;
+import 'biome.dart';
 import 'tile.dart';
 import 'world_generator.dart';
 
@@ -51,10 +52,16 @@ class TileMapComponent extends PositionComponent with HasGameRef {
   // --- CACHED PAINTS (Optimization) ---
   // Reusing these prevents creating garbage every frame
   final Paint _fogPaint = Paint()..color = const Color(0xFF0a0a0f);
-  final Paint _emptyPaint = Paint()..color = const Color(0xFF1a1a2e);
   final Paint _fallbackPaint = Paint()..color = const Color(0xFFFF00FF); // Hot pink for errors
   final Paint _digOverlayPaint = Paint(); // Color updated dynamically, object reused
   final Paint _digBarPaint = Paint()..color = Colors.yellow.withOpacity(0.8);
+
+  // Per-biome cached paints (empty/cave background + band tint overlay)
+  final Map<String, Paint> _caveColorPaints = {};
+  final Map<String, Paint> _biomeTintPaints = {};
+  // Procedural paints for tiles without sprites (new v2 tile types)
+  final Map<TileType, Paint> _baseColorPaints = {};
+  final Map<TileType, Paint> _highlightColorPaints = {};
 
   TileMapComponent({required this.config});
 
@@ -108,6 +115,19 @@ class TileMapComponent extends PositionComponent with HasGameRef {
         _tileSprites[type] = getSprite(row, col);
       }
     }
+
+    // Cache procedural paints for sprite-less tiles and biome overlays.
+    for (final type in TileType.values) {
+      if (type == TileType.empty || _tileSprites.containsKey(type)) continue;
+      _baseColorPaints[type] = Paint()..color = type.color;
+      _highlightColorPaints[type] = Paint()..color = type.highlightColor;
+    }
+    for (final biome in Biome.strata) {
+      _caveColorPaints[biome.name] = Paint()..color = biome.caveColor;
+      if (biome.tint.alpha > 0) {
+        _biomeTintPaints[biome.name] = Paint()..color = biome.tint;
+      }
+    }
   }
 
   // ============================================================
@@ -155,12 +175,14 @@ class TileMapComponent extends PositionComponent with HasGameRef {
       return;
     }
 
+    final depth = tile.y - config.surfaceRows;
+    final biome = Biome.atDepth(depth < 0 ? 0 : depth);
+    final rect = Rect.fromLTWH(position.x, position.y, tileSize, tileSize);
+
     // 2. Render Tile Sprite
     if (tile.type == TileType.empty) {
-      canvas.drawRect(
-        Rect.fromLTWH(position.x, position.y, tileSize, tileSize),
-        _emptyPaint,
-      );
+      final cavePaint = _caveColorPaints[biome.name];
+      canvas.drawRect(rect, cavePaint ?? _fogPaint);
     } else {
       final sprite = _tileSprites[tile.type];
       if (sprite != null) {
@@ -169,18 +191,92 @@ class TileMapComponent extends PositionComponent with HasGameRef {
           position: position,
           size: size,
         );
+      } else if (_baseColorPaints.containsKey(tile.type)) {
+        // Procedural rendering for v2 tiles without sprite art
+        _renderProceduralTile(canvas, tile, rect);
       } else {
         // Fallback for missing sprites
-        canvas.drawRect(
-          Rect.fromLTWH(position.x, position.y, tileSize, tileSize),
-          _fallbackPaint,
-        );
+        canvas.drawRect(rect, _fallbackPaint);
+      }
+      // Biome band tint so each stratum reads visually distinct
+      final tintPaint = _biomeTintPaints[biome.name];
+      if (tintPaint != null) {
+        canvas.drawRect(rect, tintPaint);
       }
     }
 
     // 3. Render Dig Progress
     if (tile.isBeingDug && tile.digProgress > 0) {
       _renderDigProgress(canvas, tile, position);
+    }
+  }
+
+  /// Draws v2 tile types (crystal, crate, artifact, etc.) with simple
+  /// canvas shapes until dedicated sprite art is added to the sheet.
+  void _renderProceduralTile(Canvas canvas, Tile tile, Rect rect) {
+    final base = _baseColorPaints[tile.type]!;
+    final highlight = _highlightColorPaints[tile.type]!;
+    canvas.drawRect(rect, base);
+
+    switch (tile.type) {
+      case TileType.crystalOre:
+        // Two crystal shards
+        final path = Path()
+          ..moveTo(rect.left + 8, rect.bottom - 4)
+          ..lineTo(rect.left + 12, rect.top + 6)
+          ..lineTo(rect.left + 16, rect.bottom - 4)
+          ..close()
+          ..moveTo(rect.left + 17, rect.bottom - 4)
+          ..lineTo(rect.left + 22, rect.top + 12)
+          ..lineTo(rect.left + 26, rect.bottom - 4)
+          ..close();
+        canvas.drawPath(path, highlight);
+        break;
+      case TileType.lootCrate:
+        // Crate: border + diagonal band
+        canvas.drawRect(rect.deflate(3), highlight);
+        canvas.drawRect(rect.deflate(6), base);
+        canvas.drawLine(
+          Offset(rect.left + 4, rect.top + 4),
+          Offset(rect.right - 4, rect.bottom - 4),
+          highlight..strokeWidth = 3,
+        );
+        break;
+      case TileType.artifact:
+        // Golden diamond shape on dark base
+        final cx = rect.center.dx;
+        final cy = rect.center.dy;
+        final path = Path()
+          ..moveTo(cx, cy - 9)
+          ..lineTo(cx + 7, cy)
+          ..lineTo(cx, cy + 9)
+          ..lineTo(cx - 7, cy)
+          ..close();
+        canvas.drawPath(path, highlight);
+        break;
+      case TileType.unstableRock:
+        // Cracked look: jagged lines
+        canvas.drawLine(
+          Offset(rect.left + 6, rect.top + 4),
+          Offset(rect.left + 14, rect.bottom - 10),
+          highlight..strokeWidth = 2,
+        );
+        canvas.drawLine(
+          Offset(rect.left + 14, rect.bottom - 10),
+          Offset(rect.right - 6, rect.bottom - 4),
+          highlight..strokeWidth = 2,
+        );
+        break;
+      default:
+        // frozenDirt / magmaRock: speckled texture
+        final hash = (tile.x * 31 + tile.y * 17) & 0x7fffffff;
+        for (int i = 0; i < 3; i++) {
+          final px = rect.left + 4 + ((hash >> (i * 4)) % 22);
+          final py = rect.top + 4 + ((hash >> (i * 4 + 2)) % 22);
+          canvas.drawRect(Rect.fromLTWH(px.toDouble(), py.toDouble(), 3, 3),
+              highlight);
+        }
+        break;
     }
   }
 
@@ -281,25 +377,84 @@ class TileMapComponent extends PositionComponent with HasGameRef {
     return gridY <= config.surfaceRows;
   }
 
+  /// Detonate an explosion. Gas pockets caught in the blast chain-react
+  /// with their own radius-1 explosion. Returns all destroyed ore types
+  /// (the caller decides how much of the yield survives the blast).
   List<TileType> explode(int centerX, int centerY, int radius) {
     final destroyedOres = <TileType>[];
-    for (int dx = -radius; dx <= radius; dx++) {
-      for (int dy = -radius; dy <= radius; dy++) {
-        final x = centerX + dx;
-        final y = centerY + dy;
-        if (!_isInBounds(x, y)) continue;
-        final tile = _grid[x][y];
-        if (tile.type == TileType.bedrock || tile.type == TileType.empty) continue;
-        if (tile.type.isOre) {
-          destroyedOres.add(tile.type);
+    // Queue of (x, y, radius) blasts; gas chain reactions append to it.
+    final pending = <List<int>>[
+      [centerX, centerY, radius]
+    ];
+    // Cap total chained blasts to keep pathological gas fields bounded.
+    int blastsLeft = 16;
+
+    while (pending.isNotEmpty && blastsLeft > 0) {
+      blastsLeft--;
+      final blast = pending.removeAt(0);
+      final bx = blast[0], by = blast[1], br = blast[2];
+
+      for (int dx = -br; dx <= br; dx++) {
+        for (int dy = -br; dy <= br; dy++) {
+          final x = bx + dx;
+          final y = by + dy;
+          if (!_isInBounds(x, y)) continue;
+          final tile = _grid[x][y];
+          if (tile.type == TileType.bedrock || tile.type == TileType.empty) {
+            continue;
+          }
+          if (tile.type == TileType.gas && !(dx == 0 && dy == 0)) {
+            // Chain reaction: gas pocket detonates
+            pending.add([x, y, 1]);
+          }
+          if (tile.type.isOre) {
+            destroyedOres.add(tile.type);
+          }
+          tile.type = TileType.empty;
+          tile.isRevealed = true;
+          tile.resetDig();
         }
+      }
+      revealAround(bx, by, radius: br + 1);
+    }
+    return destroyedOres;
+  }
+
+  /// Cascade-collapse unstable rock adjacent to (x, y).
+  /// Returns the tiles that crumbled so the caller can apply falling-rock
+  /// damage. Cascade is capped to avoid runaway chains.
+  List<Tile> collapseUnstableAround(int x, int y) {
+    final collapsed = <Tile>[];
+    final toCheck = <List<int>>[
+      [x, y]
+    ];
+    const maxCollapse = 12;
+
+    while (toCheck.isNotEmpty && collapsed.length < maxCollapse) {
+      final pos = toCheck.removeAt(0);
+      const neighbors = [
+        [0, -1],
+        [0, 1],
+        [-1, 0],
+        [1, 0],
+      ];
+      for (final d in neighbors) {
+        final nx = pos[0] + d[0];
+        final ny = pos[1] + d[1];
+        if (!_isInBounds(nx, ny)) continue;
+        final tile = _grid[nx][ny];
+        if (tile.type != TileType.unstableRock) continue;
         tile.type = TileType.empty;
         tile.isRevealed = true;
         tile.resetDig();
+        collapsed.add(tile);
+        toCheck.add([nx, ny]);
       }
     }
-    revealAround(centerX, centerY, radius: radius + 1);
-    return destroyedOres;
+    if (collapsed.isNotEmpty) {
+      revealAround(x, y, radius: 2);
+    }
+    return collapsed;
   }
 
   void reset() async {
@@ -310,24 +465,65 @@ class TileMapComponent extends PositionComponent with HasGameRef {
     // Force redraw or state update if necessary
   }
 
-  Uint8List exportBytes() {
-    final bytes = Uint8List(config.width * config.height);
-    int i = 0;
+  // ============================================================
+  // SERIALIZATION
+  // ============================================================
+  // Format v1: [version byte = 1][width*height tile type indexes].
+  // Legacy (pre-versioning) saves are exactly width*height bytes with
+  // no header and are still importable.
+  //
+  // TileType enum values MUST be append-only or old saves corrupt.
+
+  static const int _serializationVersion = 1;
+
+  /// Encode a tile grid to bytes (static for unit testing).
+  static Uint8List encodeTileGrid(List<List<Tile>> grid, WorldConfig config) {
+    final bytes = Uint8List(1 + config.width * config.height);
+    bytes[0] = _serializationVersion;
+    int i = 1;
     for (int x = 0; x < config.width; x++) {
       for (int y = 0; y < config.height; y++) {
-        bytes[i++] = _grid[x][y].type.index;
+        bytes[i++] = grid[x][y].type.index;
       }
     }
     return bytes;
   }
 
-  void importBytes(Uint8List bytes) {
-    if (bytes.length != config.width * config.height) {
+  /// Decode bytes into an existing grid (static for unit testing).
+  /// Accepts both versioned (v1) and legacy headerless payloads.
+  static void decodeTileGrid(
+      Uint8List bytes, List<List<Tile>> grid, WorldConfig config) {
+    final tileCount = config.width * config.height;
+    int offset;
+    if (bytes.length == tileCount + 1 && bytes[0] == _serializationVersion) {
+      offset = 1;
+    } else if (bytes.length == tileCount) {
+      offset = 0; // legacy save without version byte
+    } else {
       throw ArgumentError(
-        'importBytes: expected ${config.width * config.height} bytes, '
-            'got ${bytes.length}',
+        'decodeTileGrid: expected $tileCount or ${tileCount + 1} bytes, '
+        'got ${bytes.length}',
       );
     }
+
+    int i = offset;
+    for (int x = 0; x < config.width; x++) {
+      for (int y = 0; y < config.height; y++) {
+        final typeIndex = bytes[i++];
+        if (typeIndex < TileType.values.length) {
+          grid[x][y].type = TileType.values[typeIndex];
+        }
+        grid[x][y].isRevealed = y < config.surfaceRows;
+        grid[x][y].resetDig();
+      }
+    }
+  }
+
+  Uint8List exportBytes() {
+    return encodeTileGrid(_grid, config);
+  }
+
+  void importBytes(Uint8List bytes) {
     // If importing, we likely need to ensure _grid is initialized
     if (_grid.isEmpty) {
       // We can't import into an empty grid structure.
@@ -336,17 +532,7 @@ class TileMapComponent extends PositionComponent with HasGameRef {
       return;
     }
 
-    int i = 0;
-    for (int x = 0; x < config.width; x++) {
-      for (int y = 0; y < config.height; y++) {
-        final typeIndex = bytes[i++];
-        if (typeIndex < TileType.values.length) {
-          _grid[x][y].type = TileType.values[typeIndex];
-        }
-        _grid[x][y].isRevealed = y < config.surfaceRows;
-        _grid[x][y].resetDig();
-      }
-    }
+    decodeTileGrid(bytes, _grid, config);
     revealAround(config.width ~/ 2, config.surfaceRows, radius: 2);
   }
 }

@@ -10,6 +10,10 @@ enum ItemType {
   dynamite,
   c4,
   spaceRift,
+
+  // v2 points-exclusive consumables (append-only for save compat)
+  oreScanner, // reveals ore in a radius
+  heatShield, // 60s lava immunity
 }
 
 /// Extension for item properties
@@ -26,6 +30,10 @@ extension ItemTypeExtension on ItemType {
         return 'C4';
       case ItemType.spaceRift:
         return 'Space Rift';
+      case ItemType.oreScanner:
+        return 'Ore Scanner';
+      case ItemType.heatShield:
+        return 'Heat Shield';
     }
   }
 
@@ -41,9 +49,14 @@ extension ItemTypeExtension on ItemType {
         return 'Blows up 5x5 area';
       case ItemType.spaceRift:
         return 'Teleport to surface';
+      case ItemType.oreScanner:
+        return 'Reveals terrain in a wide radius';
+      case ItemType.heatShield:
+        return '60s of lava immunity';
     }
   }
 
+  /// Cash price (0 = not purchasable with cash — points only).
   int get price {
     switch (this) {
       case ItemType.backupFuel:
@@ -56,8 +69,37 @@ extension ItemTypeExtension on ItemType {
         return 1000;
       case ItemType.spaceRift:
         return 20000;
+      case ItemType.oreScanner:
+        return 0;
+      case ItemType.heatShield:
+        return 0;
     }
   }
+
+  /// Points price (dual pricing for cash items; the only price for
+  /// points-exclusive items). Points packs in the premium store are
+  /// what make this a real SOL sink.
+  int get pointsPrice {
+    switch (this) {
+      case ItemType.backupFuel:
+        return 10;
+      case ItemType.repairBot:
+        return 25;
+      case ItemType.dynamite:
+        return 20;
+      case ItemType.c4:
+        return 80;
+      case ItemType.spaceRift:
+        return 600;
+      case ItemType.oreScanner:
+        return 40;
+      case ItemType.heatShield:
+        return 75;
+    }
+  }
+
+  /// Points-only items can't be bought with cash.
+  bool get isPointsExclusive => price == 0;
 
   String get icon {
     switch (this) {
@@ -71,6 +113,10 @@ extension ItemTypeExtension on ItemType {
         return '💣';
       case ItemType.spaceRift:
         return '🌀';
+      case ItemType.oreScanner:
+        return '📡';
+      case ItemType.heatShield:
+        return '🛡️';
     }
   }
 

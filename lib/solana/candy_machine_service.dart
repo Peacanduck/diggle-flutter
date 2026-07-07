@@ -104,11 +104,16 @@ class OwnedDiggleNFT {
   final String? name;
   final String? imageUri;
 
+  /// Off-chain metadata JSON URI (from on-chain metadata). Used by the
+  /// gear system to parse trait attributes post-reveal.
+  final String? metadataUri;
+
   OwnedDiggleNFT({
     required this.mintAddress,
     required this.tokenAccount,
     this.name,
     this.imageUri,
+    this.metadataUri,
   });
 }
 
@@ -130,9 +135,15 @@ class CandyMachineService extends ChangeNotifier {
     throw StateError('SolanaClient not available — WalletService not initialized');
   }
 
-  /// Known collection mint for Diggle NFTs
-  static const String collectionMint =
-      '3FJkKz61tMRt3rDzGk1Xp6mTN8kGYXtwSTgYaYEmx5fG'; // 4eFNHpLUiVEAh2wi9K1YLUEeTdDYJgjiLhgEkxbw8upV devnet
+  /// Known collection mints for Diggle NFTs (per cluster)
+  static const String mainnetCollectionMint =
+      '3FJkKz61tMRt3rDzGk1Xp6mTN8kGYXtwSTgYaYEmx5fG';
+  static const String devnetCollectionMint =
+      '4eFNHpLUiVEAh2wi9K1YLUEeTdDYJgjiLhgEkxbw8upV';
+
+  /// Collection mint for the wallet's current cluster.
+  String get collectionMint =>
+      _wallet.isDevnet ? devnetCollectionMint : mainnetCollectionMint;
 
   /// Metaplex Token Metadata program ID
   static const String _tokenMetadataProgram =
@@ -148,6 +159,7 @@ class CandyMachineService extends ChangeNotifier {
   String? _lastMintedNFT;
   CandyMachineInfo? _info;
   OwnedDiggleNFT? _ownedNFT;
+  final List<OwnedDiggleNFT> _ownedNFTs = [];
   bool _isLoadingInfo = false;
   bool _isCheckingOwnership = false;
 
@@ -161,6 +173,9 @@ class CandyMachineService extends ChangeNotifier {
   String? get lastMintedNFT => _lastMintedNFT;
   CandyMachineInfo? get info => _info;
   OwnedDiggleNFT? get ownedNFT => _ownedNFT;
+
+  /// All Diggle NFTs in the connected wallet (a holder can own several).
+  List<OwnedDiggleNFT> get ownedNFTs => List.unmodifiable(_ownedNFTs);
   bool get hasNFT => _ownedNFT != null;
   bool get isLoadingInfo => _isLoadingInfo;
   bool get isCheckingOwnership => _isCheckingOwnership;
@@ -180,8 +195,12 @@ class CandyMachineService extends ChangeNotifier {
         _supabaseUrl = supabaseUrl,
         _supabaseAnonKey = supabaseAnonKey;
 
-  /// Base URL for the candy-machine edge function
-  String get _functionUrl => '$_supabaseUrl/functions/v1/candy-machine';
+  /// Base URL for the candy-machine edge function.
+  /// Devnet wallets route to the separate candy-machine-devnet function
+  /// so testing never touches the mainnet function serving live users.
+  String get _functionUrl => _wallet.isDevnet
+      ? '$_supabaseUrl/functions/v1/candy-machine-devnet'
+      : '$_supabaseUrl/functions/v1/candy-machine';
 
   /// Standard headers for Supabase edge function calls
   Map<String, String> get _headers => {
@@ -425,12 +444,14 @@ class CandyMachineService extends ChangeNotifier {
   // NFT OWNERSHIP DETECTION
   // ============================================================
 
-  /// Check if the connected wallet owns a Diggle NFT.
+  /// Check if the connected wallet owns Diggle NFTs.
   /// Uses getTokenAccountsByOwner to find NFTs, then checks
-  /// metadata for the correct collection.
+  /// metadata for the correct collection. Collects ALL matches
+  /// (a wallet can hold several Diggle Machines).
   Future<bool> checkNFTOwnership() async {
     if (!_wallet.isConnected || _wallet.publicKey == null) {
       _ownedNFT = null;
+      _ownedNFTs.clear();
       notifyListeners();
       return false;
     }
@@ -472,6 +493,7 @@ class CandyMachineService extends ChangeNotifier {
       debugPrint('CandyMachine: Found ${tokenAccounts.value.length} token accounts');
 
       int nftCount = 0;
+      final found = <OwnedDiggleNFT>[];
 
       for (final account in tokenAccounts.value) {
         try {
@@ -510,16 +532,15 @@ class CandyMachineService extends ChangeNotifier {
               imageUri = await _fetchNFTImageUri(result.uri!);
             }
 
-            _ownedNFT = OwnedDiggleNFT(
+            found.add(OwnedDiggleNFT(
               mintAddress: mintAddress,
               tokenAccount: account.pubkey,
               name: result.name,
               imageUri: imageUri,
-            );
-            _isCheckingOwnership = false;
-            notifyListeners();
+              metadataUri: result.uri,
+            ));
             debugPrint('CandyMachine: ✅ Found Diggle NFT: $mintAddress (image: $imageUri)');
-            return true;
+            // Keep scanning — the wallet may hold more Diggle Machines
           }
         } catch (e) {
           debugPrint('CandyMachine: Error parsing token account: $e');
@@ -527,13 +548,20 @@ class CandyMachineService extends ChangeNotifier {
         }
       }
 
-      debugPrint('CandyMachine: Scanned $nftCount NFTs, none matched collection $collectionMint');
-
-      // No Diggle NFT found
-      _ownedNFT = null;
+      _ownedNFTs
+        ..clear()
+        ..addAll(found);
+      _ownedNFT = found.isNotEmpty ? found.first : null;
       _isCheckingOwnership = false;
       notifyListeners();
-      return false;
+
+      if (found.isEmpty) {
+        debugPrint('CandyMachine: Scanned $nftCount NFTs, '
+            'none matched collection $collectionMint');
+        return false;
+      }
+      debugPrint('CandyMachine: ${found.length} Diggle NFT(s) in wallet');
+      return true;
 
     } catch (e) {
       debugPrint('CandyMachine: Error checking NFT ownership: $e');
@@ -743,7 +771,10 @@ class CandyMachineService extends ChangeNotifier {
   /// Fetch the image URI from the NFT's off-chain metadata JSON.
   /// The on-chain metadata URI points to a JSON file (e.g. on Arweave/IPFS)
   /// that contains an "image" field with the actual image URL.
-  Future<String?> _fetchNFTImageUri(String metadataUri) async {
+  /// Fetch and decode the off-chain metadata JSON for an NFT.
+  /// Public so the gear system can parse trait attributes post-reveal.
+  Future<Map<String, dynamic>?> fetchOffchainMetadata(
+      String metadataUri) async {
     try {
       debugPrint('CandyMachine: Fetching off-chain metadata from: $metadataUri');
       final response = await http
@@ -751,17 +782,20 @@ class CandyMachineService extends ChangeNotifier {
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final image = json['image'] as String?;
-        debugPrint('CandyMachine: NFT image URI: $image');
-        return image;
-      } else {
-        debugPrint('CandyMachine: Metadata fetch failed: ${response.statusCode}');
+        return jsonDecode(response.body) as Map<String, dynamic>;
       }
+      debugPrint('CandyMachine: Metadata fetch failed: ${response.statusCode}');
     } catch (e) {
       debugPrint('CandyMachine: Error fetching NFT metadata JSON: $e');
     }
     return null;
+  }
+
+  Future<String?> _fetchNFTImageUri(String metadataUri) async {
+    final json = await fetchOffchainMetadata(metadataUri);
+    final image = json?['image'] as String?;
+    debugPrint('CandyMachine: NFT image URI: $image');
+    return image;
   }
 
   int _readU32LE(Uint8List bytes, int offset) {

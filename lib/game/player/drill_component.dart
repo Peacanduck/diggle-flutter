@@ -9,7 +9,7 @@ import '../world/tile_map_component.dart';
 import '../world/tile.dart';
 import '../systems/fuel_system.dart';
 import '../systems/economy_system.dart';
-import '../systems/hull_system.dart';
+import '../systems/hull_system.dart' show HullSystem, HullLevel;
 import '../systems/drillbit_system.dart';
 import '../systems/engine_system.dart';
 import '../systems/cooling_system.dart';
@@ -205,6 +205,7 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     }
 
     economySystem.updateMaxDepth(depth);
+    gameRef.achievementSystem.recordDepth(depth);
 
     if (isAtSurface) {
       onReachSurface?.call();
@@ -329,8 +330,11 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     _fallStartY = 0;
     _currentFallY = 0;
 
-    if (fallDistance > safeFallDistance) {
-      final damageTiles = fallDistance - safeFallDistance;
+    // Legendary thruster (Quantum Glitch) extends the safe fall distance
+    final safeDistance =
+        safeFallDistance + gameRef.gearSystem.bonusSafeFallTiles;
+    if (fallDistance > safeDistance) {
+      final damageTiles = fallDistance - safeDistance;
       final damage = damageTiles * damagePerTile;
       hullSystem.takeDamage(damage);
     }
@@ -354,12 +358,24 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
 
     if (result != null) {
       if (result.isLethal) {
-        hullSystem.takeDamage(9999);
-        _digging = false;
-        return;
+        // Heat Shield consumable grants temporary lava immunity
+        if (!gameRef.heatShieldActive) {
+          hullSystem.takeDamage(9999);
+          _digging = false;
+          return;
+        }
       }
 
       if (result.isHazard && result.hazardDamage > 0) {
+        // Legendary hull (Ghost Stealth) halves gas damage
+        final resist =
+            result == TileType.gas && gameRef.gearSystem.gasResist ? 0.5 : 1.0;
+        hullSystem.takeDamage(result.hazardDamage * resist);
+      }
+
+      // Crystal shards pierce weaker hulls; Titanium Hull is immune.
+      if (result == TileType.crystalOre &&
+          hullSystem.hullLevel != HullLevel.level3) {
         hullSystem.takeDamage(result.hazardDamage);
       }
 
@@ -373,7 +389,28 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
           gameRef.xpPointsSystem.awardForMining(result, depth);
         }
         gameRef.questSystem.onOreMined();
+        gameRef.achievementSystem.recordOreMined();
+      } else if (result == TileType.lootCrate) {
+        gameRef.onLootCrateOpened(depth);
+      } else if (result == TileType.artifact) {
+        gameRef.onArtifactFound(_digX, _digY, depth);
       }
+
+      // Digging can destabilize adjacent unstable rock.
+      final collapsed = tileMap.collapseUnstableAround(_digX, _digY);
+      if (collapsed.isNotEmpty) {
+        // Rubble falling from directly above the dig column hits the drill.
+        int hits = 0;
+        for (final tile in collapsed) {
+          if (tile.x == _digX && tile.y < _digY && _digY - tile.y <= 3) {
+            hits++;
+          }
+        }
+        if (hits > 0) {
+          hullSystem.takeDamage((hits * 15.0).clamp(0, 45.0));
+        }
+      }
+
       tileMap.revealAround(_digX, _digY);
       _target = _tileCenter(_digX, _digY);
       _digging = false;
@@ -411,6 +448,12 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     } else if (fuelSystem.isEmpty) {
       // Darken if out of fuel
       paint.colorFilter = const ColorFilter.mode(Colors.grey, BlendMode.modulate);
+    } else {
+      // NFT gear rarity tint (until dedicated gear sprites are exported)
+      final tint = gameRef.gearSystem.equippedTint;
+      if (tint != null) {
+        paint.colorFilter = ColorFilter.mode(tint, BlendMode.modulate);
+      }
     }
 
     // 3. Render the sprite

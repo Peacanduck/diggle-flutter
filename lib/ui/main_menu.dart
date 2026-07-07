@@ -13,6 +13,9 @@ class MainMenu extends StatefulWidget {
   final VoidCallback onAccount;
   final VoidCallback? onSettings;
   final VoidCallback? onHowToPlay;
+  final VoidCallback? onLeaderboard;
+  final VoidCallback? onWeeklyChallenge;
+  final VoidCallback? onHangar;
 
   /// Whether a recent save exists (enables Continue button)
   final bool hasSaves;
@@ -25,6 +28,9 @@ class MainMenu extends StatefulWidget {
     required this.onAccount,
     this.onSettings,
     this.onHowToPlay,
+    this.onLeaderboard,
+    this.onWeeklyChallenge,
+    this.onHangar,
     this.hasSaves = false,
   });
 
@@ -154,6 +160,44 @@ class _MainMenuState extends State<MainMenu>
                               ),
 
                               const SizedBox(height: 24),
+
+                              // Weekly challenge + leaderboard
+                              if (widget.onWeeklyChallenge != null) ...[
+                                _buildAnimatedButton(
+                                  index: widget.hasSaves ? 3 : 2,
+                                  child: _SecondaryMenuButton(
+                                    icon: Icons.emoji_events,
+                                    label: 'Weekly Challenge',
+                                    color: Colors.deepOrange,
+                                    onPressed: widget.onWeeklyChallenge!,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                              if (widget.onLeaderboard != null) ...[
+                                _buildAnimatedButton(
+                                  index: widget.hasSaves ? 3 : 2,
+                                  child: _SecondaryMenuButton(
+                                    icon: Icons.leaderboard,
+                                    label: 'Leaderboard',
+                                    color: Colors.amber,
+                                    onPressed: widget.onLeaderboard!,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                              if (widget.onHangar != null) ...[
+                                _buildAnimatedButton(
+                                  index: widget.hasSaves ? 3 : 2,
+                                  child: _SecondaryMenuButton(
+                                    icon: Icons.precision_manufacturing,
+                                    label: 'Hangar',
+                                    color: Colors.teal,
+                                    onPressed: widget.onHangar!,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
 
                               _buildAnimatedButton(
                                 index: widget.hasSaves ? 3 : 2,

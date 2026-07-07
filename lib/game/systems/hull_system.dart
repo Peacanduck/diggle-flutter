@@ -46,9 +46,18 @@ class HullSystem extends ChangeNotifier {
   })  : _hullLevel = hullLevel,
         _hull = initialHull ?? hullLevel.maxHull;
 
+  /// NFT gear bonus: extra max HP.
+  double _gearHPBonus = 0;
+
+  void setGearBonus({double hpBonus = 0}) {
+    _gearHPBonus = hpBonus.clamp(0.0, 100.0);
+    if (_hull > maxHull) _hull = maxHull;
+    notifyListeners();
+  }
+
   // Getters
   double get hull => _hull;
-  double get maxHull => _hullLevel.maxHull;
+  double get maxHull => _hullLevel.maxHull + _gearHPBonus;
   double get hullPercentage => _hull / maxHull;
   HullLevel get hullLevel => _hullLevel;
   bool get isDestroyed => _hull <= 0;

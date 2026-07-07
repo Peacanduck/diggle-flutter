@@ -1,0 +1,320 @@
+/// collection_overlay.dart
+/// The museum: artifact collection log grouped by biome, plus the
+/// achievements/records tab (lifetime milestones + login streak).
+///
+/// Found artifacts show icon + name + description; unfound ones show a
+/// silhouetted "?" card. Completing a biome set is celebrated with a
+/// gold border and the set bonus note.
+
+import 'package:flutter/material.dart';
+
+import '../game/systems/achievement_system.dart';
+import '../game/systems/collection_system.dart';
+import '../game/systems/streak_system.dart';
+import '../game/world/biome.dart';
+
+class CollectionOverlay extends StatelessWidget {
+  final CollectionSystem collectionSystem;
+  final AchievementSystem achievementSystem;
+  final StreakSystem streakSystem;
+  final VoidCallback onClose;
+
+  const CollectionOverlay({
+    super.key,
+    required this.collectionSystem,
+    required this.achievementSystem,
+    required this.streakSystem,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: AnimatedBuilder(
+        animation: Listenable.merge(
+            [collectionSystem, achievementSystem, streakSystem]),
+        builder: (context, _) {
+          return Container(
+            color: Colors.black.withOpacity(0.88),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  _buildHeader(),
+                  const TabBar(
+                    indicatorColor: Colors.amber,
+                    labelColor: Colors.amber,
+                    unselectedLabelColor: Colors.white54,
+                    tabs: [
+                      Tab(text: 'ARTIFACTS'),
+                      Tab(text: 'RECORDS'),
+                    ],
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        ListView(
+                          padding: const EdgeInsets.all(16),
+                          children: [
+                            for (final biome in Biome.strata)
+                              _buildBiomeSection(biome.name),
+                          ],
+                        ),
+                        _buildRecordsTab(),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+      child: Row(
+        children: [
+          const Text('🏛️', style: TextStyle(fontSize: 24)),
+          const SizedBox(width: 8),
+          const Text(
+            'MUSEUM',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 2,
+            ),
+          ),
+          const Spacer(),
+          if (streakSystem.streak > 0) ...[
+            Text(
+              '📅 ${streakSystem.streak}${streakSystem.streak >= 7 ? '🔥' : ''}',
+              style: TextStyle(
+                color: Colors.orange.shade300,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+          Text(
+            '${collectionSystem.foundCount}/${collectionSystem.totalCount}',
+            style: TextStyle(
+              color: Colors.amber.shade300,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          IconButton(
+            onPressed: onClose,
+            icon: const Icon(Icons.close, color: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecordsTab() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Row(
+          children: [
+            Text(
+              'ACHIEVEMENTS',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.5,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '${achievementSystem.unlockedCount}/${achievementSystem.totalCount}',
+              style: const TextStyle(color: Colors.white38, fontSize: 13),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        for (final def in AchievementSystem.catalog)
+          _buildAchievementRow(def),
+      ],
+    );
+  }
+
+  Widget _buildAchievementRow(AchievementDefinition def) {
+    final unlocked = achievementSystem.isUnlocked(def.id);
+    final progress = achievementSystem.progressFor(def);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: unlocked ? Colors.indigo.shade900 : Colors.grey.shade900,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: unlocked ? Colors.amber.shade700 : Colors.grey.shade800,
+        ),
+      ),
+      child: Row(
+        children: [
+          Text(def.icon,
+              style: TextStyle(
+                  fontSize: 22,
+                  color: unlocked ? null : Colors.grey.shade700)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  def.name,
+                  style: TextStyle(
+                    color: unlocked ? Colors.white : Colors.white60,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  def.description,
+                  style: const TextStyle(
+                      color: Colors.white38, fontSize: 11),
+                ),
+                if (!unlocked) ...[
+                  const SizedBox(height: 4),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 4,
+                      backgroundColor: Colors.grey.shade800,
+                      valueColor: AlwaysStoppedAnimation(
+                          Colors.amber.shade700),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (def.xpReward > 0)
+                Text('+${def.xpReward} XP',
+                    style: TextStyle(
+                        color: Colors.cyan.shade200, fontSize: 10)),
+              if (def.pointsReward > 0)
+                Text('+${def.pointsReward} pts',
+                    style: TextStyle(
+                        color: Colors.amber.shade200, fontSize: 10)),
+              if (unlocked)
+                const Text('✓',
+                    style: TextStyle(color: Colors.green, fontSize: 16)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBiomeSection(String biomeName) {
+    final artifacts = CollectionSystem.catalogForBiome(biomeName);
+    if (artifacts.isEmpty) return const SizedBox.shrink();
+    final complete = collectionSystem.isSetComplete(biomeName);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                biomeName.toUpperCase(),
+                style: TextStyle(
+                  color: complete ? Colors.amber : Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${collectionSystem.foundInBiome(biomeName)}/${artifacts.length}',
+                style: const TextStyle(color: Colors.white38, fontSize: 13),
+              ),
+              if (complete) ...[
+                const SizedBox(width: 6),
+                const Text('✨', style: TextStyle(fontSize: 14)),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final artifact in artifacts) _buildArtifactCard(artifact),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildArtifactCard(ArtifactDefinition artifact) {
+    final found = collectionSystem.isFound(artifact.id);
+
+    return Container(
+      width: 105,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: found ? Colors.indigo.shade900 : Colors.grey.shade900,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: found ? Colors.amber.shade700 : Colors.grey.shade800,
+          width: found ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Text(
+            found ? artifact.icon : '❓',
+            style: TextStyle(
+              fontSize: 28,
+              color: found ? null : Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            found ? artifact.name : '???',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: found ? Colors.white : Colors.white30,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (found) ...[
+            const SizedBox(height: 3),
+            Text(
+              artifact.description,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white54,
+                fontSize: 9,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}

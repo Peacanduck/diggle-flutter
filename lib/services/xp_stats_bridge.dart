@@ -55,8 +55,13 @@ class XPStatsBridge {
     return event;
   }
 
-  // Award XP and points from quest completion.
+  /// Award XP and points from quest completion.
+  /// Updates the local XPPointsSystem AND logs to StatsService
+  /// (same pattern as awardForMining).
   void awardQuestReward(int xp, int points, String source) {
+    xpSystem.addXP(xp);
+    xpSystem.addPoints(points);
+
     if (xp > 0) {
       statsService.addLocalXP(xp);
     }
@@ -65,12 +70,27 @@ class XPStatsBridge {
         'reward_type': 'quest',
       });
     }
-    // Also add to local XP system
-    if (xp > 0) {
-      // XPPointsSystem doesn't have a raw addXP method,
-      // so we use the internal approach
-      xpSystem.addPoints(0); // trigger notifyListeners
+  }
+
+  /// Award a discovery/bonus reward (loot crates, artifacts, streaks…).
+  /// Updates the local XP system AND logs to the server ledger.
+  RewardEvent awardBonus(
+    int xp,
+    int points,
+    String source,
+    String description, {
+    Map<String, dynamic>? metadata,
+  }) {
+    final event = xpSystem.awardBonus(xp, points, description);
+
+    if (event.finalXP > 0) {
+      statsService.addLocalXP(event.finalXP);
     }
+    if (event.finalPoints > 0) {
+      statsService.addLocalPoints(event.finalPoints, source,
+          metadata: metadata);
+    }
+    return event;
   }
 
   // ── Depth Milestones ───────────────────────────────────────────

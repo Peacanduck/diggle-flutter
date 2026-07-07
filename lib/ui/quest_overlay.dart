@@ -11,10 +11,19 @@ class QuestOverlay extends StatefulWidget {
   final QuestSystem questSystem;
   final VoidCallback onClose;
 
+  /// Purchase the Weekly Miner's Pass (2x weekly rewards).
+  /// Returns true when the purchase succeeded. Null hides the offer.
+  final bool Function()? onActivateMinersPass;
+
+  /// Cost shown on the Miner's Pass button.
+  final int minersPassCost;
+
   const QuestOverlay({
     super.key,
     required this.questSystem,
     required this.onClose,
+    this.onActivateMinersPass,
+    this.minersPassCost = 300,
   });
 
   @override
@@ -35,7 +44,7 @@ class _QuestOverlayState extends State<QuestOverlay>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -64,6 +73,7 @@ class _QuestOverlayState extends State<QuestOverlay>
                     controller: _tabController,
                     children: [
                       _buildDailyTab(l10n),
+                      _buildWeeklyTab(l10n),
                       _buildSocialTab(l10n),
                     ],
                   );
@@ -147,6 +157,10 @@ class _QuestOverlayState extends State<QuestOverlay>
         indicatorColor: Colors.indigo,
         labelColor: Colors.indigo.shade200,
         unselectedLabelColor: Colors.white54,
+        // Default 16px label padding overflows with 3 tabs on narrow
+        // phones — tighten so icon + label + badge always fit.
+        labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+        labelStyle: const TextStyle(fontSize: 13),
         tabs: [
           Tab(
             child: Row(
@@ -159,6 +173,23 @@ class _QuestOverlayState extends State<QuestOverlay>
                 _buildCountBadge(
                   widget.questSystem.completedDailyCount,
                   widget.questSystem.totalDailyCount,
+                ),
+              ],
+            ),
+          ),
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('🗓️', style: TextStyle(fontSize: 16)),
+                const SizedBox(width: 6),
+                const Text('Weekly'),
+                const SizedBox(width: 6),
+                _buildCountBadge(
+                  widget.questSystem.weeklyQuests
+                      .where((q) => q.completed)
+                      .length,
+                  widget.questSystem.weeklyQuests.length,
                 ),
               ],
             ),
@@ -218,6 +249,119 @@ class _QuestOverlayState extends State<QuestOverlay>
       padding: const EdgeInsets.all(12),
       itemCount: quests.length,
       itemBuilder: (context, index) => _buildQuestCard(l10n, quests[index]),
+    );
+  }
+
+  Widget _buildWeeklyTab(AppLocalizations l10n) {
+    final quests = widget.questSystem.weeklyQuests;
+
+    if (quests.isEmpty) {
+      return Center(
+        child: Text(l10n.questsNoDailyQuests,
+            style: TextStyle(color: Colors.white.withOpacity(0.4))),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.deepPurple.shade900.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.deepPurple.shade800),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.calendar_month,
+                  color: Colors.deepPurple.shade300, size: 18),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Big challenges, big rewards. Resets every Monday (UTC).',
+                  style: TextStyle(
+                      color: Colors.deepPurple, fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
+        _buildMinersPassBanner(),
+        for (final quest in quests) _buildQuestCard(l10n, quest),
+      ],
+    );
+  }
+
+  Widget _buildMinersPassBanner() {
+    final active = widget.questSystem.minersPassActive;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: active
+            ? Colors.amber.shade900.withOpacity(0.3)
+            : Colors.black26,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+            color: active ? Colors.amber.shade600 : Colors.grey.shade700),
+      ),
+      child: Row(
+        children: [
+          const Text('🎫', style: TextStyle(fontSize: 22)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  active
+                      ? "Miner's Pass ACTIVE"
+                      : "Weekly Miner's Pass",
+                  style: TextStyle(
+                    color: active ? Colors.amber : Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                Text(
+                  active
+                      ? '2x rewards on all weekly quests this week!'
+                      : 'Double all weekly quest rewards this week.',
+                  style:
+                      const TextStyle(color: Colors.white54, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          if (!active && widget.onActivateMinersPass != null)
+            ElevatedButton(
+              onPressed: () {
+                final ok = widget.onActivateMinersPass!();
+                if (!ok && mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'Not enough points (${widget.minersPassCost} needed). '
+                          'Grab a points pack in the store!'),
+                      backgroundColor: Colors.red.shade700,
+                    ),
+                  );
+                }
+                setState(() {});
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber.shade700,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+              ),
+              child: Text('${widget.minersPassCost} pts',
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.bold)),
+            ),
+        ],
+      ),
     );
   }
 
@@ -833,6 +977,17 @@ class _QuestOverlayState extends State<QuestOverlay>
         return l10n.questJoinDiscordTitle;
       case QuestType.postTweet:
         return l10n.questPostTweetTitle;
+      // v2 content quests — English until the l10n batch pass
+      case QuestType.useExplosives:
+        return 'Detonate ${def.target} explosives';
+      case QuestType.findArtifact:
+        return def.target == 1
+            ? 'Find an artifact'
+            : 'Find ${def.target} artifacts';
+      case QuestType.openCrate:
+        return def.target == 1
+            ? 'Open a supply crate'
+            : 'Open ${def.target} supply crates';
     }
   }
 
@@ -856,6 +1011,13 @@ class _QuestOverlayState extends State<QuestOverlay>
         return l10n.questJoinDiscordDesc;
       case QuestType.postTweet:
         return l10n.questPostTweetDesc;
+      // v2 content quests — English until the l10n batch pass
+      case QuestType.useExplosives:
+        return 'Use dynamite or C4 ${def.target} times';
+      case QuestType.findArtifact:
+        return 'Dig up buried artifacts in ruins';
+      case QuestType.openCrate:
+        return 'Crack open supply crates in abandoned shafts';
     }
   }
 }

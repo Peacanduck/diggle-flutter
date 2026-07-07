@@ -123,14 +123,22 @@ class EngineSystem extends ChangeNotifier {
   // SPEED CALCULATIONS
   // ============================================================
 
+  /// NFT gear bonus (additive speed fraction).
+  double _gearSpeedBonus = 0;
+
+  void setGearBonus({double speedBonus = 0}) {
+    _gearSpeedBonus = speedBonus.clamp(0.0, 1.0);
+    notifyListeners();
+  }
+
   /// Get effective movement speed
   double getEffectiveSpeed(double baseSpeed) {
-    return baseSpeed * _level.speedMultiplier;
+    return baseSpeed * _level.speedMultiplier * (1 + _gearSpeedBonus);
   }
 
   /// Get effective fly speed
   double getEffectiveFlySpeed(double baseFlySpeed) {
-    return baseFlySpeed * _level.flySpeedMultiplier;
+    return baseFlySpeed * _level.flySpeedMultiplier * (1 + _gearSpeedBonus);
   }
 
   // ============================================================
