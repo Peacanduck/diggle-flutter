@@ -34,7 +34,7 @@ Diggle integrates with the Solana blockchain using `solana_mobile_client`.
 * **Wallet Connection:** Supports connection via MWA-compatible apps like Phantom and Solflare.
 * **Network Switching:** Built-in toggle between **Mainnet-Beta** and **Devnet**.
 * **Premium Store:** UI implemented for purchasing XP and Point boosters using SOL.
-* **NFT Utility:** The game detects specific "Diggle Diamond Drill" NFTs in the connected wallet to apply permanent XP and Point multipliers.
+* **NFT Gear:** Diggle Machine NFTs (10k collection, 5 gear slots × 5 rarities) equip in the Hangar for real stat bonuses — and the drill **visually renders the equipped parts in-game** as layered pixel sprites (`assets/images/DiggleGearSpriteSheet.png`), with per-part preview art on the trait cards. Unrevealed NFTs ("sealed crates") keep a flat XP/Points boost.
 
 ## 🛠️ Tech Stack
 
