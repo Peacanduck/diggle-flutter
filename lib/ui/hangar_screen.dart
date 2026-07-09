@@ -11,6 +11,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../game/systems/gear_sprites.dart';
 import '../game/systems/gear_system.dart';
 import '../solana/candy_machine_service.dart';
 import '../solana/wallet_service.dart';
@@ -34,8 +35,12 @@ class HangarScreen extends StatefulWidget {
 }
 
 class _HangarScreenState extends State<HangarScreen> {
-  bool _loading = false;
+  bool _loading = false;    // blocking spinner (no cache to show)
+  bool _refreshing = false; // background rescan in progress
   List<({OwnedDiggleNFT nft, DiggleNFTTraits? traits})> _machines = [];
+
+  /// Cache older than this triggers a background rescan on open.
+  static const _staleAfter = Duration(minutes: 10);
 
   @override
   void initState() {
@@ -43,22 +48,61 @@ class _HangarScreenState extends State<HangarScreen> {
     _load();
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
-
+  /// Cache-first load: show the last scan instantly, then refresh from
+  /// the chain in the background (or on demand via the refresh button).
+  Future<void> _load({bool force = false}) async {
     final service = widget.candyMachineService;
-    if (widget.walletService.isConnected) {
-      // Always rescan — the wallet may have gained/lost machines since
-      // the last check (transfers, fresh mints).
-      await service.checkNFTOwnership();
+    if (!widget.walletService.isConnected) {
+      if (mounted) setState(() {});
+      return;
     }
 
+    try {
+      // Phase 1 — instant: serve cached ownership if we have it.
+      bool haveSomething = service.ownedNFTs.isNotEmpty;
+      if (!haveSomething) {
+        haveSomething = await service.loadCachedOwnership();
+      }
+      if (haveSomething) {
+        await _rebuildMachines(traitsFromCacheOnly: true);
+      } else {
+        // Nothing cached — this is a genuine first load.
+        if (mounted) setState(() => _loading = true);
+      }
+
+      // Phase 2 — background: rescan if forced, empty, or stale.
+      final last = service.lastScanAt;
+      final stale = last == null ||
+          DateTime.now().difference(last) > _staleAfter;
+      if (force || !haveSomething || stale) {
+        if (mounted) setState(() => _refreshing = true);
+        await service.checkNFTOwnership();
+        await service.checkGenesisTokenOwnership();
+        await _rebuildMachines();
+      }
+    } catch (e) {
+      debugPrint('Hangar: load failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _refreshing = false;
+        });
+      }
+    }
+  }
+
+  /// Build the machine list from the service's current NFTs.
+  /// With [traitsFromCacheOnly], no network is touched (instant path).
+  Future<void> _rebuildMachines({bool traitsFromCacheOnly = false}) async {
+    final service = widget.candyMachineService;
     final machines = <({OwnedDiggleNFT nft, DiggleNFTTraits? traits})>[];
     for (final nft in service.ownedNFTs) {
-      // Cached traits first; then try the metadata (post-reveal).
       DiggleNFTTraits? traits =
           await widget.gearSystem.cachedTraits(nft.mintAddress);
-      if (traits == null && nft.metadataUri != null) {
+      if (traits == null &&
+          !traitsFromCacheOnly &&
+          nft.metadataUri != null) {
         final json = await service.fetchOffchainMetadata(nft.metadataUri!);
         if (json != null) {
           traits = DiggleNFTTraits.fromMetadataJson(nft.mintAddress, json);
@@ -88,7 +132,22 @@ class _HangarScreenState extends State<HangarScreen> {
         title: const Text('🛠️ HANGAR',
             style: TextStyle(letterSpacing: 2, fontSize: 18)),
         actions: [
-          IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
+          if (_refreshing)
+            const Padding(
+              padding: EdgeInsets.only(right: 14),
+              child: Center(
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.amber),
+                ),
+              ),
+            )
+          else
+            IconButton(
+                onPressed: () => _load(force: true),
+                icon: const Icon(Icons.refresh)),
         ],
       ),
       body: _loading
@@ -106,15 +165,26 @@ class _HangarScreenState extends State<HangarScreen> {
       );
     }
     if (_machines.isEmpty) {
-      return _buildMessage(
-        '🪐',
-        'No Diggle Machine found in this wallet.\n'
-        'Mint one in the Premium Store to unlock gear bonuses!',
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          if (widget.candyMachineService.hasGenesisToken)
+            _buildGenesisBadge(),
+          SizedBox(
+            height: 400,
+            child: _buildMessage(
+              '🪐',
+              'No Diggle Machine found in this wallet.\n'
+              'Mint one in the Premium Store to unlock gear bonuses!',
+            ),
+          ),
+        ],
       );
     }
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        if (widget.candyMachineService.hasGenesisToken) _buildGenesisBadge(),
         if (_machines.length > 1)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -134,6 +204,48 @@ class _HangarScreenState extends State<HangarScreen> {
           const SizedBox(height: 28),
         ],
       ],
+    );
+  }
+
+  /// Seeker Genesis Token holder badge — verified Solana Mobile device.
+  Widget _buildGenesisBadge() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.teal.shade900, Colors.indigo.shade900],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.tealAccent.shade700),
+      ),
+      child: const Row(
+        children: [
+          Text('📱', style: TextStyle(fontSize: 26)),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'SEEKER GENESIS VERIFIED',
+                  style: TextStyle(
+                    color: Colors.tealAccent,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Solana Mobile pioneer — +5% XP & Points, always on.',
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -281,6 +393,7 @@ class _HangarScreenState extends State<HangarScreen> {
   Widget _buildTraitCard(GearTrait trait) {
     final color = _rarityColor(trait.rarity);
     final bonusText = _bonusText(trait);
+    final previewAsset = GearSpriteSheet.previewAsset(trait.partName);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -292,6 +405,17 @@ class _HangarScreenState extends State<HangarScreen> {
       ),
       child: Row(
         children: [
+          if (previewAsset != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Image.asset(
+                previewAsset,
+                width: 56,
+                height: 56,
+                filterQuality: FilterQuality.none,
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
+              ),
+            ),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

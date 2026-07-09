@@ -13,6 +13,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:solana/dto.dart';
 import 'package:solana/solana.dart';
 import 'wallet_service.dart';
@@ -115,6 +116,27 @@ class OwnedDiggleNFT {
     this.imageUri,
     this.metadataUri,
   });
+
+  Map<String, dynamic> toJson() => {
+        'mint': mintAddress,
+        'ta': tokenAccount,
+        'name': name,
+        'img': imageUri,
+        'meta': metadataUri,
+      };
+
+  static OwnedDiggleNFT? fromJson(Map<String, dynamic> json) {
+    final mint = json['mint'] as String?;
+    final ta = json['ta'] as String?;
+    if (mint == null || ta == null) return null;
+    return OwnedDiggleNFT(
+      mintAddress: mint,
+      tokenAccount: ta,
+      name: json['name'] as String?,
+      imageUri: json['img'] as String?,
+      metadataUri: json['meta'] as String?,
+    );
+  }
 }
 
 /// Service for Candy Machine minting and NFT detection
@@ -149,6 +171,19 @@ class CandyMachineService extends ChangeNotifier {
   static const String _tokenMetadataProgram =
       'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s';
 
+  // ── Seeker Genesis Token (Token-2022) ──────────────────────────
+  // Per Solana Mobile docs: verify (1) mint authority, (2) metadata
+  // pointer, (3) token group member — all three must match.
+  static const String _token2022Program =
+      'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
+  static const String _sgtMintAuthority =
+      'GT2zuHVaZQYZSyQMgJPLzvkmyztfyXg2NJunqFp4p3A4';
+  static const String _sgtMetadataAddress =
+      'GT22s89nU4iWFkNXj1Bw6uYhJJWDRPpShHt4Bk8f99Te';
+  // Metadata and group address are intentionally the same account.
+  static const String _sgtGroupAddress =
+      'GT22s89nU4iWFkNXj1Bw6uYhJJWDRPpShHt4Bk8f99Te';
+
   // ============================================================
   // STATE
   // ============================================================
@@ -177,6 +212,97 @@ class CandyMachineService extends ChangeNotifier {
   /// All Diggle NFTs in the connected wallet (a holder can own several).
   List<OwnedDiggleNFT> get ownedNFTs => List.unmodifiable(_ownedNFTs);
   bool get hasNFT => _ownedNFT != null;
+
+  /// Whether the wallet holds a verified Seeker Genesis Token
+  /// (Solana Mobile device NFT — grants a small holder perk).
+  bool get hasGenesisToken => _hasGenesisToken;
+  bool _hasGenesisToken = false;
+
+  /// When the last successful ownership scan completed (null = never).
+  DateTime? get lastScanAt => _lastScanAt;
+  DateTime? _lastScanAt;
+
+  // ── Ownership cache (per wallet + cluster) ─────────────────────
+  // The full scan is expensive (one RPC round-trip per token account),
+  // so results persist across sessions: the Hangar shows cached
+  // machines instantly and refreshes in the background.
+
+  String get _cacheKey =>
+      'diggle_nft_cache_v1_${_wallet.isDevnet ? 'devnet' : 'mainnet'}'
+      '_${_wallet.publicKey ?? 'none'}';
+
+  String get _negativeCacheKey =>
+      'diggle_non_diggle_mints_v1_${_wallet.isDevnet ? 'devnet' : 'mainnet'}';
+
+  /// Load the last scan result from disk. Returns true if a cache
+  /// existed for this wallet. Instant — no network.
+  Future<bool> loadCachedOwnership() async {
+    if (_wallet.publicKey == null) return false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_cacheKey);
+      if (raw == null) return false;
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      final nfts = <OwnedDiggleNFT>[];
+      for (final item in (data['nfts'] as List? ?? [])) {
+        final nft = OwnedDiggleNFT.fromJson(item as Map<String, dynamic>);
+        if (nft != null) nfts.add(nft);
+      }
+      _ownedNFTs
+        ..clear()
+        ..addAll(nfts);
+      _ownedNFT = nfts.isNotEmpty ? nfts.first : null;
+      _hasGenesisToken = data['genesis'] as bool? ?? false;
+      final ts = data['ts'] as int?;
+      _lastScanAt = ts != null
+          ? DateTime.fromMillisecondsSinceEpoch(ts)
+          : null;
+      notifyListeners();
+      debugPrint('CandyMachine: loaded cache (${nfts.length} NFTs, '
+          'genesis: $_hasGenesisToken, scanned: $_lastScanAt)');
+      return true;
+    } catch (e) {
+      debugPrint('CandyMachine: cache load failed: $e');
+      return false;
+    }
+  }
+
+  Future<void> _saveOwnershipCache() async {
+    if (_wallet.publicKey == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _cacheKey,
+        jsonEncode({
+          'ts': DateTime.now().millisecondsSinceEpoch,
+          'nfts': _ownedNFTs.map((n) => n.toJson()).toList(),
+          'genesis': _hasGenesisToken,
+        }),
+      );
+    } catch (e) {
+      debugPrint('CandyMachine: cache save failed: $e');
+    }
+  }
+
+  /// Mints already checked and known NOT to be Diggle NFTs — skipped on
+  /// re-scans so repeat scans only pay for new tokens.
+  Future<Set<String>> _loadNegativeMintCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return (prefs.getStringList(_negativeCacheKey) ?? []).toSet();
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> _saveNegativeMintCache(Set<String> mints) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // Bound the cache so it can't grow without limit
+      final list = mints.take(800).toList();
+      await prefs.setStringList(_negativeCacheKey, list);
+    } catch (_) {}
+  }
   bool get isLoadingInfo => _isLoadingInfo;
   bool get isCheckingOwnership => _isCheckingOwnership;
   bool get isMinting => _mintStatus != MintStatus.idle &&
@@ -492,9 +618,8 @@ class CandyMachineService extends ChangeNotifier {
 
       debugPrint('CandyMachine: Found ${tokenAccounts.value.length} token accounts');
 
-      int nftCount = 0;
-      final found = <OwnedDiggleNFT>[];
-
+      // ── Phase 1: collect candidate NFT mints (local parse, no RPC) ──
+      final candidates = <({String mint, String tokenAccount})>[];
       for (final account in tokenAccounts.value) {
         try {
           final data = account.account.data;
@@ -516,47 +641,75 @@ class CandyMachineService extends ChangeNotifier {
           // NFTs: amount == 1
           if (amount != 1) continue;
 
-          // Extract mint address (first 32 bytes)
-          final mintBytes = bytes.sublist(0, 32);
-          final mintAddress = Ed25519HDPublicKey(mintBytes).toBase58();
-
-          nftCount++;
-          debugPrint('CandyMachine: Checking NFT mint: $mintAddress');
-
-          // Check if this NFT belongs to our collection
-          final result = await _isDiggleCollectionNFT(client, mintAddress);
-          if (result.isMatch) {
-            // Fetch the off-chain metadata JSON for the image
-            String? imageUri;
-            if (result.uri != null && result.uri!.isNotEmpty) {
-              imageUri = await _fetchNFTImageUri(result.uri!);
-            }
-
-            found.add(OwnedDiggleNFT(
-              mintAddress: mintAddress,
-              tokenAccount: account.pubkey,
-              name: result.name,
-              imageUri: imageUri,
-              metadataUri: result.uri,
-            ));
-            debugPrint('CandyMachine: ✅ Found Diggle NFT: $mintAddress (image: $imageUri)');
-            // Keep scanning — the wallet may hold more Diggle Machines
-          }
+          final mintAddress =
+              Ed25519HDPublicKey(bytes.sublist(0, 32)).toBase58();
+          candidates.add((mint: mintAddress, tokenAccount: account.pubkey));
         } catch (e) {
           debugPrint('CandyMachine: Error parsing token account: $e');
-          continue;
         }
       }
+
+      // ── Phase 2: skip mints already known not to be Diggle NFTs ──
+      final negative = await _loadNegativeMintCache();
+      final toCheck =
+          candidates.where((c) => !negative.contains(c.mint)).toList();
+      debugPrint('CandyMachine: ${candidates.length} NFT candidates, '
+          '${toCheck.length} need metadata checks '
+          '(${candidates.length - toCheck.length} skipped via cache)');
+
+      // ── Phase 3: check metadata in parallel chunks ──
+      final found = <OwnedDiggleNFT>[];
+      const chunkSize = 8;
+      for (int i = 0; i < toCheck.length; i += chunkSize) {
+        final chunk = toCheck.skip(i).take(chunkSize).toList();
+        final results = await Future.wait(chunk.map((c) async {
+          try {
+            final result = await _isDiggleCollectionNFT(client, c.mint);
+            return (candidate: c, result: result);
+          } catch (e) {
+            debugPrint('CandyMachine: metadata check failed ${c.mint}: $e');
+            return (
+              candidate: c,
+              result: (isMatch: false, name: null, uri: null)
+            );
+          }
+        }));
+
+        for (final r in results) {
+          if (r.result.isMatch) {
+            // Fetch the off-chain metadata JSON for the image
+            String? imageUri;
+            final uri = r.result.uri;
+            if (uri != null && uri.isNotEmpty) {
+              imageUri = await _fetchNFTImageUri(uri);
+            }
+            found.add(OwnedDiggleNFT(
+              mintAddress: r.candidate.mint,
+              tokenAccount: r.candidate.tokenAccount,
+              name: r.result.name,
+              imageUri: imageUri,
+              metadataUri: uri,
+            ));
+            debugPrint('CandyMachine: ✅ Found Diggle NFT: '
+                '${r.candidate.mint} (image: $imageUri)');
+          } else {
+            negative.add(r.candidate.mint);
+          }
+        }
+      }
+      await _saveNegativeMintCache(negative);
 
       _ownedNFTs
         ..clear()
         ..addAll(found);
       _ownedNFT = found.isNotEmpty ? found.first : null;
+      _lastScanAt = DateTime.now();
       _isCheckingOwnership = false;
+      await _saveOwnershipCache();
       notifyListeners();
 
       if (found.isEmpty) {
-        debugPrint('CandyMachine: Scanned $nftCount NFTs, '
+        debugPrint('CandyMachine: Scanned ${candidates.length} NFTs, '
             'none matched collection $collectionMint');
         return false;
       }
@@ -567,6 +720,132 @@ class CandyMachineService extends ChangeNotifier {
       debugPrint('CandyMachine: Error checking NFT ownership: $e');
       _isCheckingOwnership = false;
       notifyListeners();
+      return false;
+    }
+  }
+
+  // ============================================================
+  // SEEKER GENESIS TOKEN (Token-2022)
+  // ============================================================
+
+  /// Check whether the connected wallet holds a verified Seeker Genesis
+  /// Token. Per Solana Mobile docs, an SGT is a Token-2022 mint where:
+  ///   1. mint authority == SGT mint authority
+  ///   2. metadata pointer -> SGT metadata address (authority matches)
+  ///   3. token group member -> SGT group address
+  Future<bool> checkGenesisTokenOwnership() async {
+    if (!_wallet.isConnected || _wallet.publicKey == null) {
+      _hasGenesisToken = false;
+      notifyListeners();
+      return false;
+    }
+
+    try {
+      final client = _solanaClient;
+
+      final tokenAccounts = await client.rpcClient.getTokenAccountsByOwner(
+        _wallet.publicKey!,
+        TokenAccountsFilter.byProgramId(_token2022Program),
+        encoding: Encoding.base64,
+        commitment: Commitment.confirmed,
+      );
+
+      // Collect held Token-2022 mints (amount == 1)
+      final mints = <String>[];
+      for (final account in tokenAccounts.value) {
+        final data = account.account.data;
+        if (data is! BinaryAccountData) continue;
+        final bytes = Uint8List.fromList(data.data);
+        if (bytes.length < 72) continue;
+        int amount = 0;
+        for (int i = 0; i < 8; i++) {
+          amount |= bytes[64 + i] << (i * 8);
+        }
+        if (amount != 1) continue;
+        mints.add(Ed25519HDPublicKey(bytes.sublist(0, 32)).toBase58());
+      }
+      debugPrint('CandyMachine: ${mints.length} Token-2022 NFT(s) to '
+          'check for SGT');
+
+      bool foundSGT = false;
+      for (final mint in mints) {
+        final info = await client.rpcClient.getAccountInfo(
+          mint,
+          encoding: Encoding.base64,
+          commitment: Commitment.confirmed,
+        );
+        final data = info.value?.data;
+        if (data is! BinaryAccountData) continue;
+        if (_isSeekerGenesisMint(Uint8List.fromList(data.data))) {
+          debugPrint('CandyMachine: ✅ Verified Seeker Genesis Token: $mint');
+          foundSGT = true;
+          break;
+        }
+      }
+
+      _hasGenesisToken = foundSGT;
+      await _saveOwnershipCache();
+      notifyListeners();
+      return foundSGT;
+    } catch (e) {
+      debugPrint('CandyMachine: SGT check failed: $e');
+      // Keep the previous (possibly cached) value on transient failure
+      return _hasGenesisToken;
+    }
+  }
+
+  /// Parse a Token-2022 mint account and verify the three SGT properties.
+  ///
+  /// Token-2022 mint layout: 82-byte base mint, zero-padded to 165, then
+  /// 1 account-type byte (1 = Mint), then TLV extension entries:
+  /// [u16 type][u16 length][value...].
+  bool _isSeekerGenesisMint(Uint8List bytes) {
+    try {
+      if (bytes.length < 82) return false;
+
+      // (1) Mint authority: COption<Pubkey> at offset 0 (u32 tag + 32B)
+      final hasAuthority = bytes[0] == 1;
+      if (!hasAuthority) return false;
+      final authority =
+          Ed25519HDPublicKey(bytes.sublist(4, 36)).toBase58();
+      if (authority != _sgtMintAuthority) return false;
+
+      // Extensions require padded layout + account type byte
+      if (bytes.length < 166) return false;
+      if (bytes[165] != 1) return false; // AccountType.mint
+
+      bool metadataOk = false;
+      bool groupOk = false;
+
+      int offset = 166;
+      while (offset + 4 <= bytes.length) {
+        final type = bytes[offset] | (bytes[offset + 1] << 8);
+        final length = bytes[offset + 2] | (bytes[offset + 3] << 8);
+        final valueStart = offset + 4;
+        if (valueStart + length > bytes.length) break;
+
+        if (type == 18 && length >= 64) {
+          // MetadataPointer: authority(32) + metadata_address(32)
+          final ptrAuthority = Ed25519HDPublicKey(
+              bytes.sublist(valueStart, valueStart + 32)).toBase58();
+          final metadataAddr = Ed25519HDPublicKey(
+              bytes.sublist(valueStart + 32, valueStart + 64)).toBase58();
+          metadataOk = ptrAuthority == _sgtMintAuthority &&
+              metadataAddr == _sgtMetadataAddress;
+        } else if (type == 23 && length >= 64) {
+          // TokenGroupMember: mint(32) + group(32) + member_number(u64)
+          final group = Ed25519HDPublicKey(
+              bytes.sublist(valueStart + 32, valueStart + 64)).toBase58();
+          groupOk = group == _sgtGroupAddress;
+        }
+
+        offset = valueStart + length;
+        if (length == 0) break; // malformed TLV guard
+      }
+
+      return metadataOk && groupOk;
+    } catch (e) {
+      debugPrint('CandyMachine: SGT mint parse error: $e');
       return false;
     }
   }
@@ -811,9 +1090,13 @@ class CandyMachineService extends ChangeNotifier {
 
   /// Initialize: fetch mint info and check NFT ownership
   Future<void> initialize() async {
+    // Cache first so holder boosts (NFT + Seeker Genesis) apply from
+    // cold start without waiting on a wallet scan.
+    await loadCachedOwnership();
     await fetchMintInfo();
     if (_wallet.isConnected) {
       await checkNFTOwnership();
+      await checkGenesisTokenOwnership();
     }
   }
 

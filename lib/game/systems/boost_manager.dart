@@ -396,6 +396,7 @@ class BoostManager extends ChangeNotifier {
       }
     }
     if (hasNFT) mult *= _nftCollection.xpMultiplier;
+    if (hasGenesisToken) mult *= genesisTokenBonus;
     return mult;
   }
 
@@ -408,6 +409,7 @@ class BoostManager extends ChangeNotifier {
       }
     }
     if (hasNFT) mult *= _nftCollection.pointsMultiplier;
+    if (hasGenesisToken) mult *= genesisTokenBonus;
     return mult;
   }
 
@@ -755,17 +757,50 @@ class BoostManager extends ChangeNotifier {
   }
 
   /// Sync multipliers from active boosters + NFT to XP system
-  void _syncMultipliers() {
-    xpSystem.setXPBoost(totalXPMultiplier);
-    xpSystem.setPointsBoost(totalPointsMultiplier);
+  /// Seeker Genesis Token holder bonus (verified Solana Mobile device).
+  static const double genesisTokenBonus = 1.05;
 
-    if (hasNFT) {
-      xpSystem.setNFTXPMultiplier(_nftCollection.xpMultiplier);
-      xpSystem.setNFTPointsMultiplier(_nftCollection.pointsMultiplier);
-    } else {
-      xpSystem.setNFTXPMultiplier(1.0);
-      xpSystem.setNFTPointsMultiplier(1.0);
+  bool get hasGenesisToken => candyMachineService.hasGenesisToken;
+
+  /// Booster-only multipliers (excluding NFT/genesis) — these feed
+  /// XPPointsSystem.setXPBoost/setPointsBoost, while the NFT/genesis
+  /// portion feeds setNFT*Multiplier. XPPointsSystem multiplies the two,
+  /// so including the NFT here as well would double-count it (was a bug:
+  /// 1.25x NFT boost was effectively 1.56x).
+  double get _boosterOnlyXPMultiplier {
+    double mult = 1.0;
+    for (final b in activeBoosters) {
+      if (b.type == BoosterType.xpBoost || b.type == BoosterType.comboBoost) {
+        mult *= b.multiplier;
+      }
     }
+    return mult;
+  }
+
+  double get _boosterOnlyPointsMultiplier {
+    double mult = 1.0;
+    for (final b in activeBoosters) {
+      if (b.type == BoosterType.pointsBoost ||
+          b.type == BoosterType.comboBoost) {
+        mult *= b.multiplier;
+      }
+    }
+    return mult;
+  }
+
+  void _syncMultipliers() {
+    xpSystem.setXPBoost(_boosterOnlyXPMultiplier);
+    xpSystem.setPointsBoost(_boosterOnlyPointsMultiplier);
+
+    // Holder multipliers: Diggle NFT × Seeker Genesis Token
+    double nftXP = hasNFT ? _nftCollection.xpMultiplier : 1.0;
+    double nftPoints = hasNFT ? _nftCollection.pointsMultiplier : 1.0;
+    if (hasGenesisToken) {
+      nftXP *= genesisTokenBonus;
+      nftPoints *= genesisTokenBonus;
+    }
+    xpSystem.setNFTXPMultiplier(nftXP);
+    xpSystem.setNFTPointsMultiplier(nftPoints);
   }
 
   void reset() {
