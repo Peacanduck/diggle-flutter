@@ -76,32 +76,37 @@ extension GearSlotX on GearSlot {
 /// Fallback: part name → rarity, for metadata missing the explicit
 /// "<Slot> Rarity" attributes. Mirrors the DiggleAssets trait matrix.
 const Map<String, GearRarity> _partNameRarity = {
-  // Hull
+  // Hull (two Common variants per slot — 50/25/15/8/2 curve)
   'standard prospector': GearRarity.common,
+  'rusty hauler': GearRarity.common,
   'armored vanguard': GearRarity.uncommon,
   'cyber scarab': GearRarity.rare,
   'golden behemoth': GearRarity.epic,
   'ghost stealth': GearRarity.legendary,
   // Thruster
   'ion drive': GearRarity.common,
+  'turbo fan': GearRarity.common,
   'chemical burner': GearRarity.uncommon,
   'plasma jet': GearRarity.rare,
   'gravity well': GearRarity.epic,
   'quantum glitch': GearRarity.legendary,
   // Fuel Tank
   'diesel canister': GearRarity.common,
+  'oil drum': GearRarity.common,
   'hydrogen cell': GearRarity.uncommon,
   'nuclear battery': GearRarity.rare,
   'dark matter vial': GearRarity.epic,
   'miniature star': GearRarity.legendary,
   // Drill
   'steel augur': GearRarity.common,
+  'iron pike': GearRarity.common,
   'tungsten breaker': GearRarity.uncommon,
   'laser bore': GearRarity.rare,
   'sonic pulverizer': GearRarity.epic,
   'diamond omni-drill': GearRarity.legendary,
   // Cargo Hold
   'standard bin': GearRarity.common,
+  'scrap basket': GearRarity.common,
   'reinforced crate': GearRarity.uncommon,
   'ore net': GearRarity.rare,
   'cryo pod': GearRarity.epic,

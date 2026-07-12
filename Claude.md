@@ -225,9 +225,15 @@ instead of the tinted base sprite. Art matches the reveal collection
 `assets/images/` and `sprites_out/gear_sprites.dart` to
 `lib/game/systems/`.
 
-**Collection facts** (locked): 10k tokens, rarity curve per slot
-Common 28% / Uncommon 27% / Rare 22% / Epic 15% / Legendary 8%
-(~800 tokens per legendary part), all combos unique. Reveal set:
+**Collection facts** (locked 2026-07-10): 10k tokens, rarity curve per slot
+Common 50% / Uncommon 25% / Rare 15% / Epic 8% / Legendary 2%
+(~200 tokens per legendary part), all combos unique. The Common tier has
+TWO parts per slot (Standard Prospector + Rusty Hauler, Ion Drive +
+Turbo Fan, Diesel Canister + Oil Drum, Steel Augur + Iron Pike,
+Standard Bin + Scrap Basket) — 30 gameplay parts total; this is what
+makes the steep curve feasible under uniqueness. Both Common variants
+give identical stats and share the Common sprite-sheet cell (previews
+in `assets/images/gear/` are per-part). Reveal set:
 `DiggleAssets/final_pixel/`. Trait names in metadata match
 `_partNameRarity` in gear_system.dart 1:1.
 
