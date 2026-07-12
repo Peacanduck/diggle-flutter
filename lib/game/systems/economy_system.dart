@@ -91,9 +91,19 @@ class EconomySystem extends ChangeNotifier {
   // GETTERS
   // ============================================================
 
+  /// NFT gear bonuses: extra cargo slots + sell-price fraction.
+  int _gearSlotBonus = 0;
+  double _gearSellBonus = 0;
+
+  void setGearBonus({int slotBonus = 0, double sellBonus = 0}) {
+    _gearSlotBonus = slotBonus.clamp(0, 50);
+    _gearSellBonus = sellBonus.clamp(0.0, 0.5);
+    notifyListeners();
+  }
+
   int get cash => _cash;
   CargoLevel get cargoLevel => _cargoLevel;
-  int get maxCapacity => _cargoLevel.maxCapacity;
+  int get maxCapacity => _cargoLevel.maxCapacity + _gearSlotBonus;
   
   /// Current cargo count (sum of all ore)
   int get cargoCount {
@@ -161,9 +171,16 @@ class EconomySystem extends ChangeNotifier {
   // TRANSACTIONS
   // ============================================================
 
+  /// Prestige sell-price bonus (1.0 = none). Set from PrestigeSystem.
+  double _sellMultiplier = 1.0;
+  double get sellMultiplier => _sellMultiplier;
+  void setSellMultiplier(double multiplier) {
+    _sellMultiplier = multiplier.clamp(1.0, 3.0);
+  }
+
   /// Sell all ore for cash (returns amount earned)
   int sellAllOre() {
-    final value = cargoValue;
+    final value = (cargoValue * (_sellMultiplier + _gearSellBonus)).round();
     if (value > 0) {
       _cash += value;
       _totalCashEarned += value;

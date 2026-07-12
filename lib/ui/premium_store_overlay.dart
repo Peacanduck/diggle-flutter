@@ -61,6 +61,12 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
   bool _loadingPrices = true;
   bool _pricesAvailable = false;
 
+  // Multi-mint batch state: each mint is its own transaction + wallet
+  // approval, run sequentially with progress on the button.
+  int _mintQty = 1;
+  int _mintBatchTotal = 0;
+  int _mintBatchDone = 0;
+
   @override
   void initState() {
     super.initState();
@@ -580,18 +586,31 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
               ),
               const SizedBox(height: 16),
 
-              // Mint status / action
+              // Mint status / action.
+              // Holders can mint MORE machines (multi-NFT wallets are
+              // supported end-to-end) — owning one no longer hides the
+              // mint button, it only adds the "boosts active" chip.
               if (cmInfo?.isSoldOut == true || nftCol.isSoldOut)
                 _buildMintStatus(
                     l10n.soldOut, l10n.allNftsMinted, Colors.red)
               else if (cmInfo != null && !cmInfo.isMintLive)
                 _buildMintStatus(
                     l10n.mintOpensSoon, l10n.checkBackLater, Colors.orange)
-              else if (widget.candyMachineService.hasNFT)
+              else ...[
+                if (widget.candyMachineService.hasNFT) ...[
                   _buildMintStatus(
-                      l10n.nftMinted, l10n.boostsActive, Colors.green)
+                      l10n.nftMinted, l10n.boostsActive, Colors.green),
+                  const SizedBox(height: 12),
+                ],
+                if (_walletMintAllowanceLeft == 0)
+                  _buildMintStatus(
+                      'Wallet mint limit reached',
+                      '${widget.candyMachineService.ownedNFTs.length}'
+                      '/${cmInfo?.mintLimit} machines minted by this wallet',
+                      Colors.orange)
                 else
                   _buildMintButton(l10n),
+              ],
               // ── ADD THIS BLOCK ──
               if (!widget.candyMachineService.hasNFT) ...[
                 const SizedBox(height: 12),
@@ -639,20 +658,29 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
   }
 
   Widget _buildNFTImage() {
-    // Priority: owned NFT art > collection preview > emoji fallback
+    // Priority: owned NFT art (network) > bundled collection art.
+    // The collection preview ships as a local asset so it is always the
+    // current art, loads instantly, and needs no gateway.
     final ownedImageUri = widget.candyMachineService.ownedNFT?.imageUri;
-    final collectionImageUrl = widget.boostManager.nftCollection.imageUrl;
-    final imageUri = ownedImageUri ?? collectionImageUrl;
 
-
-    if (imageUri == null || imageUri.isEmpty) {
-      return const Text('⛏️', style: TextStyle(fontSize: 64));
+    if (ownedImageUri == null || ownedImageUri.isEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.asset(
+          'assets/images/collection.png',
+          width: 120,
+          height: 120,
+          fit: BoxFit.contain,
+          errorBuilder: (_, _, _) =>
+              const Text('⛏️', style: TextStyle(fontSize: 64)),
+        ),
+      );
     }
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: Image.network(
-        imageUri,
+        ownedImageUri,
         width: 120,
         height: 120,
         fit: BoxFit.contain,
@@ -725,38 +753,101 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
     );
   }
 
+  /// How many more mints the on-chain guard allows this wallet.
+  /// null = no limit known (guard absent or info not loaded).
+  int? get _walletMintAllowanceLeft {
+    final limit = widget.candyMachineService.info?.mintLimit;
+    if (limit == null) return null;
+    final owned = widget.candyMachineService.ownedNFTs.length;
+    return (limit - owned).clamp(0, limit);
+  }
+
   Widget _buildMintButton(AppLocalizations l10n) {
     final cmInfo = widget.candyMachineService.info;
     final nftCol = widget.boostManager.nftCollection;
     final mintPrice = cmInfo?.mintPriceSol ?? nftCol.mintPriceSOL;
     final isMinting = widget.candyMachineService.isMinting;
+    final hasNFT = widget.candyMachineService.hasNFT;
 
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: isMinting ? null : () => _mintNFT(),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.amber.shade700,
-          foregroundColor: Colors.black,
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    // Quantity ceiling: 3 per batch (each mint is its own wallet
+    // approval), further capped by the guard's remaining allowance.
+    final allowance = _walletMintAllowanceLeft;
+    final maxQty = allowance == null ? 3 : allowance.clamp(1, 3);
+    if (_mintQty > maxQty) _mintQty = maxQty;
+
+    final label = _mintBatchTotal > 1
+        ? 'Minting ${_mintBatchDone + 1}/$_mintBatchTotal…'
+        : (hasNFT
+            ? 'MINT ANOTHER • ${(mintPrice * _mintQty).toStringAsFixed(3)} SOL'
+            : l10n.mintCost((mintPrice * _mintQty).toStringAsFixed(3)));
+
+    return Column(
+      children: [
+        if (maxQty > 1 && !isMinting)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('Quantity',
+                    style: TextStyle(color: Colors.white54, fontSize: 13)),
+                const SizedBox(width: 12),
+                for (int q = 1; q <= maxQty; q++)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: ChoiceChip(
+                      label: Text('$q'),
+                      selected: _mintQty == q,
+                      selectedColor: Colors.amber.shade700,
+                      labelStyle: TextStyle(
+                        color: _mintQty == q ? Colors.black : Colors.white70,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      onSelected: (_) => setState(() => _mintQty = q),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: isMinting ? null : () => _mintNFT(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber.shade700,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+            ),
+            child: isMinting
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.black),
+                      ),
+                      if (_mintBatchTotal > 1) ...[
+                        const SizedBox(width: 12),
+                        Text(label,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 14)),
+                      ],
+                    ],
+                  )
+                : Text(
+                    label,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        letterSpacing: 1),
+                  ),
+          ),
         ),
-        child: isMinting
-            ? const SizedBox(
-          width: 24,
-          height: 24,
-          child: CircularProgressIndicator(
-              strokeWidth: 2, color: Colors.black),
-        )
-            : Text(
-          l10n.mintCost(mintPrice.toStringAsFixed(3)),
-          style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              letterSpacing: 1),
-        ),
-      ),
+      ],
     );
   }
 
@@ -936,17 +1027,44 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
     }
   }
 
+  /// Mint [_mintQty] machines sequentially. Each mint is a separate
+  /// edge-function transaction and wallet approval; the batch aborts on
+  /// the first failure/rejection so nobody pays for a broken run.
   Future<void> _mintNFT() async {
     final l10n = AppLocalizations.of(context)!;
+    final qty = _mintQty;
+    setState(() {
+      _mintBatchTotal = qty;
+      _mintBatchDone = 0;
+    });
+
+    int minted = 0;
     try {
-      final result = await widget.candyMachineService.mint();
-      if (result != null) {
-        // Refresh NFT ownership status in BoostManager
-        await widget.boostManager.checkForNFT();
-        _showStatus(l10n.nftMinted);
+      for (int i = 0; i < qty; i++) {
+        final result = await widget.candyMachineService.mint();
+        if (result == null) break; // rejected/failed — stop the batch
+        minted++;
+        if (mounted) setState(() => _mintBatchDone = minted);
       }
     } catch (e) {
-      _showStatus(l10n.purchaseFailed);
+      debugPrint('PremiumStore: mint batch error: $e');
+    } finally {
+      if (minted > 0) {
+        // Refresh NFT ownership status in BoostManager (one rescan)
+        await widget.boostManager.checkForNFT();
+        _showStatus(qty > 1
+            ? '$minted/$qty ${l10n.nftMinted}'
+            : l10n.nftMinted);
+      } else {
+        _showStatus(l10n.purchaseFailed);
+      }
+      if (mounted) {
+        setState(() {
+          _mintBatchTotal = 0;
+          _mintBatchDone = 0;
+          _mintQty = 1;
+        });
+      }
     }
   }
 

@@ -62,8 +62,18 @@ class FuelSystem extends ChangeNotifier {
   /// Current fuel amount
   double get fuel => _fuel;
 
+  /// NFT gear bonuses: capacity fraction + refuel discount fraction.
+  double _gearCapacityBonus = 0;
+  double _gearRefuelDiscount = 0;
+
+  void setGearBonus({double capacityBonus = 0, double refuelDiscount = 0}) {
+    _gearCapacityBonus = capacityBonus.clamp(0.0, 1.0);
+    _gearRefuelDiscount = refuelDiscount.clamp(0.0, 0.5);
+    notifyListeners();
+  }
+
   /// Maximum fuel capacity
-  double get maxFuel => _tankLevel.maxFuel;
+  double get maxFuel => _tankLevel.maxFuel * (1 + _gearCapacityBonus);
 
   /// Fuel as percentage (0.0 to 1.0)
   double get fuelPercentage => _fuel / maxFuel;
@@ -121,8 +131,8 @@ class FuelSystem extends ChangeNotifier {
   /// Get cost to refill from current level
   int getRefillCost() {
     final fuelNeeded = maxFuel - _fuel;
-    // 1 cash per 10 fuel units
-    return (fuelNeeded / 10).ceil();
+    // 1 cash per 10 fuel units, minus any gear refuel discount
+    return ((fuelNeeded / 10) * (1 - _gearRefuelDiscount)).ceil();
   }
 
   // ============================================================

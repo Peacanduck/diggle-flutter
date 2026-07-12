@@ -95,46 +95,68 @@ class _HudOverlayState extends State<HudOverlay> {
             right: 0,
             child: _buildControls(),
           ),
-          Positioned(
-            top: 250,
-            left: 16,
-            child: Stack(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () => widget.game.openQuests(),
-                  icon: const Text('📋', style: TextStyle(fontSize: 16)),
-                  label: Text(l10n.quests),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.indigo.shade700,
-                  ),
-                ),
-                if (widget.game.questSystem.hasUnclaimedRewards)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      width: 12, height: 12,
-                      decoration: BoxDecoration(
-                        color: Colors.amber,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.black, width: 1),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          // Premium store
+          // Left-side action column: store / quests / museum / boost.
+          // A single Column (instead of absolute Positioned tops) so the
+          // buttons can never overlap regardless of their heights.
           Positioned(
             top: 210,
             left: 16,
-            child: ElevatedButton.icon(
-              onPressed: () => widget.game.openPremiumStore(),
-              icon: const Text('💎', style: TextStyle(fontSize: 16)),
-              label: Text(l10n.store),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.purple.shade700,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => widget.game.openPremiumStore(),
+                  icon: const Text('💎', style: TextStyle(fontSize: 16)),
+                  label: Text(l10n.store),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple.shade700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Stack(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => widget.game.openQuests(),
+                      icon: const Text('📋', style: TextStyle(fontSize: 16)),
+                      label: Text(l10n.quests),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.indigo.shade700,
+                      ),
+                    ),
+                    if (widget.game.questSystem.hasUnclaimedRewards)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          width: 12, height: 12,
+                          decoration: BoxDecoration(
+                            color: Colors.amber,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.black, width: 1),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                ElevatedButton.icon(
+                  onPressed: () => widget.game.openCollection(),
+                  icon: const Text('🏛️', style: TextStyle(fontSize: 16)),
+                  label: AnimatedBuilder(
+                    animation: widget.game.collectionSystem,
+                    builder: (context, _) => Text(
+                      '${widget.game.collectionSystem.foundCount}'
+                      '/${widget.game.collectionSystem.totalCount}',
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.brown.shade700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                // Live boost status chip (tap → premium store)
+                _buildBoostChip(),
+              ],
             ),
           ),
 
@@ -156,6 +178,77 @@ class _HudOverlayState extends State<HudOverlay> {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  /// Boost visibility: shows the active multiplier with a live
+  /// countdown, the Heat Shield timer, or a subtle "no boost" nudge.
+  /// Every state taps into the premium store.
+  Widget _buildBoostChip() {
+    final game = widget.game;
+    final xp = game.xpPointsSystem;
+
+    // Heat shield takes display priority (short, urgent timer)
+    if (game.heatShieldActive) {
+      return _chip(
+        '🛡️ ${game.heatShieldRemaining.ceil()}s lava immunity',
+        Colors.deepOrange.shade800,
+        onTap: null,
+      );
+    }
+
+    if (xp.hasActiveBoost || xp.hasNFTBoost) {
+      final mult = xp.effectiveXPMultiplier >= xp.effectivePointsMultiplier
+          ? xp.effectiveXPMultiplier
+          : xp.effectivePointsMultiplier;
+      final boosters = game.boostManager?.activeBoosters ?? [];
+      String remaining = '';
+      if (boosters.isNotEmpty) {
+        // Shortest remaining timed booster drives the countdown
+        boosters.sort((a, b) => a.timeRemaining.compareTo(b.timeRemaining));
+        final timed =
+            boosters.where((b) => b.timeRemaining > Duration.zero).toList();
+        if (timed.isNotEmpty) {
+          final rem = timed.first.timeRemaining;
+          remaining = rem.inHours > 0
+              ? ' ${rem.inHours}h ${rem.inMinutes % 60}m'
+              : ' ${rem.inMinutes}m ${rem.inSeconds % 60}s';
+        }
+      }
+      return _chip(
+        '⚡ ${mult.toStringAsFixed(mult == mult.roundToDouble() ? 0 : 2)}x'
+        '$remaining',
+        Colors.cyan.shade800,
+        onTap: () => game.openPremiumStore(),
+      );
+    }
+
+    // No boost: quiet nudge
+    return _chip(
+      '⚡ --',
+      Colors.blueGrey.shade800.withOpacity(0.6),
+      onTap: () => game.openPremiumStore(),
+    );
+  }
+
+  Widget _chip(String text, Color color, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }

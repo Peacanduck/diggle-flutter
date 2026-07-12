@@ -32,6 +32,16 @@ enum TileType {
   // Hazards
   lava,  // Instant death
   gas,   // Damage on mine
+
+  // v2 biome tiles.
+  // IMPORTANT: new types must be APPENDED here — world saves serialize
+  // the enum index (see TileMapComponent.exportBytes).
+  frozenDirt,   // Permafrost base tile, slow to dig
+  magmaRock,    // Magma Core rock variant
+  crystalOre,   // Mid-tier ore, shards damage weak hulls on dig
+  unstableRock, // Collapses when a neighboring tile is dug
+  lootCrate,    // Structure reward: cash + points on dig
+  artifact,     // Collectible for the museum/collection log
 }
 
 /// Extension to add properties and behavior to TileType
@@ -65,6 +75,18 @@ extension TileTypeExtension on TileType {
         return 0.1;
       case TileType.gas:
         return 0.1;
+      case TileType.frozenDirt:
+        return 0.24; // 2x dirt
+      case TileType.magmaRock:
+        return 0.45;
+      case TileType.crystalOre:
+        return 0.45;
+      case TileType.unstableRock:
+        return 0.2;
+      case TileType.lootCrate:
+        return 0.3;
+      case TileType.artifact:
+        return 0.4;
       case TileType.bedrock:
         return double.infinity;
     }
@@ -101,6 +123,18 @@ extension TileTypeExtension on TileType {
         return 1;
       case TileType.gas:
         return 1;
+      case TileType.frozenDirt:
+        return 1;
+      case TileType.magmaRock:
+        return 3;
+      case TileType.crystalOre:
+        return 3;
+      case TileType.unstableRock:
+        return 1;
+      case TileType.lootCrate:
+        return 1;
+      case TileType.artifact:
+        return 2;
       case TileType.bedrock:
         return 99;
     }
@@ -125,6 +159,8 @@ extension TileTypeExtension on TileType {
         return 2000;
       case TileType.diamond:
         return 10000;
+      case TileType.crystalOre:
+        return 1400;
       default:
         return 0;
     }
@@ -158,6 +194,18 @@ extension TileTypeExtension on TileType {
       case TileType.lava:
       case TileType.gas:
         return 1.0;
+      case TileType.frozenDirt:
+        return 1.2;
+      case TileType.magmaRock:
+        return 1.8;
+      case TileType.crystalOre:
+        return 2.0;
+      case TileType.unstableRock:
+        return 1.0;
+      case TileType.lootCrate:
+        return 0.5;
+      case TileType.artifact:
+        return 1.0;
       case TileType.bedrock:
         return 0;
     }
@@ -174,6 +222,7 @@ extension TileTypeExtension on TileType {
       case TileType.emerald:
       case TileType.ruby:
       case TileType.diamond:
+      case TileType.crystalOre:
         return true;
       default:
         return false;
@@ -190,11 +239,13 @@ extension TileTypeExtension on TileType {
     return this == TileType.lava;
   }
 
-  /// Damage dealt when mining this tile (for gas)
+  /// Damage dealt when mining this tile (for gas / crystal shards)
   double get hazardDamage {
     switch (this) {
       case TileType.gas:
         return 25.0;
+      case TileType.crystalOre:
+        return 10.0; // shards — negated by Titanium Hull (see DrillComponent)
       default:
         return 0;
     }
@@ -284,6 +335,18 @@ extension TileTypeExtension on TileType {
         return const Color(0xFFFF4500);
       case TileType.gas:
         return const Color(0xFF7CFC00);
+      case TileType.frozenDirt:
+        return const Color(0xFF7FA8C9);
+      case TileType.magmaRock:
+        return const Color(0xFF4A2C2A);
+      case TileType.crystalOre:
+        return const Color(0xFF9D4EDD);
+      case TileType.unstableRock:
+        return const Color(0xFF8A7F6D);
+      case TileType.lootCrate:
+        return const Color(0xFF9C6B30);
+      case TileType.artifact:
+        return const Color(0xFF3D3A2A);
       case TileType.bedrock:
         return const Color(0xFF1C1C1C);
     }
@@ -318,6 +381,18 @@ extension TileTypeExtension on TileType {
         return const Color(0xFFFF6347);
       case TileType.gas:
         return const Color(0xFFADFF2F);
+      case TileType.frozenDirt:
+        return const Color(0xFFBFE3F5);
+      case TileType.magmaRock:
+        return const Color(0xFF8B3A2E);
+      case TileType.crystalOre:
+        return const Color(0xFFC77DFF);
+      case TileType.unstableRock:
+        return const Color(0xFFB0A28C);
+      case TileType.lootCrate:
+        return const Color(0xFFD9A05B);
+      case TileType.artifact:
+        return const Color(0xFFFFD966);
       case TileType.bedrock:
         return const Color(0xFF2D2D2D);
     }
@@ -352,6 +427,18 @@ extension TileTypeExtension on TileType {
         return 'Lava';
       case TileType.gas:
         return 'Gas Pocket';
+      case TileType.frozenDirt:
+        return 'Frozen Dirt';
+      case TileType.magmaRock:
+        return 'Magma Rock';
+      case TileType.crystalOre:
+        return 'Crystal';
+      case TileType.unstableRock:
+        return 'Unstable Rock';
+      case TileType.lootCrate:
+        return 'Supply Crate';
+      case TileType.artifact:
+        return 'Artifact';
       case TileType.bedrock:
         return 'Bedrock';
     }
@@ -398,6 +485,10 @@ extension TileTypeExtension on TileType {
         return 200;
       case TileType.lava:
         return 270;
+      case TileType.crystalOre:
+        return 240;
+      case TileType.unstableRock:
+        return 150;
       default:
         return 0;
     }
@@ -426,6 +517,10 @@ extension TileTypeExtension on TileType {
         return 0.03;
       case TileType.lava:
         return 0.025;
+      case TileType.crystalOre:
+        return 0.03; // only spawns where biome multiplier > 0
+      case TileType.unstableRock:
+        return 0.02; // only spawns where biome multiplier > 0
       default:
         return 0;
     }

@@ -802,8 +802,11 @@ class _ShopOverlayState extends State<ShopOverlay>
       builder: (context, _) {
         final items = widget.game.itemSystem;
         final owned = items.getQuantity(type);
-        final canBuy = items.canAddItem(type) &&
+        final canBuy = !type.isPointsExclusive &&
+            items.canAddItem(type) &&
             widget.game.economySystem.canAfford(type.price);
+        final canBuyPoints = items.canAddItem(type) &&
+            widget.game.xpPointsSystem.canAffordPoints(type.pointsPrice);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
@@ -843,15 +846,31 @@ class _ShopOverlayState extends State<ShopOverlay>
                       style: const TextStyle(
                           color: Colors.white, fontSize: 11)),
                 ),
+              if (!type.isPointsExclusive) ...[
+                ElevatedButton(
+                  onPressed: canBuy ? () => _buyItem(type) : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green.shade700,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                  ),
+                  child: Text('\$${type.price}'),
+                ),
+                const SizedBox(width: 6),
+              ],
+              // Dual pricing: every consumable can also be bought
+              // with points (points-exclusive items only this way)
               ElevatedButton(
-                onPressed: canBuy ? () => _buyItem(type) : null,
+                onPressed:
+                    canBuyPoints ? () => _buyItemWithPoints(type) : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade700,
+                  backgroundColor: Colors.amber.shade800,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                       horizontal: 12, vertical: 8),
                 ),
-                child: Text('\$${type.price}'),
+                child: Text('${type.pointsPrice}p'),
               ),
             ],
           ),
@@ -1018,6 +1037,13 @@ class _ShopOverlayState extends State<ShopOverlay>
   void _buyItem(ItemType type) {
     final l10n = AppLocalizations.of(context)!;
     if (widget.game.buyItem(type)) _showMessage(l10n.purchased(type.displayName));
+  }
+
+  void _buyItemWithPoints(ItemType type) {
+    final l10n = AppLocalizations.of(context)!;
+    if (widget.game.buyItemWithPoints(type)) {
+      _showMessage(l10n.purchased(type.displayName));
+    }
   }
 
   void _showMessage(String message) {

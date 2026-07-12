@@ -13,6 +13,7 @@ import '../services/xp_stats_bridge.dart';
 import '../services/game_lifecycle_manager.dart';
 import '../services/quest_sync_service.dart';
 
+import 'world/tile.dart';
 import 'world/tile_map_component.dart';
 import 'world/world_generator.dart';
 import 'player/drill_component.dart';
@@ -27,6 +28,12 @@ import 'systems/xp_points_system.dart';
 import 'systems/boost_manager.dart';
 import 'systems/light_system.dart';
 import 'systems/quest_system.dart';
+import 'systems/collection_system.dart';
+import 'systems/achievement_system.dart';
+import 'systems/streak_system.dart';
+import 'systems/level_rewards.dart';
+import 'systems/prestige_system.dart';
+import 'systems/gear_system.dart';
 
 enum GameState { playing, shopping, gameOver, paused }
 
@@ -48,6 +55,10 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   late CoolingSystem coolingSystem;
   late LightSystem lightSystem;
   late QuestSystem questSystem;
+  late CollectionSystem collectionSystem;
+  late AchievementSystem achievementSystem;
+  late StreakSystem streakSystem;
+  late GearSystem gearSystem;
 
   late XPPointsSystem xpPointsSystem;
 
@@ -57,6 +68,16 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   GameState _state = GameState.playing;
   final WorldConfig worldConfig;
   final int seed;
+
+  /// Prestige meta-progression (global). Null = no prestige attached.
+  final PrestigeSystem? prestigeSystem;
+
+  /// Whether this run gets the prestige starter kit (new games only).
+  final bool isNewGame;
+
+  /// Weekly challenge mode: standardized loadout — no prestige perks,
+  /// no hardcore seams; everyone digs the same world on equal terms.
+  final bool challengeMode;
 
   //Stats bridge for Supabase persistence
   XPStatsBridge? statsBridge;
@@ -71,15 +92,30 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   DiggleGame({
     this.seed = 42,
     WorldConfig? config,
+    this.prestigeSystem,
+    GearSystem? gearSystem,
+    this.isNewGame = true,
+    this.challengeMode = false,
   }) : worldConfig = config ?? WorldConfig(
     width: 64,
     height: 524,
     surfaceRows: 30,
     seed: seed,
+    // Hardcore seams scale with prestige — but never in challenge mode
+    // (identical world for every player).
+    oreRichness: challengeMode ? 1.0 : (prestigeSystem?.oreRichness ?? 1.0),
+    hazardIntensity:
+        challengeMode ? 1.0 : (prestigeSystem?.hazardIntensity ?? 1.0),
   ){
     xpPointsSystem = XPPointsSystem();
     lightSystem = LightSystem();
     questSystem = QuestSystem();
+    collectionSystem = CollectionSystem();
+    achievementSystem = AchievementSystem();
+    streakSystem = StreakSystem();
+    // Gear is global meta-state (shared with the Hangar screen);
+    // fall back to a local instance for tests/standalone use.
+    this.gearSystem = gearSystem ?? GearSystem();
   }
 
 
@@ -134,17 +170,81 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     engineSystem = EngineSystem();
     coolingSystem = CoolingSystem();
 
+    // NFT gear bonuses (never in challenge mode — standardized loadout)
+    gearSystem.onGearChanged = _applyGearBonuses;
+    await gearSystem.initialize();
+    _applyGearBonuses();
+
+    // Prestige perks (never in challenge mode — standardized loadout)
+    final prestige = prestigeSystem;
+    if (prestige != null && !challengeMode && prestige.level > 0) {
+      economySystem.setSellMultiplier(prestige.sellMultiplier);
+      if (isNewGame) {
+        // Starter kit for a fresh contract (base cash is already 50)
+        economySystem.addCash(prestige.starterCash - 50);
+        itemSystem.addItem(ItemType.dynamite);
+        itemSystem.addItem(ItemType.repairBot);
+      }
+    }
+
 // Initialize quests (loads from prefs, assigns dailies)
     questSystem.initialize();
 // Wire quest reward callback
     questSystem.onAwardReward = (xp, points, source) {
-      xpPointsSystem.addPoints(points);
       if (statsBridge != null) {
+        // Bridge updates the local XP system AND the server ledger.
         statsBridge!.awardQuestReward(xp, points, source);
       } else {
-        // Direct XP award via the _award-like pattern
+        // Offline fallback: local-only award.
+        xpPointsSystem.addXP(xp);
         xpPointsSystem.addPoints(points);
-        // XP is trickier without bridge — just add directly
+      }
+    };
+
+    // Initialize artifact collection log
+    collectionSystem.initialize();
+    collectionSystem.onAwardReward = (xp, points, description) {
+      if (statsBridge != null) {
+        statsBridge!.awardBonus(xp, points, 'achievement', description,
+            metadata: {'bonus_type': 'collection'});
+      } else {
+        xpPointsSystem.awardBonus(xp, points, description);
+      }
+    };
+
+    // Achievements + login streak share the same award path.
+    void awardBonusReward(int xp, int points, String description,
+        String bonusType) {
+      if (statsBridge != null) {
+        statsBridge!.awardBonus(xp, points, 'achievement', description,
+            metadata: {'bonus_type': bonusType});
+      } else {
+        xpPointsSystem.awardBonus(xp, points, description);
+      }
+    }
+
+    achievementSystem.onAwardReward =
+        (xp, points, desc) => awardBonusReward(xp, points, desc, 'achievement');
+    await achievementSystem.initialize();
+    achievementSystem.recordLevel(xpPointsSystem.level);
+
+    streakSystem.onAwardReward =
+        (xp, points, desc) => awardBonusReward(xp, points, desc, 'streak');
+    streakSystem.initializeAndClaim();
+
+    // Level rewards: items + titles at key levels (LevelRewardTable)
+    xpPointsSystem.onLevelUp = (newLevel) {
+      achievementSystem.recordLevel(newLevel);
+      final reward = LevelRewardTable.forLevel(newLevel);
+      if (reward == null || reward.isEmpty) return;
+      reward.items.forEach((type, count) {
+        for (int i = 0; i < count; i++) {
+          itemSystem.addItem(type);
+        }
+      });
+      final title = reward.title;
+      if (title != null) {
+        xpPointsSystem.awardBonus(0, 0, 'Title unlocked: $title');
       }
     };
 
@@ -208,6 +308,9 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   void update(double dt) {
     super.update(dt);
     if (_state != GameState.playing) return;
+    if (_heatShieldRemaining > 0) {
+      _heatShieldRemaining = (_heatShieldRemaining - dt).clamp(0.0, 60.0);
+    }
     economySystem.updateMaxDepth(drill.depth);
     //xpPointsSystem.updateDepth(drill.depth);
     //xpPointsSystem.checkDepthMilestone(drill.depth);
@@ -234,6 +337,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
 
   void _handleGameOver() {
     _state = GameState.gameOver;
+    achievementSystem.recordDeath();
     fuelSystem.pause();
     overlays.add('gameOver');
     overlays.remove('hud');
@@ -515,6 +619,8 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
       statsBridge?.awardForSale(earned, economySystem.totalOreCollected) ??
           xpPointsSystem.awardForSale(earned, economySystem.totalOreCollected);
       questSystem.onOreSold(earned);
+      achievementSystem.recordCashEarned(earned);
+      achievementSystem.recordOreSale();
     }
     return earned;
   }
@@ -630,20 +736,186 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
         break;
 
       case ItemType.dynamite:
-        tileMap.explode(drill.gridX, drill.gridY, type.explosionRadius);
+        _collectBlastYield(
+            tileMap.explode(drill.gridX, drill.gridY, type.explosionRadius));
+        achievementSystem.recordBlast();
+        questSystem.onExplosiveUsed();
         break;
 
       case ItemType.c4:
-        tileMap.explode(drill.gridX, drill.gridY, type.explosionRadius);
+        _collectBlastYield(
+            tileMap.explode(drill.gridX, drill.gridY, type.explosionRadius));
+        achievementSystem.recordBlast();
+        questSystem.onExplosiveUsed();
         break;
 
       case ItemType.spaceRift:
         drill.teleportToSurface();
+        break;
+
+      case ItemType.oreScanner:
+        // Reveal a wide radius around the drill (fog of war)
+        tileMap.revealAround(drill.gridX, drill.gridY, radius: 6);
+        break;
+
+      case ItemType.heatShield:
+        _heatShieldRemaining = 60.0;
         break;
     }
 
     itemSystem.useItem(type);
     questSystem.onItemUsed();
     return true;
+  }
+
+  // ── Heat shield (points-exclusive consumable) ──────────────────
+
+  double _heatShieldRemaining = 0;
+  bool get heatShieldActive => _heatShieldRemaining > 0;
+  double get heatShieldRemaining => _heatShieldRemaining;
+
+  /// Buy a consumable with points instead of cash.
+  bool buyItemWithPoints(ItemType type) {
+    if (!itemSystem.canAddItem(type)) return false;
+    final cost = type.pointsPrice;
+    final ok = statsBridge?.spendPoints(cost,
+            itemName: 'item_${type.name}') ??
+        xpPointsSystem.spendPoints(cost);
+    if (!ok) return false;
+    itemSystem.addItem(type);
+    return true;
+  }
+
+  // ── Emergency Recovery (death sink) ────────────────────────────
+
+  /// Points cost to recover after death: base fee + 5% of cargo value.
+  /// The more you were carrying, the more the rescue costs — and the
+  /// more it's worth paying.
+  int get emergencyRecoveryCost =>
+      50 + (economySystem.cargoValue * 0.05).round();
+
+  /// Rescue the drill after game over: keeps cargo, returns to surface
+  /// with half hull and half fuel. Costs points.
+  bool emergencyRecover() {
+    if (_state != GameState.gameOver) return false;
+    final cost = emergencyRecoveryCost;
+    final ok = statsBridge?.spendPoints(cost,
+            itemName: 'emergency_recovery') ??
+        xpPointsSystem.spendPoints(cost);
+    if (!ok) return false;
+
+    hullSystem.repair(hullSystem.maxHull * 0.5);
+    fuelSystem.add(fuelSystem.maxFuel * 0.5);
+    drill.teleportToSurface();
+    _state = GameState.playing;
+    fuelSystem.resume();
+    overlays.remove('gameOver');
+    if (!overlays.isActive('hud')) overlays.add('hud');
+    return true;
+  }
+
+  // ── Miner's Pass (weekly premium quest track) ──────────────────
+
+  static const int minersPassCost = 300;
+
+  /// Activate the Weekly Miner's Pass: 2x weekly quest rewards for the
+  /// current ISO week. The recurring points sink that makes points
+  /// packs worth buying.
+  bool activateMinersPass() {
+    if (questSystem.minersPassActive) return false;
+    final ok = statsBridge?.spendPoints(minersPassCost,
+            itemName: 'miners_pass') ??
+        xpPointsSystem.spendPoints(minersPassCost);
+    if (!ok) return false;
+    questSystem.activateMinersPass();
+    return true;
+  }
+
+  /// Blasted ore is partially recoverable: every other ore survives the
+  /// explosion and goes to cargo (until full). No mining XP/points — the
+  /// value comes from selling what survived.
+  void _collectBlastYield(List<TileType> destroyedOres) {
+    for (int i = 0; i < destroyedOres.length; i++) {
+      if (i.isOdd) continue; // 50% yield
+      economySystem.collectOre(destroyedOres[i]);
+    }
+  }
+
+  // ============================================================
+  // WORLD DISCOVERY REWARDS
+  // ============================================================
+
+  /// Supply crate dug up: cash + points scaled by depth.
+  void onLootCrateOpened(int depth) {
+    final cash = 150 + depth * 2;
+    economySystem.addCash(cash);
+    questSystem.onCrateOpened();
+    final points = 10 + depth ~/ 10;
+    // 'achievement' is a server-whitelisted ledger source; the metadata
+    // records the true origin for analytics.
+    if (statsBridge != null) {
+      statsBridge!.awardBonus(25, points, 'achievement',
+          'Supply crate: +\$$cash!',
+          metadata: {'bonus_type': 'loot_crate', 'depth': depth});
+    } else {
+      xpPointsSystem.awardBonus(25, points, 'Supply crate: +\$$cash!');
+    }
+  }
+
+  /// Artifact dug up: resolve which relic this site holds and log it.
+  /// Duplicates and set-completion bonuses are handled inside
+  /// CollectionSystem via its award callback.
+  void onArtifactFound(int x, int y, int depth) {
+    final result = collectionSystem.collect(x, y, depth, seed);
+    if (result.isNew) {
+      achievementSystem.recordArtifactFound();
+      questSystem.onArtifactFound();
+      final desc = 'Found ${result.artifact.icon} ${result.artifact.name}!';
+      if (statsBridge != null) {
+        statsBridge!.awardBonus(60, 25, 'achievement', desc, metadata: {
+          'bonus_type': 'artifact',
+          'artifact_id': result.artifact.id,
+          'depth': depth,
+        });
+      } else {
+        xpPointsSystem.awardBonus(60, 25, desc);
+      }
+    }
+  }
+
+  /// Apply (or clear) equipped NFT gear bonuses on all ship systems.
+  void _applyGearBonuses() {
+    if (challengeMode) return; // standardized loadout
+    drillbitSystem.setGearBonus(
+      speedBonus: gearSystem.drillSpeedBonus,
+      hardnessOverride: gearSystem.drillHardnessOverride,
+    );
+    engineSystem.setGearBonus(speedBonus: gearSystem.thrusterSpeedBonus);
+    fuelSystem.setGearBonus(
+      capacityBonus: gearSystem.fuelCapacityBonus,
+      refuelDiscount: gearSystem.refuelDiscount,
+    );
+    hullSystem.setGearBonus(hpBonus: gearSystem.hullHPBonus);
+    economySystem.setGearBonus(
+      slotBonus: gearSystem.cargoSlotBonus,
+      sellBonus: gearSystem.sellBonus,
+    );
+  }
+
+  /// Whether the current run qualifies for signing the next contract.
+  bool get canPrestige =>
+      !challengeMode &&
+      (prestigeSystem?.canPrestige(
+            maxDepth: economySystem.maxDepthReached,
+            lifetimeCash: economySystem.totalCashEarned,
+          ) ??
+          false);
+
+  void openCollection() {
+    overlays.add('collection');
+  }
+
+  void closeCollection() {
+    overlays.remove('collection');
   }
 }

@@ -9,10 +9,13 @@ import '../world/tile_map_component.dart';
 import '../world/tile.dart';
 import '../systems/fuel_system.dart';
 import '../systems/economy_system.dart';
-import '../systems/hull_system.dart';
+import '../systems/hull_system.dart' show HullSystem, HullLevel;
 import '../systems/drillbit_system.dart';
 import '../systems/engine_system.dart';
 import '../systems/cooling_system.dart';
+import '../systems/gear_system.dart'
+    show DiggleNFTTraits, GearRarity, GearSlot;
+import '../systems/gear_sprites.dart';
 import '../systems/light_system.dart';
 import '../diggle_game.dart';
 
@@ -38,6 +41,10 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
   late Sprite _spriteFront;
   late Sprite _spriteLeft;
   late Sprite _spriteRight;
+
+  // NFT gear sprite sheet (layered per-slot rendering when gear is equipped)
+  Image? _gearSheet;
+  final Map<int, Sprite> _gearSpriteCache = {};
 
   // Target we're moving toward
   Vector2 _target = Vector2.zero();
@@ -124,6 +131,22 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     _spriteFront = getSprite(7, 4); // Front/Down/up
     _spriteLeft = getSprite(7, 6);  // Left
     _spriteRight = getSprite(7, 8); // Right
+
+    // NFT gear sheet (layered per-slot sprites, DiggleAssets pixel art)
+    _gearSheet = await gameRef.images.load(GearSpriteSheet.asset);
+  }
+
+  Sprite _gearSprite(GearSlot slot, GearRarity rarity, {required bool down}) {
+    final (col, row) = GearSpriteSheet.cell(slot, rarity, down: down);
+    final key = row * 8 + col;
+    return _gearSpriteCache.putIfAbsent(key, () {
+      const cell = GearSpriteSheet.cellSize;
+      return Sprite(
+        _gearSheet!,
+        srcPosition: Vector2(col * cell, row * cell),
+        srcSize: Vector2.all(cell),
+      );
+    });
   }
 
   @override
@@ -205,6 +228,7 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     }
 
     economySystem.updateMaxDepth(depth);
+    gameRef.achievementSystem.recordDepth(depth);
 
     if (isAtSurface) {
       onReachSurface?.call();
@@ -329,8 +353,11 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     _fallStartY = 0;
     _currentFallY = 0;
 
-    if (fallDistance > safeFallDistance) {
-      final damageTiles = fallDistance - safeFallDistance;
+    // Legendary thruster (Quantum Glitch) extends the safe fall distance
+    final safeDistance =
+        safeFallDistance + gameRef.gearSystem.bonusSafeFallTiles;
+    if (fallDistance > safeDistance) {
+      final damageTiles = fallDistance - safeDistance;
       final damage = damageTiles * damagePerTile;
       hullSystem.takeDamage(damage);
     }
@@ -354,12 +381,24 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
 
     if (result != null) {
       if (result.isLethal) {
-        hullSystem.takeDamage(9999);
-        _digging = false;
-        return;
+        // Heat Shield consumable grants temporary lava immunity
+        if (!gameRef.heatShieldActive) {
+          hullSystem.takeDamage(9999);
+          _digging = false;
+          return;
+        }
       }
 
       if (result.isHazard && result.hazardDamage > 0) {
+        // Legendary hull (Ghost Stealth) halves gas damage
+        final resist =
+            result == TileType.gas && gameRef.gearSystem.gasResist ? 0.5 : 1.0;
+        hullSystem.takeDamage(result.hazardDamage * resist);
+      }
+
+      // Crystal shards pierce weaker hulls; Titanium Hull is immune.
+      if (result == TileType.crystalOre &&
+          hullSystem.hullLevel != HullLevel.level3) {
         hullSystem.takeDamage(result.hazardDamage);
       }
 
@@ -373,7 +412,28 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
           gameRef.xpPointsSystem.awardForMining(result, depth);
         }
         gameRef.questSystem.onOreMined();
+        gameRef.achievementSystem.recordOreMined();
+      } else if (result == TileType.lootCrate) {
+        gameRef.onLootCrateOpened(depth);
+      } else if (result == TileType.artifact) {
+        gameRef.onArtifactFound(_digX, _digY, depth);
       }
+
+      // Digging can destabilize adjacent unstable rock.
+      final collapsed = tileMap.collapseUnstableAround(_digX, _digY);
+      if (collapsed.isNotEmpty) {
+        // Rubble falling from directly above the dig column hits the drill.
+        int hits = 0;
+        for (final tile in collapsed) {
+          if (tile.x == _digX && tile.y < _digY && _digY - tile.y <= 3) {
+            hits++;
+          }
+        }
+        if (hits > 0) {
+          hullSystem.takeDamage((hits * 15.0).clamp(0, 45.0));
+        }
+      }
+
       tileMap.revealAround(_digX, _digY);
       _target = _tileCenter(_digX, _digY);
       _digging = false;
@@ -386,6 +446,13 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
 
   @override
   void render(Canvas canvas) {
+    // Layered NFT gear rendering when a fully-revealed machine is equipped
+    final gear = gameRef.gearSystem.equipped;
+    if (gear != null && gear.isComplete && _gearSheet != null) {
+      _renderGear(canvas, gear);
+      return;
+    }
+
     // 1. Select the correct sprite based on facing
     Sprite spriteToRender = _spriteFront;
     bool rotate180 = false;
@@ -411,6 +478,12 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     } else if (fuelSystem.isEmpty) {
       // Darken if out of fuel
       paint.colorFilter = const ColorFilter.mode(Colors.grey, BlendMode.modulate);
+    } else {
+      // NFT gear rarity tint (until dedicated gear sprites are exported)
+      final tint = gameRef.gearSystem.equippedTint;
+      if (tint != null) {
+        paint.colorFilter = ColorFilter.mode(tint, BlendMode.modulate);
+      }
     }
 
     // 3. Render the sprite
@@ -434,6 +507,43 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
         overridePaint: paint,
       );
     }
+  }
+
+  /// Draw the equipped machine as stacked per-slot sprites, in the same
+  /// painter's order the NFT reveal art uses. Side cells face right, so
+  /// facing left mirrors; up rotates the down view 180° (same convention
+  /// as the base sprite).
+  void _renderGear(Canvas canvas, DiggleNFTTraits gear) {
+    final paint = Paint()..color = Colors.white;
+    if (hullSystem.isCritical) {
+      paint.colorFilter =
+          const ColorFilter.mode(Colors.red, BlendMode.modulate);
+    } else if (fuelSystem.isEmpty) {
+      paint.colorFilter =
+          const ColorFilter.mode(Colors.grey, BlendMode.modulate);
+    }
+
+    final side =
+        _facing == MoveDirection.left || _facing == MoveDirection.right;
+    final mirror = _facing == MoveDirection.left;
+    final rotate180 = _facing == MoveDirection.up;
+
+    canvas.save();
+    if (mirror) {
+      canvas.translate(size.x, 0);
+      canvas.scale(-1, 1);
+    } else if (rotate180) {
+      canvas.translate(size.x / 2, size.y / 2);
+      canvas.rotate(math.pi);
+      canvas.translate(-size.x / 2, -size.y / 2);
+    }
+    for (final slot in GearSpriteSheet.drawOrder) {
+      final trait = gear.traits[slot];
+      if (trait == null) continue;
+      _gearSprite(slot, trait.rarity, down: !side)
+          .render(canvas, size: size, overridePaint: paint);
+    }
+    canvas.restore();
   }
 
   void reset() {

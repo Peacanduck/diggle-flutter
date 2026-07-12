@@ -123,6 +123,10 @@ class XPPointsSystem extends ChangeNotifier {
   final List<RewardEvent> _recentEvents = [];
   static const int maxRecentEvents = 20;
 
+  /// Fired after a level-up (bonus points already applied).
+  /// DiggleGame uses this to grant LevelRewardTable items/titles.
+  void Function(int newLevel)? onLevelUp;
+
   /// Highest depth this session (for depth milestone rewards)
   int _sessionMaxDepth = 0;
 
@@ -234,6 +238,12 @@ class XPPointsSystem extends ChangeNotifier {
     return _award(25, 5, 'Survived $hazardType!');
   }
 
+  /// Award a discovery/bonus reward (loot crates, artifacts, etc.).
+  /// Boost multipliers apply, and the event shows in the HUD reward feed.
+  RewardEvent awardBonus(int baseXP, int basePoints, String description) {
+    return _award(baseXP, basePoints, description);
+  }
+
   /// Core award method - applies multipliers and updates state
   RewardEvent _award(int baseXP, int basePoints, String description) {
     final xpMult = effectiveXPMultiplier;
@@ -264,9 +274,10 @@ class XPPointsSystem extends ChangeNotifier {
       _recentEvents.removeLast();
     }
 
-    // Check for level up
-    if (level > prevLevel) {
-      _onLevelUp(prevLevel, level);
+    // Check for level up (fire once per level gained so multi-level
+    // jumps don't skip LevelRewardTable grants)
+    for (int l = prevLevel + 1; l <= level; l++) {
+      _onLevelUp(l - 1, l);
     }
 
     notifyListeners();
@@ -288,6 +299,8 @@ class XPPointsSystem extends ChangeNotifier {
         pointsAwarded: bonusPoints,
       ),
     );
+
+    onLevelUp?.call(newLevel);
   }
 
   // ============================================================
@@ -312,6 +325,8 @@ class XPPointsSystem extends ChangeNotifier {
         return 100;
       case TileType.diamond:
         return 150;
+      case TileType.crystalOre:
+        return 85;
       default:
         return 0;
     }
@@ -335,6 +350,8 @@ class XPPointsSystem extends ChangeNotifier {
         return 18;
       case TileType.diamond:
         return 25;
+      case TileType.crystalOre:
+        return 15;
       default:
         return 0;
     }
@@ -393,6 +410,19 @@ class XPPointsSystem extends ChangeNotifier {
     if (amount <= 0) return;
     _points += amount;
     _lifetimePoints += amount;
+    notifyListeners();
+  }
+
+  /// Add raw XP directly (quest/achievement rewards).
+  /// No boost multipliers applied — reward amounts are fixed.
+  void addXP(int amount) {
+    if (amount <= 0) return;
+    final prevLevel = level;
+    _totalXP += amount;
+    _sessionXP += amount;
+    for (int l = prevLevel + 1; l <= level; l++) {
+      _onLevelUp(l - 1, l);
+    }
     notifyListeners();
   }
 

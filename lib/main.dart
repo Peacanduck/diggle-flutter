@@ -17,7 +17,10 @@
 ///   - GameLifecycleManager (orchestrates bootstrap + save/load)
 ///   - LocaleProvider (language selection with persistence)
 
+import 'dart:async';
+
 import 'package:diggle/ui/quest_overlay.dart';
+import 'package:diggle/ui/collection_overlay.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flame/game.dart';
@@ -25,6 +28,12 @@ import 'package:provider/provider.dart';
 
 import 'game/diggle_game.dart';
 import 'game/systems/boost_manager.dart';
+import 'game/systems/prestige_system.dart';
+import 'game/systems/gear_system.dart';
+import 'game/systems/quest_system.dart' show QuestSystem;
+import 'services/leaderboard_service.dart';
+import 'ui/leaderboard_screen.dart';
+import 'ui/hangar_screen.dart';
 import 'l10n/app_localizations.dart';
 import 'services/game_lifecycle_manager.dart';
 import 'services/locale_provider.dart';
@@ -102,17 +111,31 @@ void main() async {
   final localeProvider = LocaleProvider();
   await localeProvider.load();
 
+  // ── Prestige + Gear (global meta-progression) ────────────────
+  final prestigeSystem = PrestigeSystem();
+  await prestigeSystem.initialize();
+  final gearSystem = GearSystem();
+  await gearSystem.initialize();
+
+  // ── Leaderboards ─────────────────────────────────────────────
+  final leaderboardService = LeaderboardService(
+    client: SupabaseService.instance.client,
+  );
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: walletService),
         ChangeNotifierProvider.value(value: candyMachineService),
         ChangeNotifierProvider.value(value: localeProvider),
+        ChangeNotifierProvider.value(value: prestigeSystem),
+        ChangeNotifierProvider.value(value: gearSystem),
         Provider.value(value: statsService),
         Provider.value(value: worldSaveService),
         Provider.value(value: playerService),
         Provider.value(value: pointsLedgerService),
         Provider.value(value: lifecycleManager),
+        Provider.value(value: leaderboardService),
       ],
       child: const DiggleApp(),
     ),
@@ -174,6 +197,7 @@ class _AppNavigatorState extends State<AppNavigator>
   int? _gameSeed;
   int? _gameSlot;
   bool _isNewGame = true;
+  bool _challengeMode = false;
 
   /// Whether saves exist (checked on menu load)
   bool _hasSaves = false;
@@ -371,8 +395,45 @@ class _AppNavigatorState extends State<AppNavigator>
       _gameSeed = seed ?? (DateTime.now().millisecondsSinceEpoch & 0x7FFFFFFF);
       _gameSlot = slot;
       _isNewGame = isNewGame;
+      _challengeMode = false;
       _screen = AppScreen.game;
     });
+  }
+
+  /// Weekly challenge: everyone digs the identical world (seed derived
+  /// from the ISO week), no save slot, standardized loadout.
+  void _onWeeklyChallenge() {
+    final weekKey = QuestSystem.isoWeekKey(DateTime.now().toUtc());
+    setState(() {
+      _gameSeed = weekKey.hashCode & 0x7FFFFFFF;
+      _gameSlot = null; // single-run mode — no saves
+      _isNewGame = true;
+      _challengeMode = true;
+      _screen = AppScreen.game;
+    });
+  }
+
+  void _onLeaderboard() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LeaderboardScreen(
+          service: context.read<LeaderboardService>(),
+        ),
+      ),
+    );
+  }
+
+  void _onHangar() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => HangarScreen(
+          gearSystem: context.read<GearSystem>(),
+          candyMachineService: context.read<CandyMachineService>(),
+          walletService: context.read<WalletService>(),
+          onBack: () => Navigator.of(context).pop(),
+        ),
+      ),
+    );
   }
 
   void _returnToMenu() {
@@ -381,6 +442,7 @@ class _AppNavigatorState extends State<AppNavigator>
       _gameSeed = null;
       _gameSlot = null;
       _isNewGame = true;
+      _challengeMode = false;
     });
     _checkForSaves();
   }
@@ -400,6 +462,9 @@ class _AppNavigatorState extends State<AppNavigator>
           onContinue: _onContinue,
           onAccount: _onAccount,
           onSettings: _onSettings,
+          onLeaderboard: _onLeaderboard,
+          onWeeklyChallenge: _onWeeklyChallenge,
+          onHangar: _onHangar,
           hasSaves: _hasSaves,
         );
 
@@ -408,6 +473,7 @@ class _AppNavigatorState extends State<AppNavigator>
           seed: _gameSeed ?? (DateTime.now().millisecondsSinceEpoch & 0x7FFFFFFF),
           slot: _gameSlot,
           isNewGame: _isNewGame,
+          challengeMode: _challengeMode,
           onReturnToMenu: _returnToMenu,
         );
     }
@@ -422,6 +488,7 @@ class GameScreen extends StatefulWidget {
   final int seed;
   final int? slot;
   final bool isNewGame;
+  final bool challengeMode;
   final VoidCallback onReturnToMenu;
 
   const GameScreen({
@@ -429,6 +496,7 @@ class GameScreen extends StatefulWidget {
     required this.seed,
     this.slot,
     this.isNewGame = true,
+    this.challengeMode = false,
     required this.onReturnToMenu,
   });
 
@@ -436,16 +504,30 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> {
+class _GameScreenState extends State<GameScreen>
+    with WidgetsBindingObserver {
   late final DiggleGame _game;
   late final BoostManager _boostManager;
+  LeaderboardService? _leaderboardService;
   bool _isLoading = false;
+  bool _weeklyScoreSubmitted = false;
+  Timer? _autoSaveTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    try {
+      _leaderboardService = context.read<LeaderboardService>();
+    } catch (_) {}
 
-    _game = DiggleGame(seed: widget.seed);
+    _game = DiggleGame(
+      seed: widget.seed,
+      prestigeSystem: context.read<PrestigeSystem>(),
+      gearSystem: context.read<GearSystem>(),
+      isNewGame: widget.isNewGame,
+      challengeMode: widget.challengeMode,
+    );
 
     final walletService = context.read<WalletService>();
     final candyMachineService = context.read<CandyMachineService>();
@@ -468,6 +550,49 @@ class _GameScreenState extends State<GameScreen> {
 
     if (!widget.isNewGame && widget.slot != null) {
       _loadSavedGame();
+    }
+
+    // Auto-save every 2 minutes so progress survives crashes/kills.
+    if (widget.slot != null) {
+      _autoSaveTimer = Timer.periodic(
+        const Duration(minutes: 2),
+        (_) => _autoSave(),
+      );
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Save when the app is backgrounded (Android may kill it any time).
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _autoSave();
+    }
+  }
+
+  Future<void> _autoSave() async {
+    if (widget.slot == null || _isLoading) return;
+    // Don't overwrite a good save with a dead/incomplete state.
+    if (_game.state == GameState.gameOver) return;
+    if (!_game.isLoaded) return;
+
+    try {
+      final lifecycle = context.read<GameLifecycleManager>();
+      await lifecycle.saveWorld(
+        slot: widget.slot!,
+        seed: widget.seed,
+        tileMapBytes: _game.exportTileMapBytes(),
+        gameSystems: _game.exportGameSystems(),
+        playerPosition: {
+          'x': _game.drill.position.x,
+          'y': _game.drill.position.y,
+        },
+        depthReached: _game.drill.depth,
+        playtimeSeconds: _game.playtimeSeconds,
+      );
+      debugPrint('GameScreen: auto-saved to slot ${widget.slot}');
+    } catch (e) {
+      debugPrint('GameScreen: auto-save failed: $e');
     }
   }
 
@@ -501,8 +626,26 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
+  /// Submit the weekly challenge result (best score kept server-side).
+  void _submitWeeklyScore() {
+    if (!widget.challengeMode || _weeklyScoreSubmitted) return;
+    final service = _leaderboardService;
+    if (service == null) return;
+    final depth = _game.economySystem.maxDepthReached;
+    if (depth <= 0) return;
+    _weeklyScoreSubmitted = true;
+    service.submitWeeklyScore(
+      weekKey: QuestSystem.isoWeekKey(DateTime.now().toUtc()),
+      depth: depth,
+      cashEarned: _game.economySystem.totalCashEarned,
+    );
+  }
+
   @override
   void dispose() {
+    _submitWeeklyScore();
+    _autoSaveTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     try {
       final statsService = context.read<StatsService>();
       statsService.syncToServer();
@@ -524,7 +667,19 @@ class _GameScreenState extends State<GameScreen> {
           'quests': (context, game) => QuestOverlay(
             questSystem: (game as DiggleGame).questSystem,
             onClose: () => (game as DiggleGame).closeQuests(),
+            onActivateMinersPass: () =>
+                (game as DiggleGame).activateMinersPass(),
+            minersPassCost: DiggleGame.minersPassCost,
           ),
+          'collection': (context, game) {
+            final g = game as DiggleGame;
+            return CollectionOverlay(
+              collectionSystem: g.collectionSystem,
+              achievementSystem: g.achievementSystem,
+              streakSystem: g.streakSystem,
+              onClose: () => g.closeCollection(),
+            );
+          },
           'premiumStore': (context, game) {
             final g = game as DiggleGame;
             return PremiumStoreOverlay(
@@ -641,6 +796,20 @@ class _GameScreenState extends State<GameScreen> {
               ),
               const SizedBox(height: 16),
 
+              // Prestige — Corporate Contract (endgame reset)
+              if (game.canPrestige) ...[
+                ElevatedButton.icon(
+                  onPressed: () => _confirmPrestige(context, game),
+                  icon: const Text('⭐', style: TextStyle(fontSize: 16)),
+                  label: const Text('Sign New Contract'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple.shade700,
+                    minimumSize: const Size(200, 50),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
               // Main Menu
               ElevatedButton(
                 onPressed: () {
@@ -675,6 +844,52 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  /// Confirm and execute a prestige ("Corporate Contract") reset.
+  Future<void> _confirmPrestige(BuildContext context, DiggleGame game) async {
+    final prestige = context.read<PrestigeSystem>();
+    final nextLevel = prestige.level + 1;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1a1a2e),
+        title: const Text('⭐ Corporate Contract',
+            style: TextStyle(color: Colors.white)),
+        content: Text(
+          'Sign Contract #$nextLevel?\n\n'
+          'RESETS: world, cash, ship upgrades\n'
+          'KEEPS: XP, points, NFTs, achievements, collection\n\n'
+          'PERMANENT PERKS:\n'
+          '• +${nextLevel * 5}% ore sell price\n'
+          '• \$${50 + 500 * nextLevel} starting cash + starter kit\n'
+          '${nextLevel >= 2 ? '• Hardcore seams: richer ore, deadlier hazards\n' : ''}'
+          '• ${'⭐' * nextLevel.clamp(1, 5)} leaderboard badge',
+          style: const TextStyle(color: Colors.white70, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Not yet'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple.shade700),
+            child: const Text('Sign Contract'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    await prestige.prestige();
+    // Return to menu — the next New Game starts the fresh contract
+    // with perks and (level 2+) hardcore seams applied.
+    game.resume();
+    widget.onReturnToMenu();
+  }
+
   // ── Game Over Overlay ──────────────────────────────────────────
 
   Widget _buildGameOverOverlay(BuildContext context, DiggleGame game) {
@@ -705,6 +920,55 @@ class _GameScreenState extends State<GameScreen> {
                 style: const TextStyle(color: Colors.white70, fontSize: 16),
               ),
               const SizedBox(height: 32),
+
+              // Emergency Recovery — points sink at the moment of loss.
+              // Keeps cargo, returns to surface with half hull/fuel.
+              Builder(builder: (context) {
+                final cost = game.emergencyRecoveryCost;
+                final canAfford =
+                    game.xpPointsSystem.canAffordPoints(cost);
+                final cargoValue = game.economySystem.cargoValue;
+                return Column(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: canAfford
+                          ? () {
+                              final ok = game.emergencyRecover();
+                              if (!ok) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text(
+                                        'Recovery failed — not enough points'),
+                                    backgroundColor: Colors.red.shade700,
+                                  ),
+                                );
+                              }
+                            }
+                          : () => game.openPremiumStore(),
+                      icon: const Text('🚑', style: TextStyle(fontSize: 18)),
+                      label: Text(canAfford
+                          ? 'Emergency Recovery ($cost pts)'
+                          : 'Need $cost pts — open Store'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: canAfford
+                            ? Colors.teal.shade700
+                            : Colors.blueGrey.shade700,
+                        minimumSize: const Size(240, 50),
+                      ),
+                    ),
+                    if (cargoValue > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          'Keeps your \$$cargoValue cargo!',
+                          style: TextStyle(
+                              color: Colors.amber.shade300, fontSize: 12),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                  ],
+                );
+              }),
 
               ElevatedButton.icon(
                 onPressed: () => game.restart(),

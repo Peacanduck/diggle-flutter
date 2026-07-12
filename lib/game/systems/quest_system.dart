@@ -19,7 +19,21 @@ import '../../services/quest_sync_service.dart';
 // QUEST DEFINITIONS
 // ============================================================
 
-enum QuestCategory { daily, social }
+enum QuestCategory { daily, social, weekly }
+
+extension QuestCategoryWire on QuestCategory {
+  /// Wire/server name for this category.
+  String get wireName {
+    switch (this) {
+      case QuestCategory.daily:
+        return 'daily';
+      case QuestCategory.social:
+        return 'social';
+      case QuestCategory.weekly:
+        return 'weekly';
+    }
+  }
+}
 
 enum QuestType {
   // Daily quests
@@ -34,6 +48,11 @@ enum QuestType {
   followTwitter,
   joinDiscord,
   postTweet,
+
+  // v2 content quests
+  useExplosives,
+  findArtifact,
+  openCrate,
 }
 
 /// Whether a social quest requires server-side validation.
@@ -118,9 +137,7 @@ class QuestState {
   /// Serialization for server sync (includes extra fields).
   Map<String, dynamic> toSyncJson(String? resetDate) => {
     'quest_id': definition.id,
-    'category': definition.category == QuestCategory.daily
-        ? 'daily'
-        : 'social',
+    'category': definition.category.wireName,
     'progress': progress,
     'target': definition.target,
     'completed': completed,
@@ -160,8 +177,8 @@ class QuestCatalog {
       descriptionKey: 'questMineOreDesc',
       icon: '⛏️',
       target: 10,
-      xpReward: 50,
-      pointsReward: 10,
+      xpReward: 250,
+      pointsReward: 50,
     ),
     QuestDefinition(
       id: 'daily_mine_25',
@@ -171,8 +188,8 @@ class QuestCatalog {
       descriptionKey: 'questMineOreLargeDesc',
       icon: '⛏️',
       target: 25,
-      xpReward: 120,
-      pointsReward: 25,
+      xpReward: 600,
+      pointsReward: 125,
     ),
     QuestDefinition(
       id: 'daily_depth_50',
@@ -182,8 +199,8 @@ class QuestCatalog {
       descriptionKey: 'questReachDepthDesc',
       icon: '📏',
       target: 50,
-      xpReward: 75,
-      pointsReward: 15,
+      xpReward: 375,
+      pointsReward: 75,
     ),
     QuestDefinition(
       id: 'daily_depth_150',
@@ -193,8 +210,8 @@ class QuestCatalog {
       descriptionKey: 'questReachDepthDeepDesc',
       icon: '📏',
       target: 150,
-      xpReward: 200,
-      pointsReward: 40,
+      xpReward: 1000,
+      pointsReward: 200,
     ),
     QuestDefinition(
       id: 'daily_sell_500',
@@ -204,8 +221,8 @@ class QuestCatalog {
       descriptionKey: 'questSellOreDesc',
       icon: '💰',
       target: 500,
-      xpReward: 80,
-      pointsReward: 20,
+      xpReward: 400,
+      pointsReward: 100,
     ),
     QuestDefinition(
       id: 'daily_sell_2000',
@@ -215,8 +232,8 @@ class QuestCatalog {
       descriptionKey: 'questSellOreLargeDesc',
       icon: '💰',
       target: 2000,
-      xpReward: 200,
-      pointsReward: 50,
+      xpReward: 1000,
+      pointsReward: 250,
     ),
     QuestDefinition(
       id: 'daily_repair_50',
@@ -226,8 +243,8 @@ class QuestCatalog {
       descriptionKey: 'questRepairDesc',
       icon: '🔧',
       target: 50,
-      xpReward: 60,
-      pointsReward: 12,
+      xpReward: 300,
+      pointsReward: 60,
     ),
     QuestDefinition(
       id: 'daily_use_items_3',
@@ -237,8 +254,157 @@ class QuestCatalog {
       descriptionKey: 'questUseItemsDesc',
       icon: '🎒',
       target: 3,
-      xpReward: 40,
-      pointsReward: 8,
+      xpReward: 200,
+      pointsReward: 40,
+    ),
+
+    // ── v2 additions: bigger targets + new-content quests ──
+    QuestDefinition(
+      id: 'daily_mine_60',
+      type: QuestType.mineOre,
+      category: QuestCategory.daily,
+      titleKey: 'questMineOreTitle',
+      descriptionKey: 'questMineOreDesc',
+      icon: '⛏️',
+      target: 60,
+      xpReward: 1200,
+      pointsReward: 240,
+    ),
+    QuestDefinition(
+      id: 'daily_depth_300',
+      type: QuestType.reachDepth,
+      category: QuestCategory.daily,
+      titleKey: 'questReachDepthTitle',
+      descriptionKey: 'questReachDepthDesc',
+      icon: '💠',
+      target: 300,
+      xpReward: 1600,
+      pointsReward: 320,
+    ),
+    QuestDefinition(
+      id: 'daily_depth_400',
+      type: QuestType.reachDepth,
+      category: QuestCategory.daily,
+      titleKey: 'questReachDepthTitle',
+      descriptionKey: 'questReachDepthDesc',
+      icon: '🌋',
+      target: 400,
+      xpReward: 2200,
+      pointsReward: 450,
+    ),
+    QuestDefinition(
+      id: 'daily_sell_10000',
+      type: QuestType.sellOreValue,
+      category: QuestCategory.daily,
+      titleKey: 'questSellOreTitle',
+      descriptionKey: 'questSellOreDesc',
+      icon: '🤑',
+      target: 10000,
+      xpReward: 1500,
+      pointsReward: 300,
+    ),
+    QuestDefinition(
+      id: 'daily_blast_2',
+      type: QuestType.useExplosives,
+      category: QuestCategory.daily,
+      titleKey: 'questUseExplosivesTitle',
+      descriptionKey: 'questUseExplosivesDesc',
+      icon: '🧨',
+      target: 2,
+      xpReward: 500,
+      pointsReward: 100,
+    ),
+    QuestDefinition(
+      id: 'daily_artifact_1',
+      type: QuestType.findArtifact,
+      category: QuestCategory.daily,
+      titleKey: 'questFindArtifactTitle',
+      descriptionKey: 'questFindArtifactDesc',
+      icon: '🏺',
+      target: 1,
+      xpReward: 800,
+      pointsReward: 160,
+    ),
+    QuestDefinition(
+      id: 'daily_crate_2',
+      type: QuestType.openCrate,
+      category: QuestCategory.daily,
+      titleKey: 'questOpenCrateTitle',
+      descriptionKey: 'questOpenCrateDesc',
+      icon: '📦',
+      target: 2,
+      xpReward: 600,
+      pointsReward: 120,
+    ),
+    QuestDefinition(
+      id: 'daily_use_items_5',
+      type: QuestType.useItems,
+      category: QuestCategory.daily,
+      titleKey: 'questUseItemsTitle',
+      descriptionKey: 'questUseItemsDesc',
+      icon: '🎒',
+      target: 5,
+      xpReward: 350,
+      pointsReward: 70,
+    ),
+    QuestDefinition(
+      id: 'daily_repair_120',
+      type: QuestType.repairDamage,
+      category: QuestCategory.daily,
+      titleKey: 'questRepairTitle',
+      descriptionKey: 'questRepairDesc',
+      icon: '🔧',
+      target: 120,
+      xpReward: 500,
+      pointsReward: 100,
+    ),
+    QuestDefinition(
+      id: 'daily_mine_100',
+      type: QuestType.mineOre,
+      category: QuestCategory.daily,
+      titleKey: 'questMineOreTitle',
+      descriptionKey: 'questMineOreDesc',
+      icon: '⛏️',
+      target: 100,
+      xpReward: 1800,
+      pointsReward: 360,
+    ),
+  ];
+
+  /// Weekly quests — all assigned each ISO week, 10–20x daily rewards.
+  static const List<QuestDefinition> weeklyPool = [
+    QuestDefinition(
+      id: 'weekly_mine_300',
+      type: QuestType.mineOre,
+      category: QuestCategory.weekly,
+      titleKey: 'questMineOreTitle',
+      descriptionKey: 'questMineOreDesc',
+      icon: '⛏️',
+      target: 300,
+      xpReward: 5000,
+      pointsReward: 1000,
+    ),
+    QuestDefinition(
+      id: 'weekly_earn_50k',
+      type: QuestType.sellOreValue,
+      category: QuestCategory.weekly,
+      titleKey: 'questSellOreTitle',
+      descriptionKey: 'questSellOreDesc',
+      icon: '💰',
+      target: 50000,
+      xpReward: 6000,
+      pointsReward: 1200,
+    ),
+    QuestDefinition(
+      id: 'weekly_artifacts_3',
+      type: QuestType.findArtifact,
+      category: QuestCategory.weekly,
+      titleKey: 'questFindArtifactTitle',
+      descriptionKey: 'questFindArtifactDesc',
+      icon: '🏛️',
+      target: 3,
+      xpReward: 4000,
+      pointsReward: 800,
     ),
   ];
 
@@ -289,7 +455,7 @@ class QuestCatalog {
   ];
 
   /// Number of daily quests to assign each day.
-  static const int dailyQuestCount = 3;
+  static const int dailyQuestCount = 4;
 
   /// Look up a definition by ID.
   static QuestDefinition? getById(String id) {
@@ -297,6 +463,9 @@ class QuestCatalog {
       if (q.id == id) return q;
     }
     for (final q in socialQuests) {
+      if (q.id == id) return q;
+    }
+    for (final q in weeklyPool) {
       if (q.id == id) return q;
     }
     return null;
@@ -325,6 +494,9 @@ class QuestSystem extends ChangeNotifier {
 
   /// Social quests (persistent).
   final List<QuestState> _socialQuests = [];
+
+  /// Weekly quests (reset each ISO week).
+  final List<QuestState> _weeklyQuests = [];
 
   /// Callback to award rewards (set by bridge or game).
   void Function(int xp, int points, String source)? onAwardReward;
@@ -371,7 +543,9 @@ class QuestSystem extends ChangeNotifier {
 
   List<QuestState> get dailyQuests => List.unmodifiable(_dailyQuests);
   List<QuestState> get socialQuests => List.unmodifiable(_socialQuests);
-  List<QuestState> get allQuests => [..._dailyQuests, ..._socialQuests];
+  List<QuestState> get weeklyQuests => List.unmodifiable(_weeklyQuests);
+  List<QuestState> get allQuests =>
+      [..._dailyQuests, ..._weeklyQuests, ..._socialQuests];
 
   int get completedDailyCount =>
       _dailyQuests.where((q) => q.completed).length;
@@ -407,9 +581,11 @@ class QuestSystem extends ChangeNotifier {
     _playerId = playerId;
     _dailyQuests.clear();
     _socialQuests.clear();
+    _weeklyQuests.clear();
     _savedDailyDate = null;
     await _loadFromPrefs();
     _checkDailyReset();
+    _checkWeeklyReset();
     _ensureSocialQuests();
     notifyListeners();
   }
@@ -420,9 +596,11 @@ class QuestSystem extends ChangeNotifier {
     _playerId = playerId;
     _dailyQuests.clear();
     _socialQuests.clear();
+    _weeklyQuests.clear();
     _savedDailyDate = null;
     await _loadFromPrefs();
     _checkDailyReset();
+    _checkWeeklyReset();
     _ensureSocialQuests();
     _scheduleSyncAll();
     notifyListeners();
@@ -527,6 +705,46 @@ class QuestSystem extends ChangeNotifier {
     }
   }
 
+  // ── Miner's Pass (weekly premium quest track) ─────────────────
+
+  /// ISO week the pass was purchased for. Active only for that week.
+  String? _minersPassWeek;
+  String get _minersPassKey =>
+      '${_prefsPrefix}_miners_pass_${_playerId ?? 'default'}';
+
+  bool get minersPassActive => _minersPassWeek == _weekKey();
+
+  /// Reward multiplier applied to weekly quest claims.
+  int get weeklyRewardMultiplier => minersPassActive ? 2 : 1;
+
+  /// Called by DiggleGame AFTER the points were spent.
+  Future<void> activateMinersPass() async {
+    _minersPassWeek = _weekKey();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_minersPassKey, _minersPassWeek!);
+    } catch (e) {
+      debugPrint('QuestSystem: failed to persist miners pass: $e');
+    }
+    notifyListeners();
+  }
+
+  void _checkWeeklyReset() {
+    final weekStr = _weekKey();
+    final needsReset = _weeklyQuests.isEmpty || _savedWeeklyDate != weekStr;
+    if (needsReset) {
+      _weeklyQuests
+        ..clear()
+        ..addAll(QuestCatalog.weeklyPool
+            .map((def) => QuestState(definition: def)));
+      _saveWeeklyDate(weekStr);
+      _saveToPrefs();
+      _scheduleSyncAll();
+      debugPrint(
+          'QuestSystem: assigned ${_weeklyQuests.length} weekly quests for $weekStr');
+    }
+  }
+
   void _assignDailyQuests(String dateKey) {
     _dailyQuests.clear();
 
@@ -576,7 +794,7 @@ class QuestSystem extends ChangeNotifier {
   /// Called when player reaches a new depth.
   void onDepthReached(int depth) {
     bool changed = false;
-    for (final quest in _dailyQuests) {
+    for (final quest in [..._dailyQuests, ..._weeklyQuests]) {
       if (quest.definition.type == QuestType.reachDepth && !quest.completed) {
         if (depth >= quest.definition.target) {
           quest.progress = quest.definition.target;
@@ -609,6 +827,21 @@ class QuestSystem extends ChangeNotifier {
   /// Called when player uses an item.
   void onItemUsed() {
     _incrementDaily(QuestType.useItems, 1);
+  }
+
+  /// Called when player detonates dynamite/C4.
+  void onExplosiveUsed() {
+    _incrementDaily(QuestType.useExplosives, 1);
+  }
+
+  /// Called when player digs up an artifact (new finds only).
+  void onArtifactFound() {
+    _incrementDaily(QuestType.findArtifact, 1);
+  }
+
+  /// Called when player opens a supply crate.
+  void onCrateOpened() {
+    _incrementDaily(QuestType.openCrate, 1);
   }
 
   /// Called when a trust-based social quest action is performed
@@ -752,9 +985,10 @@ class QuestSystem extends ChangeNotifier {
   }
 
 
+  /// Progress all active daily AND weekly quests of the given type.
   void _incrementDaily(QuestType type, int amount) {
     bool changed = false;
-    for (final quest in _dailyQuests) {
+    for (final quest in [..._dailyQuests, ..._weeklyQuests]) {
       if (quest.definition.type == type && !quest.completed) {
         quest.progress += amount;
         if (quest.progress >= quest.definition.target) {
@@ -790,24 +1024,24 @@ class QuestSystem extends ChangeNotifier {
 
     // Try server-side claim first for atomicity
     if (_syncService != null) {
-      final resetDate = quest.definition.category == QuestCategory.daily
-          ? _todayKey()
-          : null;
+      final resetDate = _resetDateFor(quest.definition.category);
 
       final result = await _syncService!.claimRewardServer(
         questId: questId,
-        category: quest.definition.category == QuestCategory.daily
-            ? 'daily'
-            : 'social',
+        category: quest.definition.category.wireName,
         resetDate: resetDate,
       );
 
       if (result != null && result['success'] == true) {
         quest.rewardClaimed = true;
-        // Award locally too (bridge handles XP/points display)
+        // Award locally too (bridge handles XP/points display).
+        // Miner's Pass doubles weekly quest rewards.
+        final mult = quest.definition.category == QuestCategory.weekly
+            ? weeklyRewardMultiplier
+            : 1;
         onAwardReward?.call(
-          quest.definition.xpReward,
-          quest.definition.pointsReward,
+          quest.definition.xpReward * mult,
+          quest.definition.pointsReward * mult,
           'quest_${quest.definition.id}',
         );
         _saveToPrefs();
@@ -824,9 +1058,12 @@ class QuestSystem extends ChangeNotifier {
     // Local-only claim
     quest.rewardClaimed = true;
 
+    final localMult = quest.definition.category == QuestCategory.weekly
+        ? weeklyRewardMultiplier
+        : 1;
     onAwardReward?.call(
-      quest.definition.xpReward,
-      quest.definition.pointsReward,
+      quest.definition.xpReward * localMult,
+      quest.definition.pointsReward * localMult,
       'quest_${quest.definition.id}',
     );
 
@@ -852,11 +1089,13 @@ class QuestSystem extends ChangeNotifier {
     if (_syncService == null || _syncing) return;
     _syncing = true;
 
-    final resetDate = _todayKey();
     final allSyncData = <Map<String, dynamic>>[];
 
     for (final q in _dailyQuests) {
-      allSyncData.add(q.toSyncJson(resetDate));
+      allSyncData.add(q.toSyncJson(_todayKey()));
+    }
+    for (final q in _weeklyQuests) {
+      allSyncData.add(q.toSyncJson(_weekKey()));
     }
     for (final q in _socialQuests) {
       allSyncData.add(q.toSyncJson(null));
@@ -875,15 +1114,11 @@ class QuestSystem extends ChangeNotifier {
   void _syncSingleQuest(QuestState quest) {
     if (_syncService == null) return;
 
-    final resetDate = quest.definition.category == QuestCategory.daily
-        ? _todayKey()
-        : null;
+    final resetDate = _resetDateFor(quest.definition.category);
 
     _syncService!.syncQuest(
       questId: quest.definition.id,
-      category: quest.definition.category == QuestCategory.daily
-          ? 'daily'
-          : 'social',
+      category: quest.definition.category.wireName,
       progress: quest.progress,
       target: quest.definition.target,
       completed: quest.completed,
@@ -902,6 +1137,43 @@ class QuestSystem extends ChangeNotifier {
   String _todayKey() {
     final now = DateTime.now().toUtc();
     return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
+
+  /// ISO 8601 week key, e.g. '2026-W27'. Shared by the weekly quest
+  /// reset and (Phase 2) the weekly challenge seed.
+  String _weekKey() => isoWeekKey(DateTime.now().toUtc());
+
+  static String isoWeekKey(DateTime utc) {
+    // ISO week: week 1 contains the first Thursday of the year.
+    final thursday = utc.add(Duration(days: 4 - (utc.weekday == 7 ? 7 : utc.weekday)));
+    final firstDayOfYear = DateTime.utc(thursday.year, 1, 1);
+    final week = ((thursday.difference(firstDayOfYear).inDays) / 7).floor() + 1;
+    return '${thursday.year}-W${week.toString().padLeft(2, '0')}';
+  }
+
+  String? _resetDateFor(QuestCategory category) {
+    switch (category) {
+      case QuestCategory.daily:
+        return _todayKey();
+      case QuestCategory.weekly:
+        return _weekKey();
+      case QuestCategory.social:
+        return null;
+    }
+  }
+
+  String? _savedWeeklyDate;
+  String get _weeklyDateKey =>
+      '${_prefsPrefix}_weekly_date_${_playerId ?? 'default'}';
+
+  Future<void> _saveWeeklyDate(String weekKey) async {
+    _savedWeeklyDate = weekKey;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_weeklyDateKey, weekKey);
+    } catch (e) {
+      debugPrint('QuestSystem: failed to save weekly date: $e');
+    }
   }
 
   String? _lastDailyDate() {
@@ -927,6 +1199,7 @@ class QuestSystem extends ChangeNotifier {
       final data = {
         'daily': _dailyQuests.map((q) => q.toJson()).toList(),
         'social': _socialQuests.map((q) => q.toJson()).toList(),
+        'weekly': _weeklyQuests.map((q) => q.toJson()).toList(),
       };
 
       await prefs.setString(_prefsKey, jsonEncode(data));
@@ -939,8 +1212,10 @@ class QuestSystem extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      // Load daily date
+      // Load daily + weekly reset dates + miner's pass week
       _savedDailyDate = prefs.getString(_dailyDateKey);
+      _savedWeeklyDate = prefs.getString(_weeklyDateKey);
+      _minersPassWeek = prefs.getString(_minersPassKey);
 
       // Load quest state
       final raw = prefs.getString(_prefsKey);
@@ -959,6 +1234,21 @@ class QuestSystem extends ChangeNotifier {
           final def = QuestCatalog.getById(questId);
           if (def != null) {
             _dailyQuests.add(QuestState.fromJson(json, def));
+          }
+        }
+      }
+
+      // Restore weekly quests
+      if (data.containsKey('weekly')) {
+        final weeklyList = data['weekly'] as List;
+        _weeklyQuests.clear();
+        for (final item in weeklyList) {
+          final json = item as Map<String, dynamic>;
+          final questId = json['quest_id'] as String?;
+          if (questId == null) continue;
+          final def = QuestCatalog.getById(questId);
+          if (def != null) {
+            _weeklyQuests.add(QuestState.fromJson(json, def));
           }
         }
       }
@@ -991,8 +1281,10 @@ class QuestSystem extends ChangeNotifier {
 
   void reset() {
     _dailyQuests.clear();
-    // Don't reset social quests — they're permanent
+    // Don't reset social/weekly quests — social is permanent and
+    // weekly runs on its own ISO-week clock.
     _checkDailyReset();
+    _checkWeeklyReset();
     _ensureSocialQuests();
     notifyListeners();
   }
@@ -1001,8 +1293,11 @@ class QuestSystem extends ChangeNotifier {
   void fullReset() {
     _dailyQuests.clear();
     _socialQuests.clear();
+    _weeklyQuests.clear();
     _savedDailyDate = null;
+    _savedWeeklyDate = null;
     _checkDailyReset();
+    _checkWeeklyReset();
     _ensureSocialQuests();
     _saveToPrefs();
     _scheduleSyncAll();
