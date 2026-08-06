@@ -126,10 +126,6 @@ class XPPointsSystem extends ChangeNotifier {
   /// NFT permanent points multiplier
   double _nftPointsMultiplier = 1.0;
 
-  /// Recent reward events (for UI display)
-  final List<RewardEvent> _recentEvents = [];
-  static const int maxRecentEvents = 20;
-
   /// Bonus events awaiting display in the HUD reward feed. The HUD drains
   /// this via [takePendingAnnouncements]; if no HUD is mounted (menus,
   /// tests) it simply caps and drops — announcements are cosmetic, the
@@ -143,6 +139,15 @@ class XPPointsSystem extends ChangeNotifier {
     final drained = List<RewardEvent>.unmodifiable(_pendingAnnouncements);
     _pendingAnnouncements.clear();
     return drained;
+  }
+
+  void _queueAnnouncement(RewardEvent event) {
+    _pendingAnnouncements.add(event);
+    // A burst (e.g. one haul unlocking three achievement tiers, or a
+    // multi-level jump) should not queue up a wall of toasts.
+    if (_pendingAnnouncements.length > maxPendingAnnouncements) {
+      _pendingAnnouncements.removeAt(0);
+    }
   }
 
   /// Fired after a level-up (bonus points already applied).
@@ -200,9 +205,6 @@ class XPPointsSystem extends ChangeNotifier {
   /// Whether NFT boost is active
   bool get hasNFTBoost =>
       _nftXPMultiplier > 1.0 || _nftPointsMultiplier > 1.0;
-
-  /// Recent reward events
-  List<RewardEvent> get recentEvents => List.unmodifiable(_recentEvents);
 
   // ============================================================
   // XP & POINTS AWARDING
@@ -292,20 +294,7 @@ class XPPointsSystem extends ChangeNotifier {
       _sessionPoints += event.finalPoints;
     }
 
-    // Track event
-    _recentEvents.insert(0, event);
-    if (_recentEvents.length > maxRecentEvents) {
-      _recentEvents.removeLast();
-    }
-
-    if (isBonus) {
-      _pendingAnnouncements.add(event);
-      // A burst (e.g. one haul unlocking three achievement tiers) should
-      // not queue up a wall of toasts.
-      if (_pendingAnnouncements.length > maxPendingAnnouncements) {
-        _pendingAnnouncements.removeAt(0);
-      }
-    }
+    if (isBonus) _queueAnnouncement(event);
 
     // Check for level up (fire once per level gained so multi-level
     // jumps don't skip LevelRewardTable grants)
@@ -324,14 +313,14 @@ class XPPointsSystem extends ChangeNotifier {
     _points += bonusPoints;
     _lifetimePoints += bonusPoints;
 
-    _recentEvents.insert(
-      0,
-      RewardEvent(
-        description: 'Level Up! Reached level $newLevel (+$bonusPoints pts)',
-        xpAwarded: 0,
-        pointsAwarded: bonusPoints,
-      ),
-    );
+    // Announce it: levelling is exactly the kind of one-off the HUD feed
+    // exists for. This previously went into a list nothing rendered.
+    _queueAnnouncement(RewardEvent(
+      description: 'Level Up! Reached level $newLevel (+$bonusPoints pts)',
+      xpAwarded: 0,
+      pointsAwarded: bonusPoints,
+      isBonus: true,
+    ));
 
     onLevelUp?.call(newLevel);
   }
@@ -472,7 +461,6 @@ class XPPointsSystem extends ChangeNotifier {
     _sessionPoints = 0;
     _sessionMaxDepth = 0;
     _depthMilestonesAwarded.clear();
-    _recentEvents.clear();
     _pendingAnnouncements.clear();
     notifyListeners();
   }
@@ -529,7 +517,6 @@ class XPPointsSystem extends ChangeNotifier {
     _sessionPoints = 0;
     _sessionMaxDepth = 0;
     _depthMilestonesAwarded.clear();
-    _recentEvents.clear();
     _pendingAnnouncements.clear();
     notifyListeners();
   }
@@ -547,7 +534,6 @@ class XPPointsSystem extends ChangeNotifier {
     _nftXPMultiplier = 1.0;
     _nftPointsMultiplier = 1.0;
     _depthMilestonesAwarded.clear();
-    _recentEvents.clear();
     _pendingAnnouncements.clear();
     notifyListeners();
   }

@@ -165,7 +165,10 @@ class DiggleApp extends StatelessWidget {
     final localeProvider = context.watch<LocaleProvider>();
 
     return MaterialApp(
-      title: 'Diggle',
+      // onGenerateTitle, not title: the app title is read by the OS task
+      // switcher and must come from the active locale, which is not yet
+      // available where `title` is evaluated.
+      onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       debugShowCheckedModeBanner: false,
 
       // ── Localization ───────────────────────────────────────────

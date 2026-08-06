@@ -702,19 +702,20 @@ class _QuestOverlayState extends State<QuestOverlay>
             const SizedBox(height: 8),
             // Step 2: Paste URL + verify
             if (quest.validationPending) ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    SizedBox(
+                    const SizedBox(
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     ),
-                    SizedBox(width: 8),
-                    Text('Verifying...',
-                        style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    const SizedBox(width: 8),
+                    Text(l10n.questVerifying,
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 13)),
                   ],
                 ),
               ),
@@ -726,7 +727,7 @@ class _QuestOverlayState extends State<QuestOverlay>
                       controller: _tweetUrlController,
                       style: const TextStyle(color: Colors.white, fontSize: 13),
                       decoration: InputDecoration(
-                        hintText: 'Paste your tweet URL here',
+                        hintText: l10n.questPasteTweetUrl,
                         hintStyle: TextStyle(
                             color: Colors.white.withOpacity(0.3), fontSize: 13),
                         isDense: true,
@@ -753,8 +754,8 @@ class _QuestOverlayState extends State<QuestOverlay>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 10),
                     ),
-                    child: const Text('Verify',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: Text(l10n.questVerifyButton,
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),

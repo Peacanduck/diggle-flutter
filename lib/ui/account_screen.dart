@@ -973,54 +973,7 @@ class _AccountScreenState extends State<AccountScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          // The ladder: one rung per day, jackpot rung in gold.
-          Row(
-            children: List.generate(ladder.length, (i) {
-              final rungDay = i + 1;
-              final reached = day >= rungDay;
-              final isJackpot = rungDay == ladder.length;
-              final color = isJackpot ? Colors.amber : Colors.orange;
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: Column(
-                    children: [
-                      Container(
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: reached
-                              ? color.shade400
-                              : Colors.white.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        isJackpot ? '7+' : '$rungDay',
-                        style: TextStyle(
-                          color: reached
-                              ? color.shade200
-                              : Colors.white.withOpacity(0.35),
-                          fontSize: 10,
-                          fontWeight:
-                              reached ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      ),
-                      Text(
-                        '${ladder[i].$2}p',
-                        style: TextStyle(
-                          color: reached
-                              ? color.shade200.withOpacity(0.8)
-                              : Colors.white.withOpacity(0.25),
-                          fontSize: 9,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-          ),
+          _buildLadder(ladder, day),
           const SizedBox(height: 12),
           Text(
             l10n.streakNextReward(nextXp, nextPts),
@@ -1028,6 +981,83 @@ class _AccountScreenState extends State<AccountScreen> {
                 color: Colors.white.withOpacity(0.6),
                 fontSize: 12,
                 fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// One rung per ladder day, jackpot rung in gold.
+  ///
+  /// The ladder length is server-tunable, so this can't assume it fits:
+  /// rungs share the width evenly while they stay legible, then fall
+  /// back to a fixed width and scroll horizontally.
+  Widget _buildLadder(List<(int, int)> ladder, int day) {
+    const minRungWidth = 40.0;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final evenWidth = constraints.maxWidth / ladder.length;
+        final fits = evenWidth >= minRungWidth;
+        final rungWidth = fits ? evenWidth : minRungWidth;
+
+        final row = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(
+            ladder.length,
+            (i) => SizedBox(
+              width: rungWidth,
+              child: _buildRung(ladder, i, day),
+            ),
+          ),
+        );
+
+        if (fits) return row;
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: row,
+        );
+      },
+    );
+  }
+
+  Widget _buildRung(List<(int, int)> ladder, int index, int day) {
+    final rungDay = index + 1;
+    final reached = day >= rungDay;
+    // The top rung repeats for every day beyond it, hence the '+'.
+    final isJackpot = rungDay == ladder.length;
+    final color = isJackpot ? Colors.amber : Colors.orange;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: Column(
+        children: [
+          Container(
+            height: 6,
+            decoration: BoxDecoration(
+              color: reached
+                  ? color.shade400
+                  : Colors.white.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            isJackpot ? '$rungDay+' : '$rungDay',
+            style: TextStyle(
+              color: reached ? color.shade200 : Colors.white.withOpacity(0.35),
+              fontSize: 10,
+              fontWeight: reached ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          Text(
+            '${ladder[index].$2}p',
+            style: TextStyle(
+              color: reached
+                  ? color.shade200.withOpacity(0.8)
+                  : Colors.white.withOpacity(0.25),
+              fontSize: 9,
+            ),
           ),
         ],
       ),

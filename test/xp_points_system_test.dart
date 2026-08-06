@@ -62,11 +62,24 @@ void main() {
       expect(xp.takePendingAnnouncements(), isEmpty,
           reason: 'per-tile mining would spam a toast on every dig');
 
-      xp.awardBonus(300, 120, '📅 Day 7 🔥 login streak!');
+      // Small enough not to cross a level threshold, which would add a
+      // level-up announcement of its own.
+      xp.awardBonus(25, 5, '📅 Day 1 login streak!');
       final pending = xp.takePendingAnnouncements();
       expect(pending.length, 1);
       expect(pending.single.description, contains('login streak'));
       expect(pending.single.isBonus, true);
+    });
+
+    test('levelling up announces too', () {
+      final xp = XPPointsSystem();
+
+      xp.addXP(150); // crosses level 2 at 100 XP
+
+      final pending = xp.takePendingAnnouncements();
+      expect(pending, isNotEmpty);
+      expect(pending.last.description, contains('Level Up!'));
+      expect(pending.last.description, contains('level 2'));
     });
 
     test('draining clears the queue so a toast never repeats', () {
@@ -81,8 +94,9 @@ void main() {
       final xp = XPPointsSystem();
 
       // One big haul can unlock several achievement tiers at once.
+      // Zero XP keeps level-up announcements out of the count.
       for (int i = 0; i < 10; i++) {
-        xp.awardBonus(10, 5, 'Achievement $i');
+        xp.awardBonus(0, 5, 'Achievement $i');
       }
 
       final pending = xp.takePendingAnnouncements();

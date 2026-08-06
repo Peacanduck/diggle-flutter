@@ -414,14 +414,32 @@ class StatsService {
 
       if (rows is! List || rows.isEmpty) return null;
 
-      final ladder = <(int, int)>[];
+      // Place each row by its `day`, never by position. A table with a
+      // gap (days 1, 2, 5) read positionally would silently pay day 5's
+      // reward on day 3 — reject it and keep the known-good ladder
+      // instead of mispricing rewards.
+      final byDay = <int, (int, int)>{};
       for (final row in rows) {
         final map = row as Map<String, dynamic>;
-        ladder.add((
+        final day = (map['day'] as num?)?.toInt();
+        if (day == null) continue;
+        byDay[day] = (
           (map['xp'] as num?)?.toInt() ?? 0,
           (map['points'] as num?)?.toInt() ?? 0,
-        ));
+        );
       }
+
+      final ladder = <(int, int)>[];
+      for (var day = 1; day <= byDay.length; day++) {
+        final rung = byDay[day];
+        if (rung == null) {
+          debugPrint('StatsService: streak_rewards is not contiguous from '
+              'day 1 (missing day $day) — keeping the current ladder');
+          return null;
+        }
+        ladder.add(rung);
+      }
+
       debugPrint('StatsService: fetched ${ladder.length}-rung streak ladder');
       return ladder;
     } catch (e) {
