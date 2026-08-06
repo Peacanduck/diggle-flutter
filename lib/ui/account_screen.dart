@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../game/systems/streak_system.dart';
+import 'streak_glyph.dart';
 import '../solana/wallet_service.dart';
 import '../services/stats_service.dart';
 import '../services/player_service.dart';
@@ -925,8 +926,7 @@ class _AccountScreenState extends State<AccountScreen> {
         children: [
           Row(
             children: [
-              Text(day >= ladder.length ? '🔥' : '📅',
-                  style: const TextStyle(fontSize: 28)),
+              StreakGlyph(streak: day, ladderLength: ladder.length),
               const SizedBox(width: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
