@@ -11,6 +11,7 @@
 ///   - boostManager.purchaseWithPoints(item)     — buy with points
 ///   - boostManager.purchaseWithSOL(item)        — buy with SOL
 ///   - boostManager.getPremiumItemPrice(item)    — on-chain price
+///   - boostManager.getPremiumItemMultiplier(item) — on-chain multiplier
 ///   - boostManager.checkForNFT()               — refresh NFT ownership
 ///   - boostManager.hasNFT                      — NFT ownership flag
 ///   - boostManager.nftCollection               — NFTCollectionInfo
@@ -420,6 +421,7 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
       itemBuilder: (context, i) {
         final item = items[i];
         final price = widget.boostManager.getPremiumItemPrice(item);
+        final multiplier = widget.boostManager.getPremiumItemMultiplier(item);
         final isPointsPack = item.onChainPackType != null;
 
         return Container(
@@ -449,6 +451,15 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
                       Text(l10n.permanent,
                           style: const TextStyle(
                               color: Colors.amber, fontSize: 10)),
+                    // Live multiplier from the on-chain store config —
+                    // the prose description above can't track a remote
+                    // config change, so show what will actually apply.
+                    if (!isPointsPack)
+                      Text('${multiplier}x',
+                          style: TextStyle(
+                              color: Colors.amber.shade300,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),

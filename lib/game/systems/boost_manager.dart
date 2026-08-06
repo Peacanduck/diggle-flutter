@@ -446,6 +446,39 @@ class BoostManager extends ChangeNotifier {
     return item.priceInSOL;
   }
 
+  /// Get the on-chain boost multiplier for a premium store item.
+  /// Falls back to the hardcoded default if the store isn't loaded.
+  ///
+  /// The program records this value into the BoosterAccount at purchase
+  /// time, and `Booster.fromOnChain` reads it back on every re-sync — so
+  /// applying the hardcoded value locally would make a booster silently
+  /// change strength the first time boosters refresh from chain.
+  double getPremiumItemMultiplier(StoreItem item) {
+    final config = _storeData?.config;
+    if (config == null || item.onChainBoosterType == null) {
+      return item.multiplier;
+    }
+
+    final double onChain;
+    switch (item.onChainBoosterType) {
+      case 0:
+        onChain = config.xpMultiplierDouble;
+        break;
+      case 1:
+        onChain = config.pointsMultiplierDouble;
+        break;
+      case 2:
+        onChain = config.comboMultiplierDouble;
+        break;
+      default:
+        return item.multiplier;
+    }
+
+    // A misconfigured/zeroed store must never nerf a purchase below the
+    // advertised default.
+    return onChain >= 1.0 ? onChain : item.multiplier;
+  }
+
   // ============================================================
   // FETCH ON-CHAIN DATA
   // ============================================================
@@ -652,7 +685,9 @@ class BoostManager extends ChangeNotifier {
       } else {
         final booster = Booster(
           type: item.boosterType,
-          multiplier: item.multiplier,
+          // On-chain config is authoritative — the program just wrote
+          // this same value into the BoosterAccount.
+          multiplier: getPremiumItemMultiplier(item),
           duration: item.duration,
           expiresAt: DateTime.now().add(item.duration),
           isActive: true,
