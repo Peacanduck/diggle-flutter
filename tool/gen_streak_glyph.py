@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
-"""Generate assets/animations/streak_glyph.lottie — the animated flame
+"""Generate assets/animations/streak_glyph.json — the animated flame
 shown next to the login streak on the Account screen.
+
+Emits plain Lottie JSON rather than a zipped .lottie bundle. The zip
+container only earns its keep with the dotLottie player (themes, state
+machines, multiple animations); with the pure-Dart `lottie` package it
+is a liability, because that decoder picks the archive's FIRST .json --
+which would be manifest.json, not the animation.
 
 Hand-authored Lottie (no design tool involved), so it stays small and
 re-tunable. Run from the repo root:
@@ -21,7 +27,6 @@ and size can differ per stage instead of being one tweened blob.
 
 import json
 import os
-import zipfile
 
 W = H = 128
 FPS = 30
@@ -168,20 +173,16 @@ def main():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     out_dir = os.path.join(root, "assets", "animations")
     os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, "streak_glyph.lottie")
+    out_path = os.path.join(out_dir, "streak_glyph.json")
 
-    animation = build_animation()
-    manifest = {
-        "version": "1.0",
-        "generator": "diggle/tool/gen_streak_glyph.py",
-        "animations": [{"id": "streak_glyph", "loop": True, "speed": 1}],
-    }
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(build_animation(), f, separators=(",", ":"))
 
-    # A .lottie is a zip: manifest + animations/<id>.json
-    with zipfile.ZipFile(out_path, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr("manifest.json", json.dumps(manifest, separators=(",", ":")))
-        z.writestr("animations/streak_glyph.json",
-                   json.dumps(animation, separators=(",", ":")))
+    # Drop the old dotLottie bundle so a stale one can't be picked up.
+    legacy = os.path.join(out_dir, "streak_glyph.lottie")
+    if os.path.exists(legacy):
+        os.remove(legacy)
+        print(f"removed legacy {legacy}")
 
     size = os.path.getsize(out_path)
     print(f"wrote {out_path} ({size} bytes)")

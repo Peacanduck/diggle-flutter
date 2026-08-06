@@ -2,9 +2,6 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-        // dotlottie-android (used by the dotlottie_flutter plugin) is
-        // published via JitPack, not Maven Central.
-        maven { url = uri("https://jitpack.io") }
     }
 }
 

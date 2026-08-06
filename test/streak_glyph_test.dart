@@ -1,6 +1,8 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lottie/lottie.dart';
 
 import 'package:diggle/game/systems/streak_system.dart';
 import 'package:diggle/ui/streak_glyph.dart';
@@ -40,45 +42,11 @@ void main() {
     });
   });
 
-  group('generated animation contract', () {
-    test('segments tile the timeline the generator produces', () {
-      // gen_streak_glyph.py emits three consecutive 30-frame stages.
-      // If that changes, the segments here must change with it.
-      expect(StreakStage.ember.segment, [0, 30]);
-      expect(StreakStage.burning.segment, [30, 60]);
-      expect(StreakStage.blaze.segment, [60, 90]);
-
-      final stages = StreakStage.values;
-      for (var i = 1; i < stages.length; i++) {
-        expect(stages[i].segment.first, stages[i - 1].segment.last,
-            reason: 'stage ${stages[i].name} must start where the '
-                'previous one ends');
-      }
-    });
-
-    test('every stage has an emoji fallback', () {
-      for (final stage in StreakStage.values) {
-        expect(stage.emoji, isNotEmpty);
-      }
-      // The jackpot keeps the flame the Account card used before.
-      expect(StreakStage.blaze.emoji, '🔥');
-    });
-
-    test('default ladder still has the length the stages assume', () {
-      expect(StreakSystem.defaultRewardLadder.length, 7);
-    });
-  });
-
   group('asset wiring', () {
-    test('the generated animation is on disk and is a real dotLottie', () {
-      final file = File(StreakGlyph.assetKey);
-      expect(file.existsSync(), true,
+    test('the generated animation is on disk', () {
+      expect(File(StreakGlyph.assetKey).existsSync(), true,
           reason: '${StreakGlyph.assetKey} missing — run '
               'python tool/gen_streak_glyph.py');
-
-      // A .lottie is a zip; a bare JSON here would load as nothing.
-      final header = file.readAsBytesSync().take(2).toList();
-      expect(header, [0x50, 0x4B], reason: 'expected a zip (PK) header');
     });
 
     test('the asset is declared in pubspec', () {
@@ -86,13 +54,95 @@ void main() {
       expect(pubspec, contains('assets/animations/'),
           reason: 'undeclared assets are absent at runtime');
     });
+  });
 
-    test('source strips the prefix dotlottie_flutter re-adds', () {
-      // The plugin loads 'assets/' + source. Passing the full bundle key
-      // resolves to assets/assets/... and renders an empty box with no
-      // error callback — exactly the silent failure this guards.
-      expect('assets/${StreakGlyph.assetSource}', StreakGlyph.assetKey);
-      expect(StreakGlyph.assetSource, isNot(startsWith('assets/')));
+  group('generated animation parses as real Lottie', () {
+    // The whole point of the pure-Dart renderer: the composition can be
+    // parsed here, so a malformed hand-authored animation fails in CI
+    // instead of rendering as a blank box on a device.
+    late LottieComposition composition;
+
+    setUpAll(() async {
+      final bytes = File(StreakGlyph.assetKey).readAsBytesSync();
+      composition = await LottieComposition.fromBytes(bytes);
+    });
+
+    test('has the timeline the stages assume', () {
+      expect(composition.startFrame, 0);
+      // The parser trims a hundredth of a frame off the out point, so
+      // this lands at 89.99 rather than a clean 90.
+      expect(composition.endFrame, closeTo(90, 0.05));
+      expect(composition.frameRate, 30);
+      expect(composition.duration.inMilliseconds, closeTo(3000, 5));
+    });
+
+    test('has one layer per stage, and they actually drew', () {
+      // A composition that parsed but produced no drawable content is
+      // the exact failure that looks like "nothing is showing".
+      expect(composition.layers.length, StreakStage.values.length);
+      for (final layer in composition.layers) {
+        expect(layer.shapes, isNotEmpty,
+            reason: 'layer ${layer.name} has no shapes to draw');
+      }
+    });
+
+    test('every stage segment lies inside the timeline', () {
+      final lastFrame = composition.endFrame.ceil();
+      for (final stage in StreakStage.values) {
+        expect(stage.segment.first,
+            greaterThanOrEqualTo(composition.startFrame.floor()));
+        expect(stage.segment.last, lessThanOrEqualTo(lastFrame));
+      }
+      // Stages tile the timeline end to end, with no gap or overlap.
+      final stages = StreakStage.values;
+      for (var i = 1; i < stages.length; i++) {
+        expect(stages[i].segment.first, stages[i - 1].segment.last);
+      }
+      expect(stages.first.segment.first, composition.startFrame.floor());
+      expect(stages.last.segment.last, lastFrame);
+    });
+  });
+
+  group('StreakGlyph widget', () {
+    testWidgets('renders the animation once the composition loads',
+        (tester) async {
+      await tester.pumpWidget(const MaterialApp(
+        home: Scaffold(body: StreakGlyph(streak: 7)),
+      ));
+      // Let the asset load and the controller start.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.byType(LottieBuilder), findsOneWidget);
+      await tester.pumpWidget(const SizedBox()); // stop the repeat
+    });
+
+    testWidgets('falls back to the stage emoji when disabled',
+        (tester) async {
+      StreakGlyph.debugDisableAnimation = true;
+      addTearDown(() => StreakGlyph.debugDisableAnimation = false);
+
+      await tester.pumpWidget(const MaterialApp(
+        home: Scaffold(body: StreakGlyph(streak: 7)),
+      ));
+      await tester.pump();
+
+      expect(find.text('🔥'), findsOneWidget);
+      expect(find.byType(LottieBuilder), findsNothing);
+    });
+
+    testWidgets('an early streak falls back to the calendar emoji',
+        (tester) async {
+      StreakGlyph.debugDisableAnimation = true;
+      addTearDown(() => StreakGlyph.debugDisableAnimation = false);
+
+      await tester.pumpWidget(const MaterialApp(
+        home: Scaffold(body: StreakGlyph(streak: 2)),
+      ));
+      await tester.pump();
+
+      expect(find.text('📅'), findsOneWidget);
     });
   });
 }
+
