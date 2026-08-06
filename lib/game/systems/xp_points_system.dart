@@ -473,6 +473,7 @@ class XPPointsSystem extends ChangeNotifier {
     _sessionMaxDepth = 0;
     _depthMilestonesAwarded.clear();
     _recentEvents.clear();
+    _pendingAnnouncements.clear();
     notifyListeners();
   }
 
@@ -529,6 +530,7 @@ class XPPointsSystem extends ChangeNotifier {
     _sessionMaxDepth = 0;
     _depthMilestonesAwarded.clear();
     _recentEvents.clear();
+    _pendingAnnouncements.clear();
     notifyListeners();
   }
 
@@ -546,6 +548,7 @@ class XPPointsSystem extends ChangeNotifier {
     _nftPointsMultiplier = 1.0;
     _depthMilestonesAwarded.clear();
     _recentEvents.clear();
+    _pendingAnnouncements.clear();
     notifyListeners();
   }
 

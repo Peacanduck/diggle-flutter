@@ -70,10 +70,10 @@ class StreakGlyph extends StatefulWidget {
   static bool debugDisableAnimation = false;
 
   @override
-  State<StreakGlyph> createState() => _StreakGlyphState();
+  State<StreakGlyph> createState() => StreakGlyphState();
 }
 
-class _StreakGlyphState extends State<StreakGlyph>
+class StreakGlyphState extends State<StreakGlyph>
     with SingleTickerProviderStateMixin {
   /// Constructed eagerly in initState, NOT as a lazy `late final`: on the
   /// emoji-only path nothing would touch it until dispose(), and building
@@ -83,6 +83,14 @@ class _StreakGlyphState extends State<StreakGlyph>
 
   LottieComposition? _composition;
   bool _failed = false;
+  StreakStage? _playingStage;
+
+  /// Stage whose frame range is currently looping, or null before the
+  /// composition loads. Exposed so tests can catch the range failing to
+  /// follow a stage change — the rendered glyph alone would not show it,
+  /// since build() always reads the current stage.
+  @visibleForTesting
+  StreakStage? get playingStage => _playingStage;
 
   @override
   void initState() {
@@ -90,17 +98,26 @@ class _StreakGlyphState extends State<StreakGlyph>
     _controller = AnimationController(vsync: this);
   }
 
-  int get _jackpotAt => widget.ladderLength > 0
-      ? widget.ladderLength
-      : StreakSystem.defaultRewardLadder.length;
+  /// Resolved per-widget, so [didUpdateWidget] can compare the old and
+  /// new stages using each one's OWN ladder length. Reading the current
+  /// widget's length for both sides would miss a stage change caused by
+  /// the ladder itself changing size — which is exactly what happens
+  /// when a server-tuned ladder arrives.
+  static StreakStage _stageOf(StreakGlyph w) => StreakStage.forStreak(
+        w.streak,
+        w.ladderLength > 0
+            ? w.ladderLength
+            : StreakSystem.defaultRewardLadder.length,
+      );
 
-  StreakStage get _stage => StreakStage.forStreak(widget.streak, _jackpotAt);
+  StreakStage get _stage => _stageOf(widget);
 
   @override
   void didUpdateWidget(StreakGlyph oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // A streak crossing a stage boundary changes which range should loop.
-    if (_stage != StreakStage.forStreak(oldWidget.streak, _jackpotAt)) {
+    // A streak (or ladder) crossing a stage boundary changes which range
+    // should loop.
+    if (_stageOf(widget) != _stageOf(oldWidget)) {
       _playStage();
     }
   }
@@ -139,6 +156,7 @@ class _StreakGlyphState extends State<StreakGlyph>
             .clamp(0.0, 1.0);
     if (max <= min) return;
 
+    _playingStage = stage;
     _controller.repeat(
       min: min,
       max: max,

@@ -91,6 +91,17 @@ void main() {
           reason: 'the most recent unlocks are the ones worth showing');
     });
 
+    test('a session reset drops queued announcements', () {
+      final xp = XPPointsSystem();
+      xp.awardBonus(25, 5, 'Achievement: First Haul');
+
+      xp.startSession();
+
+      expect(xp.takePendingAnnouncements(), isEmpty,
+          reason: 'a toast from the previous run must not surface after '
+              'a reset');
+    });
+
     test('announcements never block the award itself', () {
       final xp = XPPointsSystem();
 

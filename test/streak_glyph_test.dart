@@ -130,6 +130,35 @@ void main() {
       expect(find.byType(LottieBuilder), findsNothing);
     });
 
+    testWidgets('the looping range follows a ladder that changed length',
+        (tester) async {
+      // Streak 5 of 7 rungs is mid-ladder; the same streak against a
+      // 5-rung ladder is the jackpot. The playing range must follow,
+      // even though the streak itself never changed.
+      expect(StreakStage.forStreak(5, 7), StreakStage.burning);
+      expect(StreakStage.forStreak(5, 5), StreakStage.blaze);
+
+      await tester.pumpWidget(const MaterialApp(
+        home: Scaffold(body: StreakGlyph(streak: 5, ladderLength: 7)),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final state = tester.state<StreakGlyphState>(find.byType(StreakGlyph));
+      expect(state.playingStage, StreakStage.burning,
+          reason: 'composition should have loaded and started a range');
+
+      await tester.pumpWidget(const MaterialApp(
+        home: Scaffold(body: StreakGlyph(streak: 5, ladderLength: 5)),
+      ));
+      await tester.pump();
+
+      expect(state.playingStage, StreakStage.blaze,
+          reason: 'ladder shrank, so this streak is now the jackpot');
+
+      await tester.pumpWidget(const SizedBox()); // stop the repeat
+    });
+
     testWidgets('an early streak falls back to the calendar emoji',
         (tester) async {
       StreakGlyph.debugDisableAnimation = true;

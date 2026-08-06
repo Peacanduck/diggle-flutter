@@ -909,7 +909,7 @@ class _AccountScreenState extends State<AccountScreen> {
     final (nextXp, nextPts) = streakSystem.nextReward;
 
     final String statusLine;
-    if (day >= ladder.length) {
+    if (streakSystem.isAtJackpot) {
       statusLine = l10n.streakJackpotReached;
     } else if (day > 0) {
       statusLine = l10n.streakToJackpot(ladder.length - day);
