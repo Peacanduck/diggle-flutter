@@ -1,6 +1,9 @@
 /// collection_overlay.dart
 /// The museum: artifact collection log grouped by biome, plus the
-/// achievements/records tab (lifetime milestones + login streak).
+/// achievements/records tab (lifetime milestones).
+///
+/// The login streak lives on the Account screen, not here — it has
+/// nothing to do with the artifact collection.
 ///
 /// Found artifacts show icon + name + description; unfound ones show a
 /// silhouetted "?" card. Completing a biome set is celebrated with a
@@ -10,20 +13,17 @@ import 'package:flutter/material.dart';
 
 import '../game/systems/achievement_system.dart';
 import '../game/systems/collection_system.dart';
-import '../game/systems/streak_system.dart';
 import '../game/world/biome.dart';
 
 class CollectionOverlay extends StatelessWidget {
   final CollectionSystem collectionSystem;
   final AchievementSystem achievementSystem;
-  final StreakSystem streakSystem;
   final VoidCallback onClose;
 
   const CollectionOverlay({
     super.key,
     required this.collectionSystem,
     required this.achievementSystem,
-    required this.streakSystem,
     required this.onClose,
   });
 
@@ -32,8 +32,7 @@ class CollectionOverlay extends StatelessWidget {
     return DefaultTabController(
       length: 2,
       child: AnimatedBuilder(
-        animation: Listenable.merge(
-            [collectionSystem, achievementSystem, streakSystem]),
+        animation: Listenable.merge([collectionSystem, achievementSystem]),
         builder: (context, _) {
           return Container(
             color: Colors.black.withOpacity(0.88),
@@ -90,17 +89,6 @@ class CollectionOverlay extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          if (streakSystem.streak > 0) ...[
-            Text(
-              '📅 ${streakSystem.streak}${streakSystem.streak >= 7 ? '🔥' : ''}',
-              style: TextStyle(
-                color: Colors.orange.shade300,
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(width: 12),
-          ],
           Text(
             '${collectionSystem.foundCount}/${collectionSystem.totalCount}',
             style: TextStyle(

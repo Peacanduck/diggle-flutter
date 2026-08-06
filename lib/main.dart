@@ -688,7 +688,6 @@ class _GameScreenState extends State<GameScreen>
             return CollectionOverlay(
               collectionSystem: g.collectionSystem,
               achievementSystem: g.achievementSystem,
-              streakSystem: g.streakSystem,
               onClose: () => g.closeCollection(),
             );
           },

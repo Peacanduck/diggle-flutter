@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lottie/lottie.dart';
 
-import 'package:diggle/game/systems/streak_system.dart';
 import 'package:diggle/ui/streak_glyph.dart';
 
 void main() {
