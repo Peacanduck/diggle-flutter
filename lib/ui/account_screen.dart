@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
+import '../game/systems/streak_system.dart';
 import '../solana/wallet_service.dart';
 import '../services/stats_service.dart';
 import '../services/player_service.dart';
@@ -97,6 +98,8 @@ class _AccountScreenState extends State<AccountScreen> {
                       ],
                       const SizedBox(height: 16),
                       _buildStatsSection(l10n),
+                      const SizedBox(height: 16),
+                      _buildStreakSection(l10n),
                       const SizedBox(height: 24),
                       _buildSignOutSection(l10n),
                       const SizedBox(height: 32),
@@ -888,6 +891,144 @@ class _AccountScreenState extends State<AccountScreen> {
                 icon: '🛒', label: l10n.statPointsSpent,
                 value: _formatNumber(stats.totalPointsSpent))),
           ]),
+        ],
+      ),
+    );
+  }
+
+  /// Daily login streak + the 7-rung reward ladder. The claim itself
+  /// happens in-game (DiggleGame wires the reward callback); this is a
+  /// read-only view of the shared StreakSystem.
+  Widget _buildStreakSection(AppLocalizations l10n) {
+    final streakSystem = context.watch<StreakSystem>();
+    // Instance ladder: server values when fetched, defaults otherwise.
+    final ladder = streakSystem.rewardLadder;
+    final day = streakSystem.streak;
+    final claimedToday = streakSystem.hasClaimedToday;
+    final (nextXp, nextPts) = streakSystem.nextReward;
+
+    final String statusLine;
+    if (day >= ladder.length) {
+      statusLine = l10n.streakJackpotReached;
+    } else if (day > 0) {
+      statusLine = l10n.streakToJackpot(ladder.length - day);
+    } else {
+      statusLine = l10n.streakStartToday;
+    }
+
+    return _SectionCard(
+      icon: Icons.local_fire_department,
+      iconColor: Colors.orange,
+      title: l10n.loginStreak,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(day >= ladder.length ? '🔥' : '📅',
+                  style: const TextStyle(fontSize: 28)),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.streakDays(day),
+                    style: TextStyle(
+                      color: Colors.orange.shade300,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    statusLine,
+                    style: TextStyle(
+                        color: Colors.white.withOpacity(0.5), fontSize: 11),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: (claimedToday ? Colors.green : Colors.blueGrey)
+                      .withOpacity(0.25),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: (claimedToday ? Colors.green : Colors.blueGrey)
+                          .shade400
+                          .withOpacity(0.6)),
+                ),
+                child: Text(
+                  claimedToday ? l10n.streakClaimedToday : l10n.streakPlayToday,
+                  style: TextStyle(
+                    color: claimedToday
+                        ? Colors.green.shade200
+                        : Colors.blueGrey.shade100,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // The ladder: one rung per day, jackpot rung in gold.
+          Row(
+            children: List.generate(ladder.length, (i) {
+              final rungDay = i + 1;
+              final reached = day >= rungDay;
+              final isJackpot = rungDay == ladder.length;
+              final color = isJackpot ? Colors.amber : Colors.orange;
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: Column(
+                    children: [
+                      Container(
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: reached
+                              ? color.shade400
+                              : Colors.white.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        isJackpot ? '7+' : '$rungDay',
+                        style: TextStyle(
+                          color: reached
+                              ? color.shade200
+                              : Colors.white.withOpacity(0.35),
+                          fontSize: 10,
+                          fontWeight:
+                              reached ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                      Text(
+                        '${ladder[i].$2}p',
+                        style: TextStyle(
+                          color: reached
+                              ? color.shade200.withOpacity(0.8)
+                              : Colors.white.withOpacity(0.25),
+                          fontSize: 9,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.streakNextReward(nextXp, nextPts),
+            style: TextStyle(
+                color: Colors.white.withOpacity(0.6),
+                fontSize: 12,
+                fontWeight: FontWeight.w500),
+          ),
         ],
       ),
     );

@@ -984,4 +984,45 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get questVerificationFailed => '인증할 수 없습니다. 다시 시도해주세요.';
+
+  @override
+  String get loginStreak => '연속 접속';
+
+  @override
+  String streakDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count일',
+      zero: '연속 기록 없음',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get streakClaimedToday => '오늘 수령 완료';
+
+  @override
+  String get streakPlayToday => '오늘 플레이하고 기록을 이어가세요';
+
+  @override
+  String get streakStartToday => '오늘 플레이하고 연속 기록을 시작하세요';
+
+  @override
+  String streakNextReward(int xp, int points) {
+    return '다음: +$xp XP, +$points포인트';
+  }
+
+  @override
+  String get streakJackpotReached => '최고 단계 — 일일 보상 최대';
+
+  @override
+  String streakToJackpot(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '잭팟까지 $count일',
+    );
+    return '$_temp0';
+  }
 }

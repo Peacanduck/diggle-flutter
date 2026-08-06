@@ -1001,4 +1001,50 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get questVerificationFailed =>
       'Не удалось подтвердить. Попробуйте снова.';
+
+  @override
+  String get loginStreak => 'Серия входов';
+
+  @override
+  String streakDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count дней',
+      few: '$count дня',
+      one: '$count день',
+      zero: 'Серии пока нет',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get streakClaimedToday => 'Получено сегодня';
+
+  @override
+  String get streakPlayToday => 'Сыграйте сегодня, чтобы продолжить';
+
+  @override
+  String get streakStartToday => 'Сыграйте сегодня, чтобы начать серию';
+
+  @override
+  String streakNextReward(int xp, int points) {
+    return 'Далее: +$xp XP, +$points оч.';
+  }
+
+  @override
+  String get streakJackpotReached =>
+      'Максимальная ступень — награда максимальна';
+
+  @override
+  String streakToJackpot(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count дней до джекпота',
+      few: '$count дня до джекпота',
+      one: '$count день до джекпота',
+    );
+    return '$_temp0';
+  }
 }

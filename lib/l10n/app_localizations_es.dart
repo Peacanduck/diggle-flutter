@@ -1004,4 +1004,47 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get questVerificationFailed =>
       'No se pudo verificar. Inténtalo de nuevo.';
+
+  @override
+  String get loginStreak => 'Racha diaria';
+
+  @override
+  String streakDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días',
+      one: '1 día',
+      zero: 'Sin racha',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get streakClaimedToday => 'Reclamado hoy';
+
+  @override
+  String get streakPlayToday => 'Juega hoy para mantenerla';
+
+  @override
+  String get streakStartToday => 'Juega hoy para empezar una racha';
+
+  @override
+  String streakNextReward(int xp, int points) {
+    return 'Siguiente: +$xp XP, +$points pts';
+  }
+
+  @override
+  String get streakJackpotReached => 'Nivel máximo: recompensa diaria máxima';
+
+  @override
+  String streakToJackpot(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días para el premio mayor',
+      one: '1 día para el premio mayor',
+    );
+    return '$_temp0';
+  }
 }

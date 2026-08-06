@@ -1883,6 +1883,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not verify. Please try again.'**
   String get questVerificationFailed;
+
+  /// No description provided for @loginStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Login Streak'**
+  String get loginStreak;
+
+  /// No description provided for @streakDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No streak yet} =1{1 day} other{{count} days}}'**
+  String streakDays(int count);
+
+  /// No description provided for @streakClaimedToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Claimed today'**
+  String get streakClaimedToday;
+
+  /// No description provided for @streakPlayToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Play today to keep it going'**
+  String get streakPlayToday;
+
+  /// No description provided for @streakStartToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Play today to start a streak'**
+  String get streakStartToday;
+
+  /// No description provided for @streakNextReward.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: +{xp} XP, +{points} pts'**
+  String streakNextReward(int xp, int points);
+
+  /// No description provided for @streakJackpotReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Jackpot rung — max daily reward'**
+  String get streakJackpotReached;
+
+  /// No description provided for @streakToJackpot.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 day to the jackpot} other{{count} days to the jackpot}}'**
+  String streakToJackpot(int count);
 }
 
 class _AppLocalizationsDelegate

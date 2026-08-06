@@ -94,6 +94,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     WorldConfig? config,
     this.prestigeSystem,
     GearSystem? gearSystem,
+    StreakSystem? streakSystem,
     this.isNewGame = true,
     this.challengeMode = false,
   }) : worldConfig = config ?? WorldConfig(
@@ -112,10 +113,10 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     questSystem = QuestSystem();
     collectionSystem = CollectionSystem();
     achievementSystem = AchievementSystem();
-    streakSystem = StreakSystem();
-    // Gear is global meta-state (shared with the Hangar screen);
-    // fall back to a local instance for tests/standalone use.
+    // Gear and streak are global meta-state (shared with the Hangar and
+    // Account screens); fall back to a local instance for tests/standalone.
     this.gearSystem = gearSystem ?? GearSystem();
+    this.streakSystem = streakSystem ?? StreakSystem();
   }
 
 
@@ -230,6 +231,19 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
 
     streakSystem.onAwardReward =
         (xp, points, desc) => awardBonusReward(xp, points, desc, 'streak');
+    // Server owns the streak day when we have a backend; without one
+    // (offline, guest-before-auth, tests) the system claims locally.
+    final bridge = statsBridge;
+    if (bridge != null) {
+      streakSystem.serverClaim = ({
+        required int localStreak,
+        required String? localLastClaimDay,
+      }) =>
+          bridge.statsService.claimDailyStreak(
+            localStreak: localStreak,
+            localLastClaimDay: localLastClaimDay,
+          );
+    }
     streakSystem.initializeAndClaim();
 
     // Level rewards: items + titles at key levels (LevelRewardTable)

@@ -364,5 +364,13 @@
   "questPasteTweetUrl": "Collez l'URL de votre tweet ici",
   "questVerifying": "Vérification...",
   "questVerified": "Quête vérifiée et complétée !",
-  "questVerificationFailed": "Impossible de vérifier. Veuillez réessayer."
+  "questVerificationFailed": "Impossible de vérifier. Veuillez réessayer.",
+  "loginStreak": "Série quotidienne",
+  "streakDays": "{count, plural, =0{Aucune série} =1{1 jour} other{{count} jours}}",
+  "streakClaimedToday": "Récupéré aujourd'hui",
+  "streakPlayToday": "Jouez aujourd'hui pour la conserver",
+  "streakStartToday": "Jouez aujourd'hui pour lancer une série",
+  "streakNextReward": "Prochain : +{xp} XP, +{points} pts",
+  "streakJackpotReached": "Palier maximal — récompense quotidienne max",
+  "streakToJackpot": "{count, plural, =1{1 jour avant le jackpot} other{{count} jours avant le jackpot}}"
 }

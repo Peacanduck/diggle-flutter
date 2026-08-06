@@ -16,6 +16,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import '../game/systems/streak_system.dart';
 import '../game/systems/xp_points_system.dart';
 import 'supabase_service.dart';
 
@@ -342,6 +343,90 @@ class StatsService {
       _depthThisSession = 0;
     } catch (e) {
       debugPrint('StatsService._syncStats error: $e');
+    }
+  }
+
+  // ── Daily Login Streak (server-owned) ──────────────────────────
+
+  /// Claim today's login streak on the server.
+  ///
+  /// The server owns the streak day (it computes the UTC boundary from
+  /// its own clock, so a device clock can't mint days). It does NOT
+  /// award the XP/points — it returns them, and the caller applies them
+  /// through XPStatsBridge.awardBonus so they flow down the normal
+  /// local-update + ledger path. Awarding server-side would be undone
+  /// by [_syncStats], which writes absolute values from local state.
+  ///
+  /// Returns null when there's no player, no connectivity, or the RPC
+  /// errors — callers fall back to a local claim.
+  Future<ServerStreakResult?> claimDailyStreak({
+    required int localStreak,
+    required String? localLastClaimDay,
+  }) async {
+    final playerId = _supabase.playerId;
+    if (playerId == null) return null;
+
+    try {
+      final rows = await _supabase.client.rpc('claim_daily_streak', params: {
+        'p_player_id': playerId,
+        'p_local_streak': localStreak,
+        'p_local_last_claim': localLastClaimDay,
+      });
+
+      // RETURNS TABLE arrives as a list of rows.
+      final row = (rows is List && rows.isNotEmpty)
+          ? rows.first as Map<String, dynamic>
+          : (rows is Map<String, dynamic> ? rows : null);
+      if (row == null) {
+        debugPrint('StatsService: claim_daily_streak returned no row');
+        return null;
+      }
+
+      final result = ServerStreakResult(
+        streak: (row['new_streak'] as num?)?.toInt() ?? 0,
+        claimed: row['did_claim'] == true,
+        rewardXp: (row['reward_xp'] as num?)?.toInt() ?? 0,
+        rewardPoints: (row['reward_points'] as num?)?.toInt() ?? 0,
+        claimDay: row['claim_date'] as String? ?? '',
+      );
+      if (result.claimDay.isEmpty) return null;
+
+      debugPrint('StatsService: streak day ${result.streak} '
+          '(claimed: ${result.claimed})');
+      return result;
+    } catch (e) {
+      debugPrint('StatsService.claimDailyStreak error: $e');
+      return null;
+    }
+  }
+
+  /// Fetch the streak reward ladder from the server, ordered by day.
+  ///
+  /// Read-only and public (the ladder is just what the UI already
+  /// displays), so this works before auth completes. Returns null on
+  /// any failure — callers keep their cached/compiled-in ladder.
+  Future<List<(int, int)>?> fetchStreakRewards() async {
+    try {
+      final rows = await _supabase.client
+          .from('streak_rewards')
+          .select('day, xp, points')
+          .order('day');
+
+      if (rows is! List || rows.isEmpty) return null;
+
+      final ladder = <(int, int)>[];
+      for (final row in rows) {
+        final map = row as Map<String, dynamic>;
+        ladder.add((
+          (map['xp'] as num?)?.toInt() ?? 0,
+          (map['points'] as num?)?.toInt() ?? 0,
+        ));
+      }
+      debugPrint('StatsService: fetched ${ladder.length}-rung streak ladder');
+      return ladder;
+    } catch (e) {
+      debugPrint('StatsService.fetchStreakRewards error: $e');
+      return null;
     }
   }
 

@@ -364,5 +364,13 @@
   "questPasteTweetUrl": "在此粘贴您的推文链接",
   "questVerifying": "验证中...",
   "questVerified": "任务已验证并完成！",
-  "questVerificationFailed": "无法验证，请重试。"
+  "questVerificationFailed": "无法验证，请重试。",
+  "loginStreak": "连续登录",
+  "streakDays": "{count, plural, =0{暂无连续记录} other{{count} 天}}",
+  "streakClaimedToday": "今日已领取",
+  "streakPlayToday": "今天来玩一局即可延续",
+  "streakStartToday": "今天来玩一局即可开始连续记录",
+  "streakNextReward": "下次：+{xp} 经验，+{points} 积分",
+  "streakJackpotReached": "已达最高档 — 每日奖励最大",
+  "streakToJackpot": "{count, plural, other{距离大奖还有 {count} 天}}"
 }

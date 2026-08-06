@@ -364,5 +364,13 @@
   "questPasteTweetUrl": "Вставьте URL вашего твита сюда",
   "questVerifying": "Проверка...",
   "questVerified": "Задание подтверждено и выполнено!",
-  "questVerificationFailed": "Не удалось подтвердить. Попробуйте снова."
+  "questVerificationFailed": "Не удалось подтвердить. Попробуйте снова.",
+  "loginStreak": "Серия входов",
+  "streakDays": "{count, plural, =0{Серии пока нет} one{{count} день} few{{count} дня} other{{count} дней}}",
+  "streakClaimedToday": "Получено сегодня",
+  "streakPlayToday": "Сыграйте сегодня, чтобы продолжить",
+  "streakStartToday": "Сыграйте сегодня, чтобы начать серию",
+  "streakNextReward": "Далее: +{xp} XP, +{points} оч.",
+  "streakJackpotReached": "Максимальная ступень — награда максимальна",
+  "streakToJackpot": "{count, plural, one{{count} день до джекпота} few{{count} дня до джекпота} other{{count} дней до джекпота}}"
 }

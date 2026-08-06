@@ -364,5 +364,13 @@
   "questPasteTweetUrl": "ツイートのURLをここに貼り付けてください",
   "questVerifying": "認証中...",
   "questVerified": "クエスト認証・完了！",
-  "questVerificationFailed": "認証できませんでした。もう一度お試しください。"
+  "questVerificationFailed": "認証できませんでした。もう一度お試しください。",
+  "loginStreak": "ログイン連続日数",
+  "streakDays": "{count, plural, =0{連続記録なし} other{{count}日}}",
+  "streakClaimedToday": "本日受取済み",
+  "streakPlayToday": "今日プレイして継続しよう",
+  "streakStartToday": "今日プレイして連続記録を始めよう",
+  "streakNextReward": "次回: +{xp} XP、+{points} pt",
+  "streakJackpotReached": "最高段階 — 日々の報酬が最大",
+  "streakToJackpot": "{count, plural, other{ジャックポットまであと{count}日}}"
 }

@@ -984,4 +984,45 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get questVerificationFailed => '認証できませんでした。もう一度お試しください。';
+
+  @override
+  String get loginStreak => 'ログイン連続日数';
+
+  @override
+  String streakDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count日',
+      zero: '連続記録なし',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get streakClaimedToday => '本日受取済み';
+
+  @override
+  String get streakPlayToday => '今日プレイして継続しよう';
+
+  @override
+  String get streakStartToday => '今日プレイして連続記録を始めよう';
+
+  @override
+  String streakNextReward(int xp, int points) {
+    return '次回: +$xp XP、+$points pt';
+  }
+
+  @override
+  String get streakJackpotReached => '最高段階 — 日々の報酬が最大';
+
+  @override
+  String streakToJackpot(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ジャックポットまであと$count日',
+    );
+    return '$_temp0';
+  }
 }

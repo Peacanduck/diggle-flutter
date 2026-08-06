@@ -30,6 +30,7 @@ import 'game/diggle_game.dart';
 import 'game/systems/boost_manager.dart';
 import 'game/systems/prestige_system.dart';
 import 'game/systems/gear_system.dart';
+import 'game/systems/streak_system.dart';
 import 'game/systems/quest_system.dart' show QuestSystem;
 import 'services/leaderboard_service.dart';
 import 'ui/leaderboard_screen.dart';
@@ -116,6 +117,15 @@ void main() async {
   await prestigeSystem.initialize();
   final gearSystem = GearSystem();
   await gearSystem.initialize();
+  // Read-only load: the daily claim happens in DiggleGame, where the
+  // reward callback is wired. This just makes the current streak
+  // readable from the menu/account screens.
+  final streakSystem = StreakSystem();
+  streakSystem.serverLadder = statsService.fetchStreakRewards;
+  await streakSystem.load();
+  // Cache-first: load() already restored the last known ladder, so this
+  // refresh runs in the background rather than delaying startup.
+  unawaited(streakSystem.refreshLadder());
 
   // ── Leaderboards ─────────────────────────────────────────────
   final leaderboardService = LeaderboardService(
@@ -130,6 +140,7 @@ void main() async {
         ChangeNotifierProvider.value(value: localeProvider),
         ChangeNotifierProvider.value(value: prestigeSystem),
         ChangeNotifierProvider.value(value: gearSystem),
+        ChangeNotifierProvider.value(value: streakSystem),
         Provider.value(value: statsService),
         Provider.value(value: worldSaveService),
         Provider.value(value: playerService),
@@ -525,6 +536,7 @@ class _GameScreenState extends State<GameScreen>
       seed: widget.seed,
       prestigeSystem: context.read<PrestigeSystem>(),
       gearSystem: context.read<GearSystem>(),
+      streakSystem: context.read<StreakSystem>(),
       isNewGame: widget.isNewGame,
       challengeMode: widget.challengeMode,
     );

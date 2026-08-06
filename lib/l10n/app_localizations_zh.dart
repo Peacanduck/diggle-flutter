@@ -979,4 +979,45 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get questVerificationFailed => '无法验证，请重试。';
+
+  @override
+  String get loginStreak => '连续登录';
+
+  @override
+  String streakDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 天',
+      zero: '暂无连续记录',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get streakClaimedToday => '今日已领取';
+
+  @override
+  String get streakPlayToday => '今天来玩一局即可延续';
+
+  @override
+  String get streakStartToday => '今天来玩一局即可开始连续记录';
+
+  @override
+  String streakNextReward(int xp, int points) {
+    return '下次：+$xp 经验，+$points 积分';
+  }
+
+  @override
+  String get streakJackpotReached => '已达最高档 — 每日奖励最大';
+
+  @override
+  String streakToJackpot(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '距离大奖还有 $count 天',
+    );
+    return '$_temp0';
+  }
 }

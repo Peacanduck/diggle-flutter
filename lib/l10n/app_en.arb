@@ -431,5 +431,37 @@
      "questPasteTweetUrl": "Paste your tweet URL here",
      "questVerifying": "Verifying...",
      "questVerified": "Quest verified and completed!",
-     "questVerificationFailed": "Could not verify. Please try again."
+     "questVerificationFailed": "Could not verify. Please try again.",
+    "loginStreak": "Login Streak",
+    "streakDays": "{count, plural, =0{No streak yet} =1{1 day} other{{count} days}}",
+    "@streakDays": {
+      "placeholders": {
+        "count": {
+          "type": "int"
+        }
+      }
+    },
+    "streakClaimedToday": "Claimed today",
+    "streakPlayToday": "Play today to keep it going",
+    "streakStartToday": "Play today to start a streak",
+    "streakNextReward": "Next: +{xp} XP, +{points} pts",
+    "@streakNextReward": {
+      "placeholders": {
+        "xp": {
+          "type": "int"
+        },
+        "points": {
+          "type": "int"
+        }
+      }
+    },
+    "streakJackpotReached": "Jackpot rung — max daily reward",
+    "streakToJackpot": "{count, plural, =1{1 day to the jackpot} other{{count} days to the jackpot}}",
+    "@streakToJackpot": {
+      "placeholders": {
+        "count": {
+          "type": "int"
+        }
+      }
+    }
 }
