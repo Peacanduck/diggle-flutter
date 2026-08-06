@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:diggle/game/systems/xp_points_system.dart';
+import 'package:diggle/game/world/tile.dart';
 
 void main() {
   group('XPPointsSystem.addXP', () {
@@ -50,6 +51,57 @@ void main() {
       expect(xp.totalXP, 50);
       expect(xp.points, 10);
       expect(xp.lifetimePoints, 10);
+    });
+  });
+
+  group('HUD reward feed queue', () {
+    test('bonus awards queue an announcement, mining does not', () {
+      final xp = XPPointsSystem();
+
+      xp.awardForMining(TileType.copper, 10);
+      expect(xp.takePendingAnnouncements(), isEmpty,
+          reason: 'per-tile mining would spam a toast on every dig');
+
+      xp.awardBonus(300, 120, '📅 Day 7 🔥 login streak!');
+      final pending = xp.takePendingAnnouncements();
+      expect(pending.length, 1);
+      expect(pending.single.description, contains('login streak'));
+      expect(pending.single.isBonus, true);
+    });
+
+    test('draining clears the queue so a toast never repeats', () {
+      final xp = XPPointsSystem();
+      xp.awardBonus(25, 5, 'Achievement: First Haul');
+
+      expect(xp.takePendingAnnouncements().length, 1);
+      expect(xp.takePendingAnnouncements(), isEmpty);
+    });
+
+    test('a burst of bonuses is capped instead of queueing a wall', () {
+      final xp = XPPointsSystem();
+
+      // One big haul can unlock several achievement tiers at once.
+      for (int i = 0; i < 10; i++) {
+        xp.awardBonus(10, 5, 'Achievement $i');
+      }
+
+      final pending = xp.takePendingAnnouncements();
+      expect(pending.length, XPPointsSystem.maxPendingAnnouncements);
+      expect(pending.last.description, 'Achievement 9',
+          reason: 'the most recent unlocks are the ones worth showing');
+    });
+
+    test('announcements never block the award itself', () {
+      final xp = XPPointsSystem();
+
+      // No HUD mounted, so nothing ever drains the queue.
+      for (int i = 0; i < 50; i++) {
+        xp.awardBonus(10, 5, 'Achievement $i');
+      }
+
+      expect(xp.totalXP, 500);
+      // At least the 50 × 5 awarded; level-up bonuses push it higher.
+      expect(xp.points, greaterThanOrEqualTo(250));
     });
   });
 }

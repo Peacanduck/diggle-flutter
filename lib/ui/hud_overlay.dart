@@ -9,6 +9,7 @@ import '../l10n/app_localizations.dart';
 import '../game/diggle_game.dart';
 import '../game/player/drill_component.dart';
 import '../game/systems/item_system.dart';
+import '../game/systems/xp_points_system.dart';
 import 'quest_overlay.dart';
 
 class HudOverlay extends StatefulWidget {
@@ -23,11 +24,20 @@ class HudOverlay extends StatefulWidget {
 class _HudOverlayState extends State<HudOverlay> {
   late Timer _updateTimer;
 
+  /// Bonus rewards currently animating in the feed. Drained from
+  /// XPPointsSystem on the regular HUD tick (never during build) and
+  /// removed by each notification when its animation finishes.
+  final List<RewardEvent> _rewardFeed = [];
+
   @override
   void initState() {
     super.initState();
     _updateTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      final pending =
+          widget.game.xpPointsSystem.takePendingAnnouncements();
+      if (pending.isNotEmpty) _rewardFeed.addAll(pending);
+      setState(() {});
     });
   }
 
@@ -70,6 +80,33 @@ class _HudOverlayState extends State<HudOverlay> {
             right: 0,
             child: _buildItemBar(l10n),
           ),
+
+          // Reward feed: achievements, artifacts, login streak, titles
+          if (_rewardFeed.isNotEmpty)
+            Positioned(
+              top: 210,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final event in _rewardFeed)
+                      Padding(
+                        key: ObjectKey(event),
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: XPGainNotification(
+                          event: event,
+                          onComplete: () {
+                            if (!mounted) return;
+                            setState(() => _rewardFeed.remove(event));
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
 
           // Pause button
           Positioned(

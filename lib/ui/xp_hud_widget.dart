@@ -191,14 +191,15 @@ class _XPGainNotificationState extends State<XPGainNotification>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      // Long enough to read a bonus description, not just a number.
+      duration: const Duration(milliseconds: 2600),
       vsync: this,
     );
 
     _fadeAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.5, 1.0),
+        curve: const Interval(0.65, 1.0),
       ),
     );
 
@@ -231,35 +232,54 @@ class _XPGainNotificationState extends State<XPGainNotification>
             color: Colors.black.withOpacity(0.7),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Row(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (widget.event.finalXP > 0)
+              // For bonus awards the description IS the message ("Day 3
+              // login streak!", "Achievement: First Haul") — the numbers
+              // alone don't say what happened.
+              if (widget.event.description.isNotEmpty)
                 Text(
-                  '+${widget.event.finalXP} XP',
+                  widget.event.description,
+                  textAlign: TextAlign.center,
                   style: const TextStyle(
-                    color: Colors.blue,
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    fontSize: 13,
                   ),
                 ),
-              if (widget.event.finalXP > 0 &&
-                  widget.event.finalPoints > 0)
-                const SizedBox(width: 8),
-              if (widget.event.finalPoints > 0)
-                Text(
-                  '+${widget.event.finalPoints} 💎',
-                  style: const TextStyle(
-                    color: Colors.purple,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-              if (widget.event.xpMultiplier > 1.0)
-                Text(
-                  ' (${widget.event.xpMultiplier}x)',
-                  style: const TextStyle(color: Colors.yellow, fontSize: 11),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.event.finalXP > 0)
+                    Text(
+                      '+${widget.event.finalXP} XP',
+                      style: const TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  if (widget.event.finalXP > 0 &&
+                      widget.event.finalPoints > 0)
+                    const SizedBox(width: 8),
+                  if (widget.event.finalPoints > 0)
+                    Text(
+                      '+${widget.event.finalPoints} 💎',
+                      style: const TextStyle(
+                        color: Colors.purple,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  if (widget.event.xpMultiplier > 1.0)
+                    Text(
+                      ' (${widget.event.xpMultiplier}x)',
+                      style:
+                          const TextStyle(color: Colors.yellow, fontSize: 11),
+                    ),
+                ],
+              ),
             ],
           ),
         ),

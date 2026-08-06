@@ -72,12 +72,19 @@ class RewardEvent {
   final double pointsMultiplier;
   final DateTime timestamp;
 
+  /// One-off rewards worth announcing in the HUD feed (achievements,
+  /// artifacts, login streak, level titles). Routine per-tile mining
+  /// rewards are not — the XP bar already moves for those, and a toast
+  /// per tile would be constant noise.
+  final bool isBonus;
+
   RewardEvent({
     required this.description,
     required this.xpAwarded,
     required this.pointsAwarded,
     this.xpMultiplier = 1.0,
     this.pointsMultiplier = 1.0,
+    this.isBonus = false,
   }) : timestamp = DateTime.now();
 
   int get finalXP => (xpAwarded * xpMultiplier).round();
@@ -122,6 +129,21 @@ class XPPointsSystem extends ChangeNotifier {
   /// Recent reward events (for UI display)
   final List<RewardEvent> _recentEvents = [];
   static const int maxRecentEvents = 20;
+
+  /// Bonus events awaiting display in the HUD reward feed. The HUD drains
+  /// this via [takePendingAnnouncements]; if no HUD is mounted (menus,
+  /// tests) it simply caps and drops — announcements are cosmetic, the
+  /// XP/points are already banked by the time they land here.
+  final List<RewardEvent> _pendingAnnouncements = [];
+  static const int maxPendingAnnouncements = 4;
+
+  /// Take (and clear) the bonus events waiting to be announced.
+  List<RewardEvent> takePendingAnnouncements() {
+    if (_pendingAnnouncements.isEmpty) return const [];
+    final drained = List<RewardEvent>.unmodifiable(_pendingAnnouncements);
+    _pendingAnnouncements.clear();
+    return drained;
+  }
 
   /// Fired after a level-up (bonus points already applied).
   /// DiggleGame uses this to grant LevelRewardTable items/titles.
@@ -241,11 +263,12 @@ class XPPointsSystem extends ChangeNotifier {
   /// Award a discovery/bonus reward (loot crates, artifacts, etc.).
   /// Boost multipliers apply, and the event shows in the HUD reward feed.
   RewardEvent awardBonus(int baseXP, int basePoints, String description) {
-    return _award(baseXP, basePoints, description);
+    return _award(baseXP, basePoints, description, isBonus: true);
   }
 
   /// Core award method - applies multipliers and updates state
-  RewardEvent _award(int baseXP, int basePoints, String description) {
+  RewardEvent _award(int baseXP, int basePoints, String description,
+      {bool isBonus = false}) {
     final xpMult = effectiveXPMultiplier;
     final ptsMult = effectivePointsMultiplier;
 
@@ -255,6 +278,7 @@ class XPPointsSystem extends ChangeNotifier {
       pointsAwarded: basePoints,
       xpMultiplier: xpMult,
       pointsMultiplier: ptsMult,
+      isBonus: isBonus,
     );
 
     final prevLevel = level;
@@ -272,6 +296,15 @@ class XPPointsSystem extends ChangeNotifier {
     _recentEvents.insert(0, event);
     if (_recentEvents.length > maxRecentEvents) {
       _recentEvents.removeLast();
+    }
+
+    if (isBonus) {
+      _pendingAnnouncements.add(event);
+      // A burst (e.g. one haul unlocking three achievement tiers) should
+      // not queue up a wall of toasts.
+      if (_pendingAnnouncements.length > maxPendingAnnouncements) {
+        _pendingAnnouncements.removeAt(0);
+      }
     }
 
     // Check for level up (fire once per level gained so multi-level
