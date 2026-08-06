@@ -80,16 +80,22 @@ def shape_group(path, rgb):
 
 
 def keyframes(start, values):
-    """Evenly spaced looping keyframes across one stage window."""
+    """Evenly spaced looping keyframes across one stage window.
+
+    Easing arrays are sized to match the value's dimensionality --
+    strict Lottie renderers reject a 1-element ease on a multi-component
+    property, which shows up as a silently blank animation.
+    """
     step = STAGE_FRAMES / (len(values) - 1)
+    dims = len(values[0])
     out = []
     for idx, value in enumerate(values):
         out.append({
             "t": round(start + idx * step, 3),
             "s": value,
             # Ease both ways so the flicker breathes instead of ticking.
-            "i": {"x": [0.4], "y": [1.0]},
-            "o": {"x": [0.6], "y": [0.0]},
+            "i": {"x": [0.4] * dims, "y": [1.0] * dims},
+            "o": {"x": [0.6] * dims, "y": [0.0] * dims},
         })
     out[-1].pop("i", None)
     out[-1].pop("o", None)
@@ -102,10 +108,14 @@ def stage_layer(index, name, scale, outer, core):
 
     # Flicker: squash and stretch, returning to the start value so the
     # segment loops seamlessly.
+    # Scale carries a z component: some renderers expect a 3-vector on a
+    # transform's scale and treat a 2-vector as malformed.
     s = scale
     scale_kf = keyframes(start, [
-        [s, s], [round(s * 1.07, 2), round(s * 0.95, 2)],
-        [round(s * 0.96, 2), round(s * 1.06, 2)], [s, s],
+        [s, s, 100],
+        [round(s * 1.07, 2), round(s * 0.95, 2), 100],
+        [round(s * 0.96, 2), round(s * 1.06, 2), 100],
+        [s, s, 100],
     ])
     rot_kf = keyframes(start, [[0], [3.5], [-3.5], [0]])
 

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:diggle/game/systems/streak_system.dart';
@@ -64,6 +66,33 @@ void main() {
 
     test('default ladder still has the length the stages assume', () {
       expect(StreakSystem.defaultRewardLadder.length, 7);
+    });
+  });
+
+  group('asset wiring', () {
+    test('the generated animation is on disk and is a real dotLottie', () {
+      final file = File(StreakGlyph.assetKey);
+      expect(file.existsSync(), true,
+          reason: '${StreakGlyph.assetKey} missing — run '
+              'python tool/gen_streak_glyph.py');
+
+      // A .lottie is a zip; a bare JSON here would load as nothing.
+      final header = file.readAsBytesSync().take(2).toList();
+      expect(header, [0x50, 0x4B], reason: 'expected a zip (PK) header');
+    });
+
+    test('the asset is declared in pubspec', () {
+      final pubspec = File('pubspec.yaml').readAsStringSync();
+      expect(pubspec, contains('assets/animations/'),
+          reason: 'undeclared assets are absent at runtime');
+    });
+
+    test('source strips the prefix dotlottie_flutter re-adds', () {
+      // The plugin loads 'assets/' + source. Passing the full bundle key
+      // resolves to assets/assets/... and renders an empty box with no
+      // error callback — exactly the silent failure this guards.
+      expect('assets/${StreakGlyph.assetSource}', StreakGlyph.assetKey);
+      expect(StreakGlyph.assetSource, isNot(startsWith('assets/')));
     });
   });
 }

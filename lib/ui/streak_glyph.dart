@@ -7,7 +7,7 @@
 /// player's streak rather than tweening one generic animation, so the
 /// flame visibly grows and brightens as the streak climbs.
 ///
-/// Keep [_stageForStreak] in sync with STAGES in the generator.
+/// Keep [StreakStage] in sync with STAGES in the generator.
 ///
 /// dotlottie_flutter renders through a native platform view, which is
 /// unavailable in widget tests and on unsupported platforms — the
@@ -17,6 +17,7 @@
 import 'package:dotlottie_flutter/dotlottie_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 import '../game/systems/streak_system.dart';
 
@@ -62,6 +63,15 @@ class StreakGlyph extends StatefulWidget {
     this.size = 34,
   });
 
+  /// Bundle key for the generated animation, as declared in pubspec.
+  static const String assetKey = 'assets/animations/streak_glyph.lottie';
+
+  /// What to hand dotlottie_flutter: [assetKey] with the leading
+  /// `assets/` removed, because the plugin prepends that itself. Passing
+  /// the full key resolves to `assets/assets/...`, which renders an
+  /// empty box and never fires `onLoadError`.
+  static const String assetSource = 'animations/streak_glyph.lottie';
+
   @override
   State<StreakGlyph> createState() => _StreakGlyphState();
 }
@@ -72,7 +82,36 @@ class _StreakGlyphState extends State<StreakGlyph> {
   @visibleForTesting
   static bool debugDisableAnimation = false;
 
-  bool _failed = false;
+  /// null = still checking, true = usable, false = fall back to emoji.
+  bool? _assetOk;
+
+  @override
+  void initState() {
+    super.initState();
+    _verifyAsset();
+  }
+
+  /// Confirm the animation is actually in the bundle before handing it
+  /// to the player.
+  ///
+  /// The plugin catches asset-load failures internally and only
+  /// debugPrints them — `onLoadError` never fires for a missing or
+  /// unreadable asset — so relying on that callback leaves an empty
+  /// box on screen with no fallback. Checking here is the only way to
+  /// make the fallback dependable.
+  Future<void> _verifyAsset() async {
+    if (debugDisableAnimation || !_supportsPlatformView) {
+      if (mounted) setState(() => _assetOk = false);
+      return;
+    }
+    try {
+      await rootBundle.load(StreakGlyph.assetKey);
+      if (mounted) setState(() => _assetOk = true);
+    } catch (e) {
+      debugPrint('StreakGlyph: ${StreakGlyph.assetKey} unavailable, using emoji: $e');
+      if (mounted) setState(() => _assetOk = false);
+    }
+  }
 
   int get _jackpotAt => widget.ladderLength > 0
       ? widget.ladderLength
@@ -84,9 +123,9 @@ class _StreakGlyphState extends State<StreakGlyph> {
   Widget build(BuildContext context) {
     final stage = _stage;
 
-    // The desktop/web renderers vary and platform views are unavailable
-    // in tests — emoji is the dependable path there.
-    if (_failed || debugDisableAnimation || !_supportsPlatformView) {
+    // Emoji covers the not-yet-verified frame too, so the glyph is
+    // never an empty box even for the first frame after mount.
+    if (_assetOk != true) {
       return SizedBox(
         width: widget.size,
         height: widget.size,
@@ -104,7 +143,7 @@ class _StreakGlyphState extends State<StreakGlyph> {
         // Key by stage so switching segments rebuilds the player rather
         // than leaving it parked on the previous range.
         key: ValueKey(stage),
-        source: 'assets/animations/streak_glyph.lottie',
+        source: StreakGlyph.assetSource,
         sourceType: 'asset',
         autoplay: true,
         loop: true,
@@ -112,7 +151,7 @@ class _StreakGlyphState extends State<StreakGlyph> {
         useFrameInterpolation: true,
         fit: BoxFit.contain,
         onLoadError: () {
-          if (mounted) setState(() => _failed = true);
+          if (mounted) setState(() => _assetOk = false);
         },
       ),
     );
