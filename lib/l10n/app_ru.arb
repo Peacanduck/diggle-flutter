@@ -1,12 +1,10 @@
 {
   "@@locale": "ru",
-
   "appTitle": "Diggle",
   "tagline": "КОПАЙ ГЛУБЖЕ  •  ДОБЫВАЙ БОГАТСТВА  •  ИДИ ДАЛЬШЕ",
   "mineDeepEarnRewards": "Копай глубоко. Зарабатывай награды.",
   "pyroLabs": "PyroLabs",
   "version": "v0.1.0-alpha",
-
   "newGame": "НОВАЯ ИГРА",
   "continueGame": "ПРОДОЛЖИТЬ",
   "loadGame": "ЗАГРУЗИТЬ",
@@ -14,8 +12,13 @@
   "settings": "Настройки",
   "howToPlay": "Как играть",
   "comingSoon": "{feature} скоро!",
-  "@comingSoon": { "placeholders": { "feature": { "type": "String" } } },
-
+  "@comingSoon": {
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      }
+    }
+  },
   "helpMiningTitle": "⛏️ Добыча",
   "helpMiningBody": "Используйте стрелки для управления буром. Копайте землю и камень, чтобы найти ценные руды.",
   "helpFuelTitle": "⛽ Топливо",
@@ -29,24 +32,39 @@
   "helpHazardsTitle": "⚠️ Опасности",
   "helpHazardsBody": "Остерегайтесь лавы (мгновенная гибель) и газовых карманов (урон)!",
   "gotIt": "ПОНЯТНО!",
-
   "paused": "ПАУЗА",
   "resume": "ПРОДОЛЖИТЬ",
   "saveGame": "СОХРАНИТЬ",
   "restart": "ЗАНОВО",
   "mainMenu": "ГЛАВНОЕ МЕНЮ",
   "savedToSlot": "Сохранено в слот {slot}",
-  "@savedToSlot": { "placeholders": { "slot": { "type": "int" } } },
-
+  "@savedToSlot": {
+    "placeholders": {
+      "slot": {
+        "type": "int"
+      }
+    }
+  },
   "gameOver": "КОНЕЦ ИГРЫ",
   "depthReached": "Достигнутая глубина: {depth}м",
-  "@depthReached": { "placeholders": { "depth": { "type": "int" } } },
+  "@depthReached": {
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
   "tryAgain": "ПОПРОБОВАТЬ СНОВА",
   "loadingDiggle": "Загрузка Diggle...",
   "failedToLoadGame": "Не удалось загрузить игру:\n{error}",
-  "@failedToLoadGame": { "placeholders": { "error": { "type": "String" } } },
+  "@failedToLoadGame": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "backToMenu": "Назад в меню",
-
   "signInWithEmail": "ВОЙТИ ЧЕРЕЗ E-MAIL",
   "signInWithWallet": "ВОЙТИ ЧЕРЕЗ КОШЕЛЁК",
   "playAsGuest": "Играть как гость",
@@ -69,17 +87,21 @@
   "pleaseFillFields": "Введите ваш e-mail и пароль",
   "passwordTooShort": "Пароль должен содержать не менее 6 символов",
   "passwordsNoMatch": "Пароли не совпадают",
-
   "accountTitle": "АККАУНТ",
   "accountSubtitle": "Профиль, способы входа и статистика",
   "playerProfile": "ПРОФИЛЬ ИГРОКА",
   "enterDisplayName": "Введите отображаемое имя",
   "anonymousMiner": "Анонимный шахтёр",
   "memberSince": "Участник с {date}",
-  "@memberSince": { "placeholders": { "date": { "type": "String" } } },
+  "@memberSince": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "playingOffline": "Игра офлайн",
   "playerIdCopied": "ID игрока скопирован",
-
   "signInMethods": "СПОСОБЫ ВХОДА",
   "signInMethodsSubtitle": "Как вы можете войти в аккаунт",
   "emailSignIn": "Вход через e-mail",
@@ -93,25 +115,21 @@
   "add": "Добавить",
   "copyAddress": "Копировать адрес",
   "unlink": "Отвязать",
-
   "addEmailSignIn": "Добавить вход через e-mail",
   "addEmailSubtitle": "Кошелёк остаётся основным способом входа. E-mail — альтернатива.",
   "addEmail": "ДОБАВИТЬ E-MAIL",
   "checkEmailLink": "Проверьте почту для подтверждения привязки!",
   "emailSignInAdded": "Вход через e-mail добавлен!",
-
   "walletConnectionCancelled": "Подключение кошелька отменено",
   "couldNotGetWalletAddress": "Не удалось получить адрес кошелька",
   "signingCancelled": "Подпись отменена",
   "walletLinked": "Кошелёк привязан! Теперь вы можете входить через него.",
   "walletLinkFailed": "Не удалось привязать кошелёк",
-
   "unlinkWalletTitle": "Отвязать кошелёк",
   "unlinkWalletMessage": "Кошелёк будет удалён из аккаунта. Вы сможете привязать другой кошелёк позже.",
   "cancel": "Отмена",
   "walletUnlinked": "Кошелёк отвязан",
   "unlinkFailed": "Не удалось отвязать кошелёк",
-
   "walletAdapter": "АДАПТЕР КОШЕЛЬКА",
   "walletAdapterGuestSubtitle": "Подключитесь для покупок в этой сессии",
   "walletAdapterReconnectSubtitle": "Переподключитесь для подписи транзакций",
@@ -120,7 +138,13 @@
   "mainnet": "Mainnet",
   "devnet": "Devnet",
   "connected": "Подключено — {network}",
-  "@connected": { "placeholders": { "network": { "type": "String" } } },
+  "@connected": {
+    "placeholders": {
+      "network": {
+        "type": "String"
+      }
+    }
+  },
   "loadingBalance": "Загрузка баланса...",
   "airdropRequested": "Аирдроп запрошен!",
   "airdropFailed": "Аирдроп не удался",
@@ -130,7 +154,6 @@
   "connectWallet": "ПОДКЛЮЧИТЬ КОШЕЛЁК",
   "phantomTip": "💡 Используйте Phantom для лучшей поддержки devnet",
   "addressCopied": "Адрес скопирован",
-
   "lifetimeStats": "ОБЩАЯ СТАТИСТИКА",
   "statLevel": "Уровень",
   "statTotalXp": "Всего XP",
@@ -140,56 +163,105 @@
   "statPlayTime": "Время игры",
   "statPointsEarned": "Очков заработано",
   "statPointsSpent": "Очков потрачено",
-
   "signedInEmail": "Вход через e-mail",
   "signedInWallet": "Вход через кошелёк",
   "playingAsGuest": "Играет как гость",
   "signOut": "Выход",
   "signOutConfirm": "Вы уверены, что хотите выйти?",
   "guestSignOutWarning": "Прогресс гостя сохраняется только на этом устройстве. Выход удалит доступ к текущим сохранениям. Вы уверены?",
-
   "emailAccount": "Аккаунт e-mail",
   "walletAccount": "Аккаунт кошелька",
   "guestLocalOnly": "Гость — только локальный прогресс",
   "offline": "Офлайн",
-
   "newGameTitle": "НОВАЯ ИГРА",
   "loadGameTitle": "ЗАГРУЗИТЬ ИГРУ",
   "newGameSubtitle": "Выберите слот для нового приключения",
   "loadGameSubtitle": "Выберите сохранение для продолжения",
   "slotEmpty": "Слот {slot} — Пусто",
-  "@slotEmpty": { "placeholders": { "slot": { "type": "int" } } },
+  "@slotEmpty": {
+    "placeholders": {
+      "slot": {
+        "type": "int"
+      }
+    }
+  },
   "tapToStart": "Нажмите, чтобы начать приключение",
   "noSaveData": "Нет сохранений",
   "slot": "Слот {slot}",
-  "@slot": { "placeholders": { "slot": { "type": "int" } } },
+  "@slot": {
+    "placeholders": {
+      "slot": {
+        "type": "int"
+      }
+    }
+  },
   "savedAgo": "Сохранено {time}",
-  "@savedAgo": { "placeholders": { "time": { "type": "String" } } },
+  "@savedAgo": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "deleteSlotConfirm": "Удалить слот {slot}?",
-  "@deleteSlotConfirm": { "placeholders": { "slot": { "type": "int" } } },
+  "@deleteSlotConfirm": {
+    "placeholders": {
+      "slot": {
+        "type": "int"
+      }
+    }
+  },
   "cannotBeUndone": "Это действие нельзя отменить.",
   "delete": "УДАЛИТЬ",
   "overwriteSaveTitle": "Перезаписать?",
   "overwriteSaveMessage": "В слоте {slot} уже есть сохранение. Новая игра здесь перезапишет его.",
-  "@overwriteSaveMessage": { "placeholders": { "slot": { "type": "int" } } },
+  "@overwriteSaveMessage": {
+    "placeholders": {
+      "slot": {
+        "type": "int"
+      }
+    }
+  },
   "overwrite": "ПЕРЕЗАПИСАТЬ",
   "noSaves": "(нет сохранений)",
   "justNow": "только что",
   "minutesAgo": "{min}мин назад",
-  "@minutesAgo": { "placeholders": { "min": { "type": "int" } } },
+  "@minutesAgo": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
   "hoursAgo": "{hours}ч назад",
-  "@hoursAgo": { "placeholders": { "hours": { "type": "int" } } },
+  "@hoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
   "daysAgo": "{days}д назад",
-  "@daysAgo": { "placeholders": { "days": { "type": "int" } } },
-
+  "@daysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "hp": "HP",
   "fuel": "ТОПЛИВО",
   "items": "ПРЕДМЕТЫ: ",
   "store": "МАГАЗИН",
   "shop": "МАГАЗИН",
   "depthMeter": "{depth}м",
-  "@depthMeter": { "placeholders": { "depth": { "type": "int" } } },
-
+  "@depthMeter": {
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
   "miningSupplyCo": "ГОРНОЕ СНАБЖЕНИЕ",
   "cash": "Деньги",
   "hull": "Корпус",
@@ -204,16 +276,43 @@
   "sellAll": "ПРОДАТЬ ВСЁ",
   "refuel": "ЗАПРАВИТЬ",
   "refuelCost": "ЗАПРАВИТЬ (${cost})",
-  "@refuelCost": { "placeholders": { "cost": { "type": "int" } } },
+  "@refuelCost": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "tankFull": "Бак полон!",
   "repair": "ПОЧИНИТЬ",
   "repairHullCost": "ПОЧИНИТЬ КОРПУС (${cost})",
-  "@repairHullCost": { "placeholders": { "cost": { "type": "int" } } },
+  "@repairHullCost": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "hullFullyRepaired": "Корпус полностью починен!",
   "inventorySlots": "Инвентарь: {used}/{max} слотов",
-  "@inventorySlots": { "placeholders": { "used": { "type": "int" }, "max": { "type": "int" } } },
+  "@inventorySlots": {
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
   "upgradeCost": "УЛУЧШИТЬ - ${cost}",
-  "@upgradeCost": { "placeholders": { "cost": { "type": "int" } } },
+  "@upgradeCost": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "maxed": "МАКС",
   "drillBit": "Бур",
   "engine": "Двигатель",
@@ -222,17 +321,47 @@
   "cargoBay": "Грузовой отсек",
   "hullArmor": "Броня корпуса",
   "capacityValue": "Ёмкость: {value}",
-  "@capacityValue": { "placeholders": { "value": { "type": "int" } } },
+  "@capacityValue": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
   "speedPercent": "Скорость: {percent}%",
-  "@speedPercent": { "placeholders": { "percent": { "type": "int" } } },
+  "@speedPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "fuelSavingsPercent": "Экономия топлива: {percent}%",
-  "@fuelSavingsPercent": { "placeholders": { "percent": { "type": "int" } } },
+  "@fuelSavingsPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "noFuelSavings": "Нет экономии топлива",
   "maxHpValue": "Макс HP: {value}",
-  "@maxHpValue": { "placeholders": { "value": { "type": "int" } } },
+  "@maxHpValue": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
   "returnToMining": "ВЕРНУТЬСЯ К ДОБЫЧЕ",
   "soldOreFor": "Руда продана за ${amount}!",
-  "@soldOreFor": { "placeholders": { "amount": { "type": "int" } } },
+  "@soldOreFor": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
   "tankRefueled": "Бак заправлен!",
   "fuelTankUpgraded": "Топливный бак улучшен!",
   "cargoBayUpgraded": "Грузовой отсек улучшен!",
@@ -242,8 +371,13 @@
   "engineUpgraded": "Двигатель улучшен!",
   "coolingUpgraded": "Охлаждение улучшено!",
   "purchased": "{item} куплен!",
-  "@purchased": { "placeholders": { "item": { "type": "String" } } },
-
+  "@purchased": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
   "premiumStore": "ПРЕМИУМ-МАГАЗИН",
   "onChainLoaded": "Цены on-chain загружены",
   "usingDefaultPrices": "Используются стандартные цены",
@@ -263,12 +397,26 @@
   "buy": "КУПИТЬ",
   "notEnoughPoints": "Недостаточно очков!",
   "activated": "{item} активирован!",
-  "@activated": { "placeholders": { "item": { "type": "String" } } },
+  "@activated": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
   "purchasedTx": "{item} куплен! TX: {tx}...",
-  "@purchasedTx": { "placeholders": { "item": { "type": "String" }, "tx": { "type": "String" } } },
+  "@purchasedTx": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "tx": {
+        "type": "String"
+      }
+    }
+  },
   "purchaseFailed": "Покупка не удалась",
   "closeStore": "ЗАКРЫТЬ МАГАЗИН",
-
   "diggleDrillMachine": "БУР DIGGLE",
   "permanentBoostNft": "NFT с постоянным бустом — один на игрока",
   "holderBenefits": "ПРЕИМУЩЕСТВА ВЛАДЕЛЬЦА",
@@ -279,11 +427,23 @@
   "allNftsMinted": "Все NFT Diggle Drill были отчеканены!",
   "mintOpensSoon": "МИНТ СКОРО ОТКРОЕТСЯ",
   "startsAt": "Начало: {date}",
-  "@startsAt": { "placeholders": { "date": { "type": "String" } } },
+  "@startsAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "checkBackLater": "Загляните позже!",
   "mintNft": "МИНТИТЬ NFT",
   "mintCost": "МИНТ — {cost} SOL",
-  "@mintCost": { "placeholders": { "cost": { "type": "String" } } },
+  "@mintCost": {
+    "placeholders": {
+      "cost": {
+        "type": "String"
+      }
+    }
+  },
   "nftMinted": "NFT отчеканен! 🎉",
   "refresh": "Обновить",
   "boostsActive": "Ваши бусты активны навсегда!",
@@ -293,21 +453,31 @@
   "mintStatusConfirming": "Подтверждение on-chain...",
   "mintStatusSuccess": "Успешно отчеканено!",
   "mintStatusError": "Минт не удался",
-
   "xpLabel": "XP: {current}/{next}",
-  "@xpLabel": { "placeholders": { "current": { "type": "int" }, "next": { "type": "int" } } },
-
+  "@xpLabel": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "next": {
+        "type": "int"
+      }
+    }
+  },
   "settingsTitle": "НАСТРОЙКИ",
   "settingsSubtitle": "Игровые настройки",
   "language": "Язык",
   "languageSubtitle": "Выберите предпочтительный язык",
   "systemDefault": "Системный по умолчанию",
-
   "pleaseFillAllFields": "Заполните все поля",
-
   "errorPrefix": "Ошибка: {message}",
-  "@errorPrefix": { "placeholders": { "message": { "type": "String" } } },
-
+  "@errorPrefix": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
   "updateAvailableTitle": "Доступно обновление",
   "updateRequiredTitle": "Требуется обновление",
   "updateRequiredMessage": "Эта версия Diggle больше не поддерживается. Обновите, чтобы продолжить игру.",
@@ -317,12 +487,16 @@
   "updateNow": "ОБНОВИТЬ",
   "updateLater": "Позже",
   "updateOpenStoreFailed": "Не удалось открыть dApp Store. Обновите вручную.",
-
   "light": "Свет",
   "lightUpgraded": "Система освещения улучшена!",
   "revealRadiusValue": "Обзор: {radius} клеток",
-  "@revealRadiusValue": { "placeholders": { "radius": { "type": "int" } } },
-
+  "@revealRadiusValue": {
+    "placeholders": {
+      "radius": {
+        "type": "int"
+      }
+    }
+  },
   "questsTitle": "ЗАДАНИЯ",
   "questsSubtitle": "Выполняйте задания, чтобы заработать XP и очки",
   "questsDailyTab": "Ежедневные",
@@ -335,25 +509,85 @@
   "questsSocialInfo": "Выполняйте социальные действия, чтобы получить разовые награды. Нажмите ПЕРЕЙТИ, чтобы открыть ссылку.",
   "quests": "ЗАДАНИЯ",
   "questMineOreTitle": "Добудьте {count} руд",
-  "@questMineOreTitle": { "placeholders": { "count": { "type": "int" } } },
+  "@questMineOreTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "questMineOreDesc": "Добудьте {count} клеток руды за один день",
-  "@questMineOreDesc": { "placeholders": { "count": { "type": "int" } } },
+  "@questMineOreDesc": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "questReachDepthTitle": "Достигните {depth}м",
-  "@questReachDepthTitle": { "placeholders": { "depth": { "type": "int" } } },
+  "@questReachDepthTitle": {
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
   "questReachDepthDesc": "Достигните глубины {depth}м или более",
-  "@questReachDepthDesc": { "placeholders": { "depth": { "type": "int" } } },
+  "@questReachDepthDesc": {
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
   "questSellOreTitle": "Продайте на ${value}",
-  "@questSellOreTitle": { "placeholders": { "value": { "type": "int" } } },
+  "@questSellOreTitle": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
   "questSellOreDesc": "Продайте руду на общую сумму ${value}",
-  "@questSellOreDesc": { "placeholders": { "value": { "type": "int" } } },
+  "@questSellOreDesc": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
   "questRepairTitle": "Почините {amount} HP",
-  "@questRepairTitle": { "placeholders": { "amount": { "type": "int" } } },
+  "@questRepairTitle": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
   "questRepairDesc": "Почините в сумме {amount} HP корпуса",
-  "@questRepairDesc": { "placeholders": { "amount": { "type": "int" } } },
+  "@questRepairDesc": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
   "questUseItemsTitle": "Используйте {count} предметов",
-  "@questUseItemsTitle": { "placeholders": { "count": { "type": "int" } } },
+  "@questUseItemsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "questUseItemsDesc": "Используйте {count} предметов из инвентаря",
-  "@questUseItemsDesc": { "placeholders": { "count": { "type": "int" } } },
+  "@questUseItemsDesc": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "questFollowTwitterTitle": "Подписаться в X",
   "questFollowTwitterDesc": "Подпишитесь на @DiggleGame в X (Twitter)",
   "questJoinDiscordTitle": "Присоединиться к Discord",
@@ -372,5 +606,52 @@
   "streakStartToday": "Сыграйте сегодня, чтобы начать серию",
   "streakNextReward": "Далее: +{xp} XP, +{points} оч.",
   "streakJackpotReached": "Максимальная ступень — награда максимальна",
-  "streakToJackpot": "{count, plural, one{{count} день до джекпота} few{{count} дня до джекпота} other{{count} дней до джекпота}}"
+  "streakToJackpot": "{count, plural, one{{count} день до джекпота} few{{count} дня до джекпота} other{{count} дней до джекпота}}",
+  "menuWeeklyChallenge": "Weekly Challenge",
+  "menuLeaderboard": "Leaderboard",
+  "menuHangar": "Hangar",
+  "museumTitle": "MUSEUM",
+  "achievementsTab": "ACHIEVEMENTS",
+  "leaderboardHeading": "🏆 LEADERBOARD",
+  "leaderboardEmpty": "No entries yet.\nBe the first on the board!",
+  "hangarHeading": "🛠️ HANGAR",
+  "hangarMachineCount": "{count} Diggle Machines in this wallet — one can be equipped at a time.",
+  "hangarSeekerVerified": "SEEKER GENESIS VERIFIED",
+  "hangarSeekerBlurb": "Solana Mobile pioneer — +5% XP & Points, always on.",
+  "hangarSealedCrate": "SEALED CRATE",
+  "hangarSealedBlurb": "This machine hasn't been revealed yet. Until then it grants the flat +25% XP & Points holder boost.\n\nAfter the reveal, its five gear traits (Hull, Thruster, Fuel Tank, Drill, Cargo Hold) become equippable with rarity-based stat bonuses. Tap refresh after reveal day!",
+  "hangarEquipped": "✅ Equipped — bonuses active in normal runs.\nWeekly Challenge uses a standardized loadout (no gear).",
+  "quantity": "Quantity",
+  "airdrop": "Airdrop",
+  "questsWeeklyTab": "Weekly",
+  "questsWeeklyInfo": "Big challenges, big rewards. Resets every Monday (UTC).",
+  "questsNotEnoughPoints": "Not enough points ({cost} needed). Grab a points pack in the store!",
+  "questJoinDiscordServer": "Join Discord Server",
+  "questCheckingMembership": "Checking membership...",
+  "questVerifyMembership": "Verify Membership",
+  "questDiscordHint": "Join the server first, then tap Verify to confirm with Discord",
+  "questPostOnX": "Post on X",
+  "questTweetHint": "Post the tweet above, then paste the URL to verify",
+  "questDiscordUnavailable": "Discord verification not available. Try again later.",
+  "questDiscordOpenFailed": "Could not open Discord. Please try again.",
+  "questDiscordVerified": "Discord membership verified! 🎉",
+  "questDiscordVerifyFailed": "Could not verify membership. Make sure you joined the server and authorized Discord.",
+  "signNewContract": "Sign New Contract",
+  "corporateContract": "⭐ Corporate Contract",
+  "prestigeDialogBody": "Sign Contract #{level}?\n\nRESETS: world, cash, ship upgrades\nKEEPS: XP, points, NFTs, achievements, collection\n\nPERMANENT PERKS:\n• +{sellBonus}% ore sell price\n• ${startCash} starting cash + starter kit\n{hardcore}• {badge} leaderboard badge",
+  "prestigeHardcoreLine": "• Hardcore seams: richer ore, deadlier hazards\n",
+  "notYet": "Not yet",
+  "signContract": "Sign Contract",
+  "recoveryFailedPoints": "Recovery failed — not enough points",
+  "emergencyRecoveryCost": "Emergency Recovery ({cost} pts)",
+  "emergencyRecoveryNeed": "Need {cost} pts — open Store",
+  "keepsCargo": "Keeps your ${value} cargo!",
+  "titleUnlocked": "Title unlocked: {title}",
+  "titleProspector": "Prospector",
+  "titleExcavator": "Excavator",
+  "titleDemolitionist": "Demolitionist",
+  "titleDeepMiner": "Deep Miner",
+  "titleVoidwalker": "Voidwalker",
+  "titleCoreBreaker": "Core Breaker",
+  "titleDiggleLegend": "Diggle Legend"
 }

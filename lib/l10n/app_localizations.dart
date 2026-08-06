@@ -1931,6 +1931,294 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 day to the jackpot} other{{count} days to the jackpot}}'**
   String streakToJackpot(int count);
+
+  /// No description provided for @menuWeeklyChallenge.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly Challenge'**
+  String get menuWeeklyChallenge;
+
+  /// No description provided for @menuLeaderboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaderboard'**
+  String get menuLeaderboard;
+
+  /// No description provided for @menuHangar.
+  ///
+  /// In en, this message translates to:
+  /// **'Hangar'**
+  String get menuHangar;
+
+  /// No description provided for @museumTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'MUSEUM'**
+  String get museumTitle;
+
+  /// No description provided for @achievementsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'ACHIEVEMENTS'**
+  String get achievementsTab;
+
+  /// No description provided for @leaderboardHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'🏆 LEADERBOARD'**
+  String get leaderboardHeading;
+
+  /// No description provided for @leaderboardEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No entries yet.\nBe the first on the board!'**
+  String get leaderboardEmpty;
+
+  /// No description provided for @hangarHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'🛠️ HANGAR'**
+  String get hangarHeading;
+
+  /// No description provided for @hangarMachineCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} Diggle Machines in this wallet — one can be equipped at a time.'**
+  String hangarMachineCount(int count);
+
+  /// No description provided for @hangarSeekerVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'SEEKER GENESIS VERIFIED'**
+  String get hangarSeekerVerified;
+
+  /// No description provided for @hangarSeekerBlurb.
+  ///
+  /// In en, this message translates to:
+  /// **'Solana Mobile pioneer — +5% XP & Points, always on.'**
+  String get hangarSeekerBlurb;
+
+  /// No description provided for @hangarSealedCrate.
+  ///
+  /// In en, this message translates to:
+  /// **'SEALED CRATE'**
+  String get hangarSealedCrate;
+
+  /// No description provided for @hangarSealedBlurb.
+  ///
+  /// In en, this message translates to:
+  /// **'This machine hasn\'t been revealed yet. Until then it grants the flat +25% XP & Points holder boost.\n\nAfter the reveal, its five gear traits (Hull, Thruster, Fuel Tank, Drill, Cargo Hold) become equippable with rarity-based stat bonuses. Tap refresh after reveal day!'**
+  String get hangarSealedBlurb;
+
+  /// No description provided for @hangarEquipped.
+  ///
+  /// In en, this message translates to:
+  /// **'✅ Equipped — bonuses active in normal runs.\nWeekly Challenge uses a standardized loadout (no gear).'**
+  String get hangarEquipped;
+
+  /// No description provided for @quantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity'**
+  String get quantity;
+
+  /// No description provided for @airdrop.
+  ///
+  /// In en, this message translates to:
+  /// **'Airdrop'**
+  String get airdrop;
+
+  /// No description provided for @questsWeeklyTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get questsWeeklyTab;
+
+  /// No description provided for @questsWeeklyInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Big challenges, big rewards. Resets every Monday (UTC).'**
+  String get questsWeeklyInfo;
+
+  /// No description provided for @questsNotEnoughPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough points ({cost} needed). Grab a points pack in the store!'**
+  String questsNotEnoughPoints(int cost);
+
+  /// No description provided for @questJoinDiscordServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Join Discord Server'**
+  String get questJoinDiscordServer;
+
+  /// No description provided for @questCheckingMembership.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking membership...'**
+  String get questCheckingMembership;
+
+  /// No description provided for @questVerifyMembership.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify Membership'**
+  String get questVerifyMembership;
+
+  /// No description provided for @questDiscordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Join the server first, then tap Verify to confirm with Discord'**
+  String get questDiscordHint;
+
+  /// No description provided for @questPostOnX.
+  ///
+  /// In en, this message translates to:
+  /// **'Post on X'**
+  String get questPostOnX;
+
+  /// No description provided for @questTweetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Post the tweet above, then paste the URL to verify'**
+  String get questTweetHint;
+
+  /// No description provided for @questDiscordUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Discord verification not available. Try again later.'**
+  String get questDiscordUnavailable;
+
+  /// No description provided for @questDiscordOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open Discord. Please try again.'**
+  String get questDiscordOpenFailed;
+
+  /// No description provided for @questDiscordVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Discord membership verified! 🎉'**
+  String get questDiscordVerified;
+
+  /// No description provided for @questDiscordVerifyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not verify membership. Make sure you joined the server and authorized Discord.'**
+  String get questDiscordVerifyFailed;
+
+  /// No description provided for @signNewContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign New Contract'**
+  String get signNewContract;
+
+  /// No description provided for @corporateContract.
+  ///
+  /// In en, this message translates to:
+  /// **'⭐ Corporate Contract'**
+  String get corporateContract;
+
+  /// No description provided for @prestigeDialogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Contract #{level}?\n\nRESETS: world, cash, ship upgrades\nKEEPS: XP, points, NFTs, achievements, collection\n\nPERMANENT PERKS:\n• +{sellBonus}% ore sell price\n• \${startCash} starting cash + starter kit\n{hardcore}• {badge} leaderboard badge'**
+  String prestigeDialogBody(
+    int level,
+    int sellBonus,
+    int startCash,
+    String hardcore,
+    String badge,
+  );
+
+  /// No description provided for @prestigeHardcoreLine.
+  ///
+  /// In en, this message translates to:
+  /// **'• Hardcore seams: richer ore, deadlier hazards\n'**
+  String get prestigeHardcoreLine;
+
+  /// No description provided for @notYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not yet'**
+  String get notYet;
+
+  /// No description provided for @signContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Contract'**
+  String get signContract;
+
+  /// No description provided for @recoveryFailedPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery failed — not enough points'**
+  String get recoveryFailedPoints;
+
+  /// No description provided for @emergencyRecoveryCost.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergency Recovery ({cost} pts)'**
+  String emergencyRecoveryCost(int cost);
+
+  /// No description provided for @emergencyRecoveryNeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Need {cost} pts — open Store'**
+  String emergencyRecoveryNeed(int cost);
+
+  /// No description provided for @keepsCargo.
+  ///
+  /// In en, this message translates to:
+  /// **'Keeps your \${value} cargo!'**
+  String keepsCargo(int value);
+
+  /// No description provided for @titleUnlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Title unlocked: {title}'**
+  String titleUnlocked(String title);
+
+  /// No description provided for @titleProspector.
+  ///
+  /// In en, this message translates to:
+  /// **'Prospector'**
+  String get titleProspector;
+
+  /// No description provided for @titleExcavator.
+  ///
+  /// In en, this message translates to:
+  /// **'Excavator'**
+  String get titleExcavator;
+
+  /// No description provided for @titleDemolitionist.
+  ///
+  /// In en, this message translates to:
+  /// **'Demolitionist'**
+  String get titleDemolitionist;
+
+  /// No description provided for @titleDeepMiner.
+  ///
+  /// In en, this message translates to:
+  /// **'Deep Miner'**
+  String get titleDeepMiner;
+
+  /// No description provided for @titleVoidwalker.
+  ///
+  /// In en, this message translates to:
+  /// **'Voidwalker'**
+  String get titleVoidwalker;
+
+  /// No description provided for @titleCoreBreaker.
+  ///
+  /// In en, this message translates to:
+  /// **'Core Breaker'**
+  String get titleCoreBreaker;
+
+  /// No description provided for @titleDiggleLegend.
+  ///
+  /// In en, this message translates to:
+  /// **'Diggle Legend'**
+  String get titleDiggleLegend;
 }
 
 class _AppLocalizationsDelegate

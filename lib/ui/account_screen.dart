@@ -729,7 +729,7 @@ class _AccountScreenState extends State<AccountScreen> {
                               }
                             },
                             icon: const Icon(Icons.air, size: 14),
-                            label: const Text('Airdrop',
+                            label: Text(l10n.airdrop,
                                 style: TextStyle(fontSize: 11)),
                             style: TextButton.styleFrom(
                               foregroundColor: Colors.orange,

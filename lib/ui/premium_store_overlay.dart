@@ -800,7 +800,7 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('Quantity',
+                Text(l10n.quantity,
                     style: TextStyle(color: Colors.white54, fontSize: 13)),
                 const SizedBox(width: 12),
                 for (int q = 1; q <= maxQty; q++)

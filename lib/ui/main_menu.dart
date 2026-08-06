@@ -167,7 +167,7 @@ class _MainMenuState extends State<MainMenu>
                                   index: widget.hasSaves ? 3 : 2,
                                   child: _SecondaryMenuButton(
                                     icon: Icons.emoji_events,
-                                    label: 'Weekly Challenge',
+                                    label: l10n.menuWeeklyChallenge,
                                     color: Colors.deepOrange,
                                     onPressed: widget.onWeeklyChallenge!,
                                   ),
@@ -179,7 +179,7 @@ class _MainMenuState extends State<MainMenu>
                                   index: widget.hasSaves ? 3 : 2,
                                   child: _SecondaryMenuButton(
                                     icon: Icons.leaderboard,
-                                    label: 'Leaderboard',
+                                    label: l10n.menuLeaderboard,
                                     color: Colors.amber,
                                     onPressed: widget.onLeaderboard!,
                                   ),
@@ -191,7 +191,7 @@ class _MainMenuState extends State<MainMenu>
                                   index: widget.hasSaves ? 3 : 2,
                                   child: _SecondaryMenuButton(
                                     icon: Icons.precision_manufacturing,
-                                    label: 'Hangar',
+                                    label: l10n.menuHangar,
                                     color: Colors.teal,
                                     onPressed: widget.onHangar!,
                                   ),

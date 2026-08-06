@@ -11,6 +11,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../game/systems/gear_sprites.dart';
 import '../game/systems/gear_system.dart';
 import '../solana/candy_machine_service.dart';
@@ -129,8 +130,8 @@ class _HangarScreenState extends State<HangarScreen> {
         backgroundColor: Colors.black45,
         leading: IconButton(
             onPressed: widget.onBack, icon: const Icon(Icons.arrow_back)),
-        title: const Text('🛠️ HANGAR',
-            style: TextStyle(letterSpacing: 2, fontSize: 18)),
+        title: Text(AppLocalizations.of(context)!.hangarHeading,
+            style: const TextStyle(letterSpacing: 2, fontSize: 18)),
         actions: [
           if (_refreshing)
             const Padding(
@@ -189,8 +190,8 @@ class _HangarScreenState extends State<HangarScreen> {
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
-              '${_machines.length} Diggle Machines in this wallet — '
-              'one can be equipped at a time.',
+              AppLocalizations.of(context)!
+                  .hangarMachineCount(_machines.length),
               style: const TextStyle(color: Colors.white54, fontSize: 12),
             ),
           ),
@@ -219,27 +220,27 @@ class _HangarScreenState extends State<HangarScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.tealAccent.shade700),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Text('📱', style: TextStyle(fontSize: 26)),
-          SizedBox(width: 12),
+          const Text('📱', style: TextStyle(fontSize: 26)),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'SEEKER GENESIS VERIFIED',
-                  style: TextStyle(
+                  AppLocalizations.of(context)!.hangarSeekerVerified,
+                  style: const TextStyle(
                     color: Colors.tealAccent,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                     letterSpacing: 1.5,
                   ),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
-                  'Solana Mobile pioneer — +5% XP & Points, always on.',
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                  AppLocalizations.of(context)!.hangarSeekerBlurb,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
               ],
             ),
@@ -322,26 +323,22 @@ class _HangarScreenState extends State<HangarScreen> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.brown.shade600),
       ),
-      child: const Column(
+      child: Column(
         children: [
-          Text('📦', style: TextStyle(fontSize: 44)),
-          SizedBox(height: 12),
+          const Text('📦', style: TextStyle(fontSize: 44)),
+          const SizedBox(height: 12),
           Text(
-            'SEALED CRATE',
+            AppLocalizations.of(context)!.hangarSealedCrate,
             style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 2),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
-            'This machine hasn\'t been revealed yet. Until then it grants '
-            'the flat +25% XP & Points holder boost.\n\n'
-            'After the reveal, its five gear traits (Hull, Thruster, Fuel '
-            'Tank, Drill, Cargo Hold) become equippable with rarity-based '
-            'stat bonuses. Tap refresh after reveal day!',
+            AppLocalizations.of(context)!.hangarSealedBlurb,
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white70, fontSize: 13),
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),
         ],
       ),
@@ -377,13 +374,12 @@ class _HangarScreenState extends State<HangarScreen> {
           ),
         ),
         if (isEquipped)
-          const Padding(
-            padding: EdgeInsets.only(top: 10),
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
             child: Text(
-              '✅ Equipped — bonuses active in normal runs.\n'
-              'Weekly Challenge uses a standardized loadout (no gear).',
+              AppLocalizations.of(context)!.hangarEquipped,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54, fontSize: 12),
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
             ),
           ),
       ],

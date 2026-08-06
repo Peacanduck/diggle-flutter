@@ -31,6 +31,7 @@ import 'game/systems/boost_manager.dart';
 import 'game/systems/prestige_system.dart';
 import 'game/systems/gear_system.dart';
 import 'game/systems/streak_system.dart';
+import 'ui/level_titles_l10n.dart';
 import 'game/systems/quest_system.dart' show QuestSystem;
 import 'services/leaderboard_service.dart';
 import 'ui/leaderboard_screen.dart';
@@ -543,6 +544,11 @@ class _GameScreenState extends State<GameScreen>
       isNewGame: widget.isNewGame,
       challengeMode: widget.challengeMode,
     );
+    // Resolved per call so a locale change mid-session is picked up.
+    _game.formatTitleUnlocked = (titleId) {
+      final l10n = AppLocalizations.of(context)!;
+      return l10n.titleUnlocked(localizedLevelTitle(l10n, titleId));
+    };
 
     final walletService = context.read<WalletService>();
     final candyMachineService = context.read<CandyMachineService>();
@@ -815,7 +821,7 @@ class _GameScreenState extends State<GameScreen>
                 ElevatedButton.icon(
                   onPressed: () => _confirmPrestige(context, game),
                   icon: const Text('⭐', style: TextStyle(fontSize: 16)),
-                  label: const Text('Sign New Contract'),
+                  label: Text(AppLocalizations.of(context)!.signNewContract),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.deepPurple.shade700,
                     minimumSize: const Size(200, 50),
@@ -861,35 +867,37 @@ class _GameScreenState extends State<GameScreen>
   /// Confirm and execute a prestige ("Corporate Contract") reset.
   Future<void> _confirmPrestige(BuildContext context, DiggleGame game) async {
     final prestige = context.read<PrestigeSystem>();
+    final l10n = AppLocalizations.of(context)!;
     final nextLevel = prestige.level + 1;
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1a1a2e),
-        title: const Text('⭐ Corporate Contract',
-            style: TextStyle(color: Colors.white)),
+        title: Text(l10n.corporateContract,
+            style: const TextStyle(color: Colors.white)),
         content: Text(
-          'Sign Contract #$nextLevel?\n\n'
-          'RESETS: world, cash, ship upgrades\n'
-          'KEEPS: XP, points, NFTs, achievements, collection\n\n'
-          'PERMANENT PERKS:\n'
-          '• +${nextLevel * 5}% ore sell price\n'
-          '• \$${50 + 500 * nextLevel} starting cash + starter kit\n'
-          '${nextLevel >= 2 ? '• Hardcore seams: richer ore, deadlier hazards\n' : ''}'
-          '• ${'⭐' * nextLevel.clamp(1, 5)} leaderboard badge',
+          l10n.prestigeDialogBody(
+            nextLevel,
+            nextLevel * 5,
+            50 + 500 * nextLevel,
+            // Passed in pre-resolved: an ICU message can't hold a
+            // conditional line of its own.
+            nextLevel >= 2 ? l10n.prestigeHardcoreLine : '',
+            '⭐' * nextLevel.clamp(1, 5),
+          ),
           style: const TextStyle(color: Colors.white70, fontSize: 13),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Not yet'),
+            child: Text(l10n.notYet),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.deepPurple.shade700),
-            child: const Text('Sign Contract'),
+            child: Text(l10n.signContract),
           ),
         ],
       ),
@@ -951,8 +959,8 @@ class _GameScreenState extends State<GameScreen>
                               if (!ok) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: const Text(
-                                        'Recovery failed — not enough points'),
+                                    content: Text(AppLocalizations.of(context)!
+                                        .recoveryFailedPoints),
                                     backgroundColor: Colors.red.shade700,
                                   ),
                                 );
@@ -961,8 +969,10 @@ class _GameScreenState extends State<GameScreen>
                           : () => game.openPremiumStore(),
                       icon: const Text('🚑', style: TextStyle(fontSize: 18)),
                       label: Text(canAfford
-                          ? 'Emergency Recovery ($cost pts)'
-                          : 'Need $cost pts — open Store'),
+                          ? AppLocalizations.of(context)!
+                              .emergencyRecoveryCost(cost)
+                          : AppLocalizations.of(context)!
+                              .emergencyRecoveryNeed(cost)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: canAfford
                             ? Colors.teal.shade700
@@ -974,7 +984,7 @@ class _GameScreenState extends State<GameScreen>
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
-                          'Keeps your \$$cargoValue cargo!',
+                          AppLocalizations.of(context)!.keepsCargo(cargoValue),
                           style: TextStyle(
                               color: Colors.amber.shade300, fontSize: 12),
                         ),

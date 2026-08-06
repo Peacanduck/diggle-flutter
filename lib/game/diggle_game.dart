@@ -58,6 +58,10 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   late CollectionSystem collectionSystem;
   late AchievementSystem achievementSystem;
   late StreakSystem streakSystem;
+
+  /// Builds the localized "Title unlocked" announcement for a
+  /// [LevelTitles] id. Set by the UI layer, which owns the context.
+  String Function(String titleId)? formatTitleUnlocked;
   late GearSystem gearSystem;
 
   late XPPointsSystem xpPointsSystem;
@@ -256,9 +260,12 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
           itemSystem.addItem(type);
         }
       });
-      final title = reward.title;
-      if (title != null) {
-        xpPointsSystem.awardBonus(0, 0, 'Title unlocked: $title');
+      final titleId = reward.title;
+      if (titleId != null) {
+        // The game layer has no BuildContext; the UI supplies the
+        // localized sentence. Falls back to the raw id.
+        xpPointsSystem.awardBonus(
+            0, 0, formatTitleUnlocked?.call(titleId) ?? titleId);
       }
     };
 

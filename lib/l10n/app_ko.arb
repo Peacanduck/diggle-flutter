@@ -1,12 +1,10 @@
 {
   "@@locale": "ko",
-
   "appTitle": "Diggle",
   "tagline": "깊이 파고  •  보물을 캐고  •  더 멀리 가자",
   "mineDeepEarnRewards": "깊이 채굴하고, 보상을 획득하세요.",
   "pyroLabs": "PyroLabs",
   "version": "v0.1.0-alpha",
-
   "newGame": "새 게임",
   "continueGame": "계속하기",
   "loadGame": "불러오기",
@@ -14,8 +12,13 @@
   "settings": "설정",
   "howToPlay": "게임 방법",
   "comingSoon": "{feature} 곧 출시!",
-  "@comingSoon": { "placeholders": { "feature": { "type": "String" } } },
-
+  "@comingSoon": {
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      }
+    }
+  },
   "helpMiningTitle": "⛏️ 채굴",
   "helpMiningBody": "방향 컨트롤로 드릴을 이동하세요. 흙과 바위를 파서 귀중한 광석을 찾으세요.",
   "helpFuelTitle": "⛽ 연료",
@@ -29,24 +32,39 @@
   "helpHazardsTitle": "⚠️ 위험 요소",
   "helpHazardsBody": "용암(즉사)과 가스 주머니(피해)를 조심하세요!",
   "gotIt": "알겠어요!",
-
   "paused": "일시정지",
   "resume": "재개",
   "saveGame": "저장",
   "restart": "재시작",
   "mainMenu": "메인 메뉴",
   "savedToSlot": "슬롯 {slot}에 저장됨",
-  "@savedToSlot": { "placeholders": { "slot": { "type": "int" } } },
-
+  "@savedToSlot": {
+    "placeholders": {
+      "slot": {
+        "type": "int"
+      }
+    }
+  },
   "gameOver": "게임 오버",
   "depthReached": "도달 깊이: {depth}m",
-  "@depthReached": { "placeholders": { "depth": { "type": "int" } } },
+  "@depthReached": {
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
   "tryAgain": "다시 시도",
   "loadingDiggle": "Diggle 로딩 중...",
   "failedToLoadGame": "게임 로드 실패:\n{error}",
-  "@failedToLoadGame": { "placeholders": { "error": { "type": "String" } } },
+  "@failedToLoadGame": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "backToMenu": "메뉴로 돌아가기",
-
   "signInWithEmail": "이메일로 로그인",
   "signInWithWallet": "지갑으로 로그인",
   "playAsGuest": "게스트로 플레이",
@@ -69,17 +87,21 @@
   "pleaseFillFields": "이메일과 비밀번호를 입력해주세요",
   "passwordTooShort": "비밀번호는 최소 6자 이상이어야 합니다",
   "passwordsNoMatch": "비밀번호가 일치하지 않습니다",
-
   "accountTitle": "계정",
   "accountSubtitle": "프로필, 로그인 방법 및 통계",
   "playerProfile": "플레이어 프로필",
   "enterDisplayName": "표시 이름 입력",
   "anonymousMiner": "익명 광부",
   "memberSince": "{date}부터 회원",
-  "@memberSince": { "placeholders": { "date": { "type": "String" } } },
+  "@memberSince": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "playingOffline": "오프라인 플레이 중",
   "playerIdCopied": "플레이어 ID 복사됨",
-
   "signInMethods": "로그인 방법",
   "signInMethodsSubtitle": "계정에 접근하는 방법",
   "emailSignIn": "이메일 로그인",
@@ -93,25 +115,21 @@
   "add": "추가",
   "copyAddress": "주소 복사",
   "unlink": "연결 해제",
-
   "addEmailSignIn": "이메일 로그인 추가",
   "addEmailSubtitle": "지갑이 기본 로그인으로 유지됩니다. 이메일은 대안입니다.",
   "addEmail": "이메일 추가",
   "checkEmailLink": "이메일을 확인하여 연결을 인증하세요!",
   "emailSignInAdded": "이메일 로그인 추가됨!",
-
   "walletConnectionCancelled": "지갑 연결 취소됨",
   "couldNotGetWalletAddress": "지갑 주소를 가져올 수 없습니다",
   "signingCancelled": "서명이 취소되었습니다",
   "walletLinked": "지갑 연결 완료! 이제 지갑으로 로그인할 수 있습니다.",
   "walletLinkFailed": "지갑 연결 실패",
-
   "unlinkWalletTitle": "지갑 연결 해제",
   "unlinkWalletMessage": "지갑이 계정에서 제거됩니다. 이후 다른 지갑을 연결할 수 있습니다.",
   "cancel": "취소",
   "walletUnlinked": "지갑 연결 해제됨",
   "unlinkFailed": "연결 해제 실패",
-
   "walletAdapter": "지갑 어댑터",
   "walletAdapterGuestSubtitle": "이번 세션의 구매를 위해 연결",
   "walletAdapterReconnectSubtitle": "거래 서명을 위해 재연결",
@@ -120,7 +138,13 @@
   "mainnet": "메인넷",
   "devnet": "개발넷",
   "connected": "연결됨 — {network}",
-  "@connected": { "placeholders": { "network": { "type": "String" } } },
+  "@connected": {
+    "placeholders": {
+      "network": {
+        "type": "String"
+      }
+    }
+  },
   "loadingBalance": "잔액 로딩 중...",
   "airdropRequested": "에어드롭 요청됨!",
   "airdropFailed": "에어드롭 실패",
@@ -130,7 +154,6 @@
   "connectWallet": "지갑 연결",
   "phantomTip": "💡 최고의 개발넷 지원을 위해 Phantom 지갑을 사용하세요",
   "addressCopied": "주소 복사됨",
-
   "lifetimeStats": "전체 통계",
   "statLevel": "레벨",
   "statTotalXp": "총 XP",
@@ -140,56 +163,105 @@
   "statPlayTime": "플레이 시간",
   "statPointsEarned": "획득 포인트",
   "statPointsSpent": "사용 포인트",
-
   "signedInEmail": "이메일로 로그인됨",
   "signedInWallet": "지갑으로 로그인됨",
   "playingAsGuest": "게스트로 플레이 중",
   "signOut": "로그아웃",
   "signOutConfirm": "정말 로그아웃하시겠습니까?",
   "guestSignOutWarning": "게스트 진행 상황은 이 기기에만 저장됩니다. 로그아웃하면 현재 저장 데이터에 접근할 수 없습니다. 계속하시겠습니까?",
-
   "emailAccount": "이메일 계정",
   "walletAccount": "지갑 계정",
   "guestLocalOnly": "게스트 — 로컬 진행만 가능",
   "offline": "오프라인",
-
   "newGameTitle": "새 게임",
   "loadGameTitle": "게임 불러오기",
   "newGameSubtitle": "새 모험을 위한 저장 슬롯을 선택하세요",
   "loadGameSubtitle": "여정을 계속할 저장 파일을 선택하세요",
   "slotEmpty": "슬롯 {slot} — 비어있음",
-  "@slotEmpty": { "placeholders": { "slot": { "type": "int" } } },
+  "@slotEmpty": {
+    "placeholders": {
+      "slot": {
+        "type": "int"
+      }
+    }
+  },
   "tapToStart": "탭하여 새 모험 시작",
   "noSaveData": "저장 데이터 없음",
   "slot": "슬롯 {slot}",
-  "@slot": { "placeholders": { "slot": { "type": "int" } } },
+  "@slot": {
+    "placeholders": {
+      "slot": {
+        "type": "int"
+      }
+    }
+  },
   "savedAgo": "{time} 전 저장",
-  "@savedAgo": { "placeholders": { "time": { "type": "String" } } },
+  "@savedAgo": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "deleteSlotConfirm": "슬롯 {slot}을(를) 삭제하시겠습니까?",
-  "@deleteSlotConfirm": { "placeholders": { "slot": { "type": "int" } } },
+  "@deleteSlotConfirm": {
+    "placeholders": {
+      "slot": {
+        "type": "int"
+      }
+    }
+  },
   "cannotBeUndone": "이 작업은 되돌릴 수 없습니다.",
   "delete": "삭제",
   "overwriteSaveTitle": "덮어쓰기?",
   "overwriteSaveMessage": "슬롯 {slot}에 이미 저장 데이터가 있습니다. 여기서 새 게임을 시작하면 덮어씁니다.",
-  "@overwriteSaveMessage": { "placeholders": { "slot": { "type": "int" } } },
+  "@overwriteSaveMessage": {
+    "placeholders": {
+      "slot": {
+        "type": "int"
+      }
+    }
+  },
   "overwrite": "덮어쓰기",
   "noSaves": "(저장 없음)",
   "justNow": "방금",
   "minutesAgo": "{min}분 전",
-  "@minutesAgo": { "placeholders": { "min": { "type": "int" } } },
+  "@minutesAgo": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
   "hoursAgo": "{hours}시간 전",
-  "@hoursAgo": { "placeholders": { "hours": { "type": "int" } } },
+  "@hoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
   "daysAgo": "{days}일 전",
-  "@daysAgo": { "placeholders": { "days": { "type": "int" } } },
-
+  "@daysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "hp": "HP",
   "fuel": "연료",
   "items": "아이템: ",
   "store": "상점",
   "shop": "상점",
   "depthMeter": "{depth}m",
-  "@depthMeter": { "placeholders": { "depth": { "type": "int" } } },
-
+  "@depthMeter": {
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
   "miningSupplyCo": "채굴 용품점",
   "cash": "돈",
   "hull": "선체",
@@ -204,16 +276,43 @@
   "sellAll": "모두 판매",
   "refuel": "연료 보급",
   "refuelCost": "연료 보급 (${cost})",
-  "@refuelCost": { "placeholders": { "cost": { "type": "int" } } },
+  "@refuelCost": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "tankFull": "탱크가 가득 찼습니다!",
   "repair": "수리",
   "repairHullCost": "선체 수리 (${cost})",
-  "@repairHullCost": { "placeholders": { "cost": { "type": "int" } } },
+  "@repairHullCost": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "hullFullyRepaired": "선체 완전 수리 완료!",
   "inventorySlots": "인벤토리: {used}/{max} 칸",
-  "@inventorySlots": { "placeholders": { "used": { "type": "int" }, "max": { "type": "int" } } },
+  "@inventorySlots": {
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
   "upgradeCost": "업그레이드 - ${cost}",
-  "@upgradeCost": { "placeholders": { "cost": { "type": "int" } } },
+  "@upgradeCost": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "maxed": "최대",
   "drillBit": "드릴 비트",
   "engine": "엔진",
@@ -222,17 +321,47 @@
   "cargoBay": "화물칸",
   "hullArmor": "선체 장갑",
   "capacityValue": "용량: {value}",
-  "@capacityValue": { "placeholders": { "value": { "type": "int" } } },
+  "@capacityValue": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
   "speedPercent": "속도: {percent}%",
-  "@speedPercent": { "placeholders": { "percent": { "type": "int" } } },
+  "@speedPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "fuelSavingsPercent": "연료 절약: {percent}%",
-  "@fuelSavingsPercent": { "placeholders": { "percent": { "type": "int" } } },
+  "@fuelSavingsPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "noFuelSavings": "연료 절약 없음",
   "maxHpValue": "최대 HP: {value}",
-  "@maxHpValue": { "placeholders": { "value": { "type": "int" } } },
+  "@maxHpValue": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
   "returnToMining": "채굴로 돌아가기",
   "soldOreFor": "광석을 ${amount}에 판매했습니다!",
-  "@soldOreFor": { "placeholders": { "amount": { "type": "int" } } },
+  "@soldOreFor": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
   "tankRefueled": "연료 보급 완료!",
   "fuelTankUpgraded": "연료 탱크 업그레이드!",
   "cargoBayUpgraded": "화물칸 업그레이드!",
@@ -242,8 +371,13 @@
   "engineUpgraded": "엔진 업그레이드!",
   "coolingUpgraded": "냉각 시스템 업그레이드!",
   "purchased": "{item} 구매 완료!",
-  "@purchased": { "placeholders": { "item": { "type": "String" } } },
-
+  "@purchased": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
   "premiumStore": "프리미엄 상점",
   "onChainLoaded": "온체인 가격 로드됨",
   "usingDefaultPrices": "기본 가격 사용 중",
@@ -263,12 +397,26 @@
   "buy": "구매",
   "notEnoughPoints": "포인트가 부족합니다!",
   "activated": "{item} 활성화!",
-  "@activated": { "placeholders": { "item": { "type": "String" } } },
+  "@activated": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
   "purchasedTx": "{item} 구매 완료! TX: {tx}...",
-  "@purchasedTx": { "placeholders": { "item": { "type": "String" }, "tx": { "type": "String" } } },
+  "@purchasedTx": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "tx": {
+        "type": "String"
+      }
+    }
+  },
   "purchaseFailed": "구매 실패",
   "closeStore": "상점 닫기",
-
   "diggleDrillMachine": "DIGGLE 드릴 머신",
   "permanentBoostNft": "영구 부스트 NFT — 플레이어당 1개",
   "holderBenefits": "보유자 혜택",
@@ -279,11 +427,23 @@
   "allNftsMinted": "모든 Diggle Drill NFT가 민팅되었습니다!",
   "mintOpensSoon": "민팅 곧 시작",
   "startsAt": "시작: {date}",
-  "@startsAt": { "placeholders": { "date": { "type": "String" } } },
+  "@startsAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "checkBackLater": "나중에 다시 확인하세요!",
   "mintNft": "NFT 민팅",
   "mintCost": "민팅 — {cost} SOL",
-  "@mintCost": { "placeholders": { "cost": { "type": "String" } } },
+  "@mintCost": {
+    "placeholders": {
+      "cost": {
+        "type": "String"
+      }
+    }
+  },
   "nftMinted": "NFT 민팅 완료! 🎉",
   "refresh": "새로고침",
   "boostsActive": "부스트가 영구 활성화되었습니다!",
@@ -293,21 +453,31 @@
   "mintStatusConfirming": "온체인 확인 중...",
   "mintStatusSuccess": "민팅 성공!",
   "mintStatusError": "민팅 실패",
-
   "xpLabel": "XP: {current}/{next}",
-  "@xpLabel": { "placeholders": { "current": { "type": "int" }, "next": { "type": "int" } } },
-
+  "@xpLabel": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "next": {
+        "type": "int"
+      }
+    }
+  },
   "settingsTitle": "설정",
   "settingsSubtitle": "게임 환경 설정",
   "language": "언어",
   "languageSubtitle": "선호하는 언어를 선택하세요",
   "systemDefault": "시스템 기본값",
-
   "pleaseFillAllFields": "모든 항목을 입력해주세요",
-
   "errorPrefix": "오류: {message}",
-  "@errorPrefix": { "placeholders": { "message": { "type": "String" } } },
-
+  "@errorPrefix": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
   "updateAvailableTitle": "업데이트 가능",
   "updateRequiredTitle": "업데이트 필요",
   "updateRequiredMessage": "이 버전의 Diggle은 더 이상 지원되지 않습니다. 계속 플레이하려면 업데이트하세요.",
@@ -317,12 +487,16 @@
   "updateNow": "지금 업데이트",
   "updateLater": "나중에",
   "updateOpenStoreFailed": "dApp Store를 열 수 없습니다. 수동으로 업데이트해주세요.",
-
   "light": "조명",
   "lightUpgraded": "조명 시스템 업그레이드!",
   "revealRadiusValue": "탐지 범위: {radius} 타일",
-  "@revealRadiusValue": { "placeholders": { "radius": { "type": "int" } } },
-
+  "@revealRadiusValue": {
+    "placeholders": {
+      "radius": {
+        "type": "int"
+      }
+    }
+  },
   "questsTitle": "퀘스트",
   "questsSubtitle": "퀘스트를 완료하여 XP와 포인트를 획득하세요",
   "questsDailyTab": "일일",
@@ -335,25 +509,85 @@
   "questsSocialInfo": "소셜 활동을 완료하여 일회성 보상을 받으세요. 이동을 탭하여 링크를 여세요.",
   "quests": "퀘스트",
   "questMineOreTitle": "광석 {count}개 채굴",
-  "@questMineOreTitle": { "placeholders": { "count": { "type": "int" } } },
+  "@questMineOreTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "questMineOreDesc": "하루에 광석 타일 {count}개 채굴",
-  "@questMineOreDesc": { "placeholders": { "count": { "type": "int" } } },
+  "@questMineOreDesc": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "questReachDepthTitle": "{depth}m 도달",
-  "@questReachDepthTitle": { "placeholders": { "depth": { "type": "int" } } },
+  "@questReachDepthTitle": {
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
   "questReachDepthDesc": "{depth}m 이상 깊이에 도달",
-  "@questReachDepthDesc": { "placeholders": { "depth": { "type": "int" } } },
+  "@questReachDepthDesc": {
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
   "questSellOreTitle": "${value} 어치 판매",
-  "@questSellOreTitle": { "placeholders": { "value": { "type": "int" } } },
+  "@questSellOreTitle": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
   "questSellOreDesc": "총 ${value} 어치의 광석 판매",
-  "@questSellOreDesc": { "placeholders": { "value": { "type": "int" } } },
+  "@questSellOreDesc": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
   "questRepairTitle": "HP {amount} 수리",
-  "@questRepairTitle": { "placeholders": { "amount": { "type": "int" } } },
+  "@questRepairTitle": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
   "questRepairDesc": "총 선체 HP {amount} 수리",
-  "@questRepairDesc": { "placeholders": { "amount": { "type": "int" } } },
+  "@questRepairDesc": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
   "questUseItemsTitle": "아이템 {count}개 사용",
-  "@questUseItemsTitle": { "placeholders": { "count": { "type": "int" } } },
+  "@questUseItemsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "questUseItemsDesc": "인벤토리에서 아이템 {count}개 사용",
-  "@questUseItemsDesc": { "placeholders": { "count": { "type": "int" } } },
+  "@questUseItemsDesc": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "questFollowTwitterTitle": "X 팔로우",
   "questFollowTwitterDesc": "X (Twitter)에서 @DiggleGame 팔로우",
   "questJoinDiscordTitle": "Discord 참여",
@@ -372,5 +606,52 @@
   "streakStartToday": "오늘 플레이하고 연속 기록을 시작하세요",
   "streakNextReward": "다음: +{xp} XP, +{points}포인트",
   "streakJackpotReached": "최고 단계 — 일일 보상 최대",
-  "streakToJackpot": "{count, plural, other{잭팟까지 {count}일}}"
+  "streakToJackpot": "{count, plural, other{잭팟까지 {count}일}}",
+  "menuWeeklyChallenge": "Weekly Challenge",
+  "menuLeaderboard": "Leaderboard",
+  "menuHangar": "Hangar",
+  "museumTitle": "MUSEUM",
+  "achievementsTab": "ACHIEVEMENTS",
+  "leaderboardHeading": "🏆 LEADERBOARD",
+  "leaderboardEmpty": "No entries yet.\nBe the first on the board!",
+  "hangarHeading": "🛠️ HANGAR",
+  "hangarMachineCount": "{count} Diggle Machines in this wallet — one can be equipped at a time.",
+  "hangarSeekerVerified": "SEEKER GENESIS VERIFIED",
+  "hangarSeekerBlurb": "Solana Mobile pioneer — +5% XP & Points, always on.",
+  "hangarSealedCrate": "SEALED CRATE",
+  "hangarSealedBlurb": "This machine hasn't been revealed yet. Until then it grants the flat +25% XP & Points holder boost.\n\nAfter the reveal, its five gear traits (Hull, Thruster, Fuel Tank, Drill, Cargo Hold) become equippable with rarity-based stat bonuses. Tap refresh after reveal day!",
+  "hangarEquipped": "✅ Equipped — bonuses active in normal runs.\nWeekly Challenge uses a standardized loadout (no gear).",
+  "quantity": "Quantity",
+  "airdrop": "Airdrop",
+  "questsWeeklyTab": "Weekly",
+  "questsWeeklyInfo": "Big challenges, big rewards. Resets every Monday (UTC).",
+  "questsNotEnoughPoints": "Not enough points ({cost} needed). Grab a points pack in the store!",
+  "questJoinDiscordServer": "Join Discord Server",
+  "questCheckingMembership": "Checking membership...",
+  "questVerifyMembership": "Verify Membership",
+  "questDiscordHint": "Join the server first, then tap Verify to confirm with Discord",
+  "questPostOnX": "Post on X",
+  "questTweetHint": "Post the tweet above, then paste the URL to verify",
+  "questDiscordUnavailable": "Discord verification not available. Try again later.",
+  "questDiscordOpenFailed": "Could not open Discord. Please try again.",
+  "questDiscordVerified": "Discord membership verified! 🎉",
+  "questDiscordVerifyFailed": "Could not verify membership. Make sure you joined the server and authorized Discord.",
+  "signNewContract": "Sign New Contract",
+  "corporateContract": "⭐ Corporate Contract",
+  "prestigeDialogBody": "Sign Contract #{level}?\n\nRESETS: world, cash, ship upgrades\nKEEPS: XP, points, NFTs, achievements, collection\n\nPERMANENT PERKS:\n• +{sellBonus}% ore sell price\n• ${startCash} starting cash + starter kit\n{hardcore}• {badge} leaderboard badge",
+  "prestigeHardcoreLine": "• Hardcore seams: richer ore, deadlier hazards\n",
+  "notYet": "Not yet",
+  "signContract": "Sign Contract",
+  "recoveryFailedPoints": "Recovery failed — not enough points",
+  "emergencyRecoveryCost": "Emergency Recovery ({cost} pts)",
+  "emergencyRecoveryNeed": "Need {cost} pts — open Store",
+  "keepsCargo": "Keeps your ${value} cargo!",
+  "titleUnlocked": "Title unlocked: {title}",
+  "titleProspector": "Prospector",
+  "titleExcavator": "Excavator",
+  "titleDemolitionist": "Demolitionist",
+  "titleDeepMiner": "Deep Miner",
+  "titleVoidwalker": "Voidwalker",
+  "titleCoreBreaker": "Core Breaker",
+  "titleDiggleLegend": "Diggle Legend"
 }

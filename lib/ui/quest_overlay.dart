@@ -183,7 +183,7 @@ class _QuestOverlayState extends State<QuestOverlay>
               children: [
                 const Text('🗓️', style: TextStyle(fontSize: 16)),
                 const SizedBox(width: 6),
-                const Text('Weekly'),
+                Text(l10n.questsWeeklyTab),
                 const SizedBox(width: 6),
                 _buildCountBadge(
                   widget.questSystem.weeklyQuests
@@ -278,10 +278,10 @@ class _QuestOverlayState extends State<QuestOverlay>
               Icon(Icons.calendar_month,
                   color: Colors.deepPurple.shade300, size: 18),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Big challenges, big rewards. Resets every Monday (UTC).',
-                  style: TextStyle(
+                  l10n.questsWeeklyInfo,
+                  style: const TextStyle(
                       color: Colors.deepPurple, fontSize: 12),
                 ),
               ),
@@ -343,9 +343,8 @@ class _QuestOverlayState extends State<QuestOverlay>
                 if (!ok && mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(
-                          'Not enough points (${widget.minersPassCost} needed). '
-                          'Grab a points pack in the store!'),
+                      content: Text(AppLocalizations.of(context)!
+                          .questsNotEnoughPoints(widget.minersPassCost)),
                       backgroundColor: Colors.red.shade700,
                     ),
                   );
@@ -622,8 +621,8 @@ class _QuestOverlayState extends State<QuestOverlay>
               child: ElevatedButton.icon(
                 onPressed: () => _launchUrl(def.url!),
                 icon: const Text('💬', style: TextStyle(fontSize: 14)),
-                label: const Text('Join Discord Server',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                label: Text(l10n.questJoinDiscordServer,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF5865F2), // Discord blurple
                   foregroundColor: Colors.white,
@@ -634,19 +633,19 @@ class _QuestOverlayState extends State<QuestOverlay>
             const SizedBox(height: 8),
             // Step 2: Verify membership via OAuth
             if (_discordVerifying) ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    SizedBox(
+                    const SizedBox(
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     ),
-                    SizedBox(width: 8),
-                    Text('Checking membership...',
-                        style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    const SizedBox(width: 8),
+                    Text(l10n.questCheckingMembership,
+                        style: const TextStyle(color: Colors.white70, fontSize: 13)),
                   ],
                 ),
               ),
@@ -656,8 +655,8 @@ class _QuestOverlayState extends State<QuestOverlay>
                 child: OutlinedButton.icon(
                   onPressed: () => _verifyDiscord(quest),
                   icon: const Icon(Icons.verified_user, size: 16),
-                  label: const Text('Verify Membership',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: Text(l10n.questVerifyMembership,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF5865F2),
                     side: const BorderSide(color: Color(0xFF5865F2)),
@@ -674,7 +673,7 @@ class _QuestOverlayState extends State<QuestOverlay>
               ],
               const SizedBox(height: 4),
               Text(
-                'Join the server first, then tap Verify to confirm with Discord',
+                l10n.questDiscordHint,
                 style: TextStyle(
                     color: Colors.white.withOpacity(0.3), fontSize: 11),
               ),
@@ -690,8 +689,8 @@ class _QuestOverlayState extends State<QuestOverlay>
               child: ElevatedButton.icon(
                 onPressed: () => _launchUrl(def.url!),
                 icon: const Text('🐦', style: TextStyle(fontSize: 14)),
-                label: const Text('Post on X',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                label: Text(l10n.questPostOnX,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue.shade700,
                   foregroundColor: Colors.white,
@@ -761,7 +760,7 @@ class _QuestOverlayState extends State<QuestOverlay>
               ),
               const SizedBox(height: 4),
               Text(
-                'Post the tweet above, then paste the URL to verify',
+                l10n.questTweetHint,
                 style: TextStyle(
                     color: Colors.white.withOpacity(0.3), fontSize: 11),
               ),
@@ -892,7 +891,8 @@ class _QuestOverlayState extends State<QuestOverlay>
         setState(() => _discordVerifying = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Discord verification not available. Try again later.'),
+            content: Text(
+                AppLocalizations.of(context)!.questDiscordUnavailable),
             backgroundColor: Colors.red.shade700,
           ),
         );
@@ -908,7 +908,8 @@ class _QuestOverlayState extends State<QuestOverlay>
         setState(() => _discordVerifying = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Could not open Discord. Please try again.'),
+            content: Text(
+                AppLocalizations.of(context)!.questDiscordOpenFailed),
             backgroundColor: Colors.red.shade700,
           ),
         );
@@ -938,8 +939,9 @@ class _QuestOverlayState extends State<QuestOverlay>
 
     if (verified) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Discord membership verified! 🎉'),
+        SnackBar(
+          content: Text(
+              AppLocalizations.of(context)!.questDiscordVerified),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 3),
         ),
@@ -947,8 +949,8 @@ class _QuestOverlayState extends State<QuestOverlay>
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-              'Could not verify membership. Make sure you joined the server and authorized Discord.'),
+          content: Text(
+              AppLocalizations.of(context)!.questDiscordVerifyFailed),
           backgroundColor: Colors.red.shade700,
           duration: const Duration(seconds: 4),
         ),

@@ -1047,4 +1047,175 @@ class AppLocalizationsRu extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get menuWeeklyChallenge => 'Weekly Challenge';
+
+  @override
+  String get menuLeaderboard => 'Leaderboard';
+
+  @override
+  String get menuHangar => 'Hangar';
+
+  @override
+  String get museumTitle => 'MUSEUM';
+
+  @override
+  String get achievementsTab => 'ACHIEVEMENTS';
+
+  @override
+  String get leaderboardHeading => '🏆 LEADERBOARD';
+
+  @override
+  String get leaderboardEmpty => 'No entries yet.\nBe the first on the board!';
+
+  @override
+  String get hangarHeading => '🛠️ HANGAR';
+
+  @override
+  String hangarMachineCount(int count) {
+    return '$count Diggle Machines in this wallet — one can be equipped at a time.';
+  }
+
+  @override
+  String get hangarSeekerVerified => 'SEEKER GENESIS VERIFIED';
+
+  @override
+  String get hangarSeekerBlurb =>
+      'Solana Mobile pioneer — +5% XP & Points, always on.';
+
+  @override
+  String get hangarSealedCrate => 'SEALED CRATE';
+
+  @override
+  String get hangarSealedBlurb =>
+      'This machine hasn\'t been revealed yet. Until then it grants the flat +25% XP & Points holder boost.\n\nAfter the reveal, its five gear traits (Hull, Thruster, Fuel Tank, Drill, Cargo Hold) become equippable with rarity-based stat bonuses. Tap refresh after reveal day!';
+
+  @override
+  String get hangarEquipped =>
+      '✅ Equipped — bonuses active in normal runs.\nWeekly Challenge uses a standardized loadout (no gear).';
+
+  @override
+  String get quantity => 'Quantity';
+
+  @override
+  String get airdrop => 'Airdrop';
+
+  @override
+  String get questsWeeklyTab => 'Weekly';
+
+  @override
+  String get questsWeeklyInfo =>
+      'Big challenges, big rewards. Resets every Monday (UTC).';
+
+  @override
+  String questsNotEnoughPoints(int cost) {
+    return 'Not enough points ($cost needed). Grab a points pack in the store!';
+  }
+
+  @override
+  String get questJoinDiscordServer => 'Join Discord Server';
+
+  @override
+  String get questCheckingMembership => 'Checking membership...';
+
+  @override
+  String get questVerifyMembership => 'Verify Membership';
+
+  @override
+  String get questDiscordHint =>
+      'Join the server first, then tap Verify to confirm with Discord';
+
+  @override
+  String get questPostOnX => 'Post on X';
+
+  @override
+  String get questTweetHint =>
+      'Post the tweet above, then paste the URL to verify';
+
+  @override
+  String get questDiscordUnavailable =>
+      'Discord verification not available. Try again later.';
+
+  @override
+  String get questDiscordOpenFailed =>
+      'Could not open Discord. Please try again.';
+
+  @override
+  String get questDiscordVerified => 'Discord membership verified! 🎉';
+
+  @override
+  String get questDiscordVerifyFailed =>
+      'Could not verify membership. Make sure you joined the server and authorized Discord.';
+
+  @override
+  String get signNewContract => 'Sign New Contract';
+
+  @override
+  String get corporateContract => '⭐ Corporate Contract';
+
+  @override
+  String prestigeDialogBody(
+    int level,
+    int sellBonus,
+    int startCash,
+    String hardcore,
+    String badge,
+  ) {
+    return 'Sign Contract #$level?\n\nRESETS: world, cash, ship upgrades\nKEEPS: XP, points, NFTs, achievements, collection\n\nPERMANENT PERKS:\n• +$sellBonus% ore sell price\n• \$$startCash starting cash + starter kit\n$hardcore• $badge leaderboard badge';
+  }
+
+  @override
+  String get prestigeHardcoreLine =>
+      '• Hardcore seams: richer ore, deadlier hazards\n';
+
+  @override
+  String get notYet => 'Not yet';
+
+  @override
+  String get signContract => 'Sign Contract';
+
+  @override
+  String get recoveryFailedPoints => 'Recovery failed — not enough points';
+
+  @override
+  String emergencyRecoveryCost(int cost) {
+    return 'Emergency Recovery ($cost pts)';
+  }
+
+  @override
+  String emergencyRecoveryNeed(int cost) {
+    return 'Need $cost pts — open Store';
+  }
+
+  @override
+  String keepsCargo(int value) {
+    return 'Keeps your \$$value cargo!';
+  }
+
+  @override
+  String titleUnlocked(String title) {
+    return 'Title unlocked: $title';
+  }
+
+  @override
+  String get titleProspector => 'Prospector';
+
+  @override
+  String get titleExcavator => 'Excavator';
+
+  @override
+  String get titleDemolitionist => 'Demolitionist';
+
+  @override
+  String get titleDeepMiner => 'Deep Miner';
+
+  @override
+  String get titleVoidwalker => 'Voidwalker';
+
+  @override
+  String get titleCoreBreaker => 'Core Breaker';
+
+  @override
+  String get titleDiggleLegend => 'Diggle Legend';
 }

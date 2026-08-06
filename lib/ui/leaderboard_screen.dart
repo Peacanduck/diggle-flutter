@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../game/systems/quest_system.dart' show QuestSystem;
 import '../services/leaderboard_service.dart';
 
@@ -59,12 +60,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: const Color(0xFF1a1a2e),
       appBar: AppBar(
         backgroundColor: Colors.black45,
-        title: const Text('🏆 LEADERBOARD',
-            style: TextStyle(letterSpacing: 2, fontSize: 18)),
+        title: Text(l10n.leaderboardHeading,
+            style: const TextStyle(letterSpacing: 2, fontSize: 18)),
         actions: [
           IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
         ],
@@ -173,9 +175,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   }
 
   Widget _buildEmpty() {
-    return const Center(
+    final l10n = AppLocalizations.of(context)!;
+    return Center(
       child: Text(
-        'No entries yet.\nBe the first on the board!',
+        l10n.leaderboardEmpty,
         textAlign: TextAlign.center,
         style: TextStyle(color: Colors.white38),
       ),

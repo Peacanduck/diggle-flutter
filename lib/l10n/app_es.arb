@@ -1,12 +1,10 @@
 {
   "@@locale": "es",
-
   "appTitle": "Diggle",
   "tagline": "EXCAVA PROFUNDO  •  EXTRAE RIQUEZAS  •  LLEGA MÁS LEJOS",
   "mineDeepEarnRewards": "Excava profundo. Gana recompensas.",
   "pyroLabs": "PyroLabs",
   "version": "v0.1.0-alpha",
-
   "newGame": "NUEVA PARTIDA",
   "continueGame": "CONTINUAR",
   "loadGame": "CARGAR",
@@ -14,8 +12,13 @@
   "settings": "Ajustes",
   "howToPlay": "Cómo jugar",
   "comingSoon": "¡{feature} próximamente!",
-  "@comingSoon": { "placeholders": { "feature": { "type": "String" } } },
-
+  "@comingSoon": {
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      }
+    }
+  },
   "helpMiningTitle": "⛏️ Minería",
   "helpMiningBody": "Usa los controles de dirección para mover tu taladro. Excava tierra y roca para encontrar minerales valiosos.",
   "helpFuelTitle": "⛽ Combustible",
@@ -29,24 +32,39 @@
   "helpHazardsTitle": "⚠️ Peligros",
   "helpHazardsBody": "¡Cuidado con la lava (muerte instantánea) y las bolsas de gas (daño)!",
   "gotIt": "¡ENTENDIDO!",
-
   "paused": "PAUSA",
   "resume": "REANUDAR",
   "saveGame": "GUARDAR",
   "restart": "REINICIAR",
   "mainMenu": "MENÚ PRINCIPAL",
   "savedToSlot": "Guardado en ranura {slot}",
-  "@savedToSlot": { "placeholders": { "slot": { "type": "int" } } },
-
+  "@savedToSlot": {
+    "placeholders": {
+      "slot": {
+        "type": "int"
+      }
+    }
+  },
   "gameOver": "FIN DEL JUEGO",
   "depthReached": "Profundidad alcanzada: {depth}m",
-  "@depthReached": { "placeholders": { "depth": { "type": "int" } } },
+  "@depthReached": {
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
   "tryAgain": "REINTENTAR",
   "loadingDiggle": "Cargando Diggle...",
   "failedToLoadGame": "Error al cargar:\n{error}",
-  "@failedToLoadGame": { "placeholders": { "error": { "type": "String" } } },
+  "@failedToLoadGame": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "backToMenu": "Volver al menú",
-
   "signInWithEmail": "INICIAR CON E-MAIL",
   "signInWithWallet": "INICIAR CON WALLET",
   "playAsGuest": "Jugar como invitado",
@@ -69,17 +87,21 @@
   "pleaseFillFields": "Ingresa tu correo y contraseña",
   "passwordTooShort": "La contraseña debe tener al menos 6 caracteres",
   "passwordsNoMatch": "Las contraseñas no coinciden",
-
   "accountTitle": "CUENTA",
   "accountSubtitle": "Perfil, métodos de inicio de sesión y estadísticas",
   "playerProfile": "PERFIL DEL JUGADOR",
   "enterDisplayName": "Ingresa un nombre para mostrar",
   "anonymousMiner": "Minero anónimo",
   "memberSince": "Miembro desde {date}",
-  "@memberSince": { "placeholders": { "date": { "type": "String" } } },
+  "@memberSince": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "playingOffline": "Jugando sin conexión",
   "playerIdCopied": "ID del jugador copiado",
-
   "signInMethods": "MÉTODOS DE INICIO",
   "signInMethodsSubtitle": "Cómo puedes acceder a tu cuenta",
   "emailSignIn": "Inicio por correo",
@@ -93,25 +115,21 @@
   "add": "Añadir",
   "copyAddress": "Copiar dirección",
   "unlink": "Desvincular",
-
   "addEmailSignIn": "Añadir inicio por correo",
   "addEmailSubtitle": "Tu wallet sigue siendo tu inicio principal. El correo es una alternativa.",
   "addEmail": "AÑADIR CORREO",
   "checkEmailLink": "¡Revisa tu correo para confirmar el vínculo!",
   "emailSignInAdded": "¡Inicio por correo añadido!",
-
   "walletConnectionCancelled": "Conexión de wallet cancelada",
   "couldNotGetWalletAddress": "No se pudo obtener la dirección de la wallet",
   "signingCancelled": "Firma cancelada",
   "walletLinked": "¡Wallet vinculada! Ahora puedes iniciar sesión con ella.",
   "walletLinkFailed": "Error al vincular la wallet",
-
   "unlinkWalletTitle": "Desvincular wallet",
   "unlinkWalletMessage": "Tu wallet será eliminada de tu cuenta. Puedes vincular otra wallet después.",
   "cancel": "Cancelar",
   "walletUnlinked": "Wallet desvinculada",
   "unlinkFailed": "Error al desvincular la wallet",
-
   "walletAdapter": "ADAPTADOR DE WALLET",
   "walletAdapterGuestSubtitle": "Conéctate para compras en esta sesión",
   "walletAdapterReconnectSubtitle": "Reconéctate para firmar transacciones",
@@ -120,7 +138,13 @@
   "mainnet": "Mainnet",
   "devnet": "Devnet",
   "connected": "Conectado — {network}",
-  "@connected": { "placeholders": { "network": { "type": "String" } } },
+  "@connected": {
+    "placeholders": {
+      "network": {
+        "type": "String"
+      }
+    }
+  },
   "loadingBalance": "Cargando saldo...",
   "airdropRequested": "¡Airdrop solicitado!",
   "airdropFailed": "Airdrop fallido",
@@ -130,7 +154,6 @@
   "connectWallet": "CONECTAR WALLET",
   "phantomTip": "💡 Usa Phantom para mejor soporte en devnet",
   "addressCopied": "Dirección copiada",
-
   "lifetimeStats": "ESTADÍSTICAS GLOBALES",
   "statLevel": "Nivel",
   "statTotalXp": "XP Total",
@@ -140,56 +163,105 @@
   "statPlayTime": "Tiempo de juego",
   "statPointsEarned": "Puntos ganados",
   "statPointsSpent": "Puntos gastados",
-
   "signedInEmail": "Sesión con correo",
   "signedInWallet": "Sesión con wallet",
   "playingAsGuest": "Jugando como invitado",
   "signOut": "Cerrar sesión",
   "signOutConfirm": "¿Seguro que quieres cerrar sesión?",
   "guestSignOutWarning": "El progreso de invitado solo está en este dispositivo. Cerrar sesión eliminará el acceso a tus partidas guardadas. ¿Estás seguro?",
-
   "emailAccount": "Cuenta de correo",
   "walletAccount": "Cuenta de wallet",
   "guestLocalOnly": "Invitado — progreso solo local",
   "offline": "Sin conexión",
-
   "newGameTitle": "NUEVA PARTIDA",
   "loadGameTitle": "CARGAR PARTIDA",
   "newGameSubtitle": "Elige una ranura para tu nueva aventura",
   "loadGameSubtitle": "Selecciona una partida guardada para continuar",
   "slotEmpty": "Ranura {slot} — Vacía",
-  "@slotEmpty": { "placeholders": { "slot": { "type": "int" } } },
+  "@slotEmpty": {
+    "placeholders": {
+      "slot": {
+        "type": "int"
+      }
+    }
+  },
   "tapToStart": "Toca para iniciar una nueva aventura",
   "noSaveData": "Sin datos guardados",
   "slot": "Ranura {slot}",
-  "@slot": { "placeholders": { "slot": { "type": "int" } } },
+  "@slot": {
+    "placeholders": {
+      "slot": {
+        "type": "int"
+      }
+    }
+  },
   "savedAgo": "Guardado {time}",
-  "@savedAgo": { "placeholders": { "time": { "type": "String" } } },
+  "@savedAgo": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "deleteSlotConfirm": "¿Eliminar ranura {slot}?",
-  "@deleteSlotConfirm": { "placeholders": { "slot": { "type": "int" } } },
+  "@deleteSlotConfirm": {
+    "placeholders": {
+      "slot": {
+        "type": "int"
+      }
+    }
+  },
   "cannotBeUndone": "Esto no se puede deshacer.",
   "delete": "ELIMINAR",
   "overwriteSaveTitle": "¿Sobrescribir?",
   "overwriteSaveMessage": "La ranura {slot} ya tiene una partida. Empezar aquí la sobrescribirá.",
-  "@overwriteSaveMessage": { "placeholders": { "slot": { "type": "int" } } },
+  "@overwriteSaveMessage": {
+    "placeholders": {
+      "slot": {
+        "type": "int"
+      }
+    }
+  },
   "overwrite": "SOBRESCRIBIR",
   "noSaves": "(sin partidas)",
   "justNow": "ahora mismo",
   "minutesAgo": "hace {min}min",
-  "@minutesAgo": { "placeholders": { "min": { "type": "int" } } },
+  "@minutesAgo": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
   "hoursAgo": "hace {hours}h",
-  "@hoursAgo": { "placeholders": { "hours": { "type": "int" } } },
+  "@hoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
   "daysAgo": "hace {days}d",
-  "@daysAgo": { "placeholders": { "days": { "type": "int" } } },
-
+  "@daysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "hp": "PV",
   "fuel": "COMBUSTIBLE",
   "items": "OBJETOS: ",
   "store": "TIENDA",
   "shop": "TIENDA",
   "depthMeter": "{depth}m",
-  "@depthMeter": { "placeholders": { "depth": { "type": "int" } } },
-
+  "@depthMeter": {
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
   "miningSupplyCo": "SUMINISTROS MINEROS",
   "cash": "Dinero",
   "hull": "Casco",
@@ -204,16 +276,43 @@
   "sellAll": "VENDER TODO",
   "refuel": "RECARGAR",
   "refuelCost": "RECARGAR (${cost})",
-  "@refuelCost": { "placeholders": { "cost": { "type": "int" } } },
+  "@refuelCost": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "tankFull": "¡Tanque lleno!",
   "repair": "REPARAR",
   "repairHullCost": "REPARAR CASCO (${cost})",
-  "@repairHullCost": { "placeholders": { "cost": { "type": "int" } } },
+  "@repairHullCost": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "hullFullyRepaired": "¡Casco totalmente reparado!",
   "inventorySlots": "Inventario: {used}/{max} espacios",
-  "@inventorySlots": { "placeholders": { "used": { "type": "int" }, "max": { "type": "int" } } },
+  "@inventorySlots": {
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
   "upgradeCost": "MEJORAR - ${cost}",
-  "@upgradeCost": { "placeholders": { "cost": { "type": "int" } } },
+  "@upgradeCost": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "maxed": "AL MÁXIMO",
   "drillBit": "Broca",
   "engine": "Motor",
@@ -222,17 +321,47 @@
   "cargoBay": "Bodega",
   "hullArmor": "Blindaje",
   "capacityValue": "Capacidad: {value}",
-  "@capacityValue": { "placeholders": { "value": { "type": "int" } } },
+  "@capacityValue": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
   "speedPercent": "Velocidad: {percent}%",
-  "@speedPercent": { "placeholders": { "percent": { "type": "int" } } },
+  "@speedPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "fuelSavingsPercent": "Ahorro de combustible: {percent}%",
-  "@fuelSavingsPercent": { "placeholders": { "percent": { "type": "int" } } },
+  "@fuelSavingsPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "noFuelSavings": "Sin ahorro de combustible",
   "maxHpValue": "PV máx: {value}",
-  "@maxHpValue": { "placeholders": { "value": { "type": "int" } } },
+  "@maxHpValue": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
   "returnToMining": "VOLVER A MINAR",
   "soldOreFor": "¡Mineral vendido por ${amount}!",
-  "@soldOreFor": { "placeholders": { "amount": { "type": "int" } } },
+  "@soldOreFor": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
   "tankRefueled": "¡Tanque recargado!",
   "fuelTankUpgraded": "¡Tanque mejorado!",
   "cargoBayUpgraded": "¡Bodega mejorada!",
@@ -242,8 +371,13 @@
   "engineUpgraded": "¡Motor mejorado!",
   "coolingUpgraded": "¡Refrigeración mejorada!",
   "purchased": "¡{item} comprado!",
-  "@purchased": { "placeholders": { "item": { "type": "String" } } },
-
+  "@purchased": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
   "premiumStore": "TIENDA PREMIUM",
   "onChainLoaded": "Precios on-chain cargados",
   "usingDefaultPrices": "Usando precios por defecto",
@@ -263,12 +397,26 @@
   "buy": "COMPRAR",
   "notEnoughPoints": "¡Puntos insuficientes!",
   "activated": "¡{item} activado!",
-  "@activated": { "placeholders": { "item": { "type": "String" } } },
+  "@activated": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
   "purchasedTx": "¡{item} comprado! TX: {tx}...",
-  "@purchasedTx": { "placeholders": { "item": { "type": "String" }, "tx": { "type": "String" } } },
+  "@purchasedTx": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "tx": {
+        "type": "String"
+      }
+    }
+  },
   "purchaseFailed": "Compra fallida",
   "closeStore": "CERRAR TIENDA",
-
   "diggleDrillMachine": "TALADRO DIGGLE",
   "permanentBoostNft": "NFT de mejora permanente — uno por jugador",
   "holderBenefits": "BENEFICIOS DEL TITULAR",
@@ -279,11 +427,23 @@
   "allNftsMinted": "¡Todos los NFT Diggle Drill han sido acuñados!",
   "mintOpensSoon": "ACUÑACIÓN PRÓXIMAMENTE",
   "startsAt": "Inicio: {date}",
-  "@startsAt": { "placeholders": { "date": { "type": "String" } } },
+  "@startsAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "checkBackLater": "¡Vuelve más tarde!",
   "mintNft": "ACUÑAR NFT",
   "mintCost": "ACUÑAR — {cost} SOL",
-  "@mintCost": { "placeholders": { "cost": { "type": "String" } } },
+  "@mintCost": {
+    "placeholders": {
+      "cost": {
+        "type": "String"
+      }
+    }
+  },
   "nftMinted": "¡NFT acuñado! 🎉",
   "refresh": "Actualizar",
   "boostsActive": "¡Tus mejoras están activas permanentemente!",
@@ -293,21 +453,31 @@
   "mintStatusConfirming": "Confirmando en cadena...",
   "mintStatusSuccess": "¡Acuñado con éxito!",
   "mintStatusError": "Error al acuñar",
-
   "xpLabel": "XP: {current}/{next}",
-  "@xpLabel": { "placeholders": { "current": { "type": "int" }, "next": { "type": "int" } } },
-
+  "@xpLabel": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "next": {
+        "type": "int"
+      }
+    }
+  },
   "settingsTitle": "AJUSTES",
   "settingsSubtitle": "Preferencias del juego",
   "language": "Idioma",
   "languageSubtitle": "Elige tu idioma preferido",
   "systemDefault": "Predeterminado del sistema",
-
   "pleaseFillAllFields": "Por favor completa todos los campos",
-
   "errorPrefix": "Error: {message}",
-  "@errorPrefix": { "placeholders": { "message": { "type": "String" } } },
-
+  "@errorPrefix": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
   "updateAvailableTitle": "Actualización disponible",
   "updateRequiredTitle": "Actualización requerida",
   "updateRequiredMessage": "Esta versión de Diggle ya no es compatible. Actualiza para seguir jugando.",
@@ -317,12 +487,16 @@
   "updateNow": "ACTUALIZAR",
   "updateLater": "Más tarde",
   "updateOpenStoreFailed": "No se pudo abrir el dApp Store. Actualiza manualmente.",
-
   "light": "Luz",
   "lightUpgraded": "¡Sistema de luz mejorado!",
   "revealRadiusValue": "Alcance: {radius} casillas",
-  "@revealRadiusValue": { "placeholders": { "radius": { "type": "int" } } },
-
+  "@revealRadiusValue": {
+    "placeholders": {
+      "radius": {
+        "type": "int"
+      }
+    }
+  },
   "questsTitle": "MISIONES",
   "questsSubtitle": "Completa misiones para ganar XP y puntos",
   "questsDailyTab": "Diarias",
@@ -335,25 +509,85 @@
   "questsSocialInfo": "Completa acciones sociales para ganar recompensas únicas. Toca IR para abrir el enlace.",
   "quests": "MISIONES",
   "questMineOreTitle": "Minar {count} minerales",
-  "@questMineOreTitle": { "placeholders": { "count": { "type": "int" } } },
+  "@questMineOreTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "questMineOreDesc": "Mina {count} casillas de mineral en un solo día",
-  "@questMineOreDesc": { "placeholders": { "count": { "type": "int" } } },
+  "@questMineOreDesc": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "questReachDepthTitle": "Alcanzar {depth}m",
-  "@questReachDepthTitle": { "placeholders": { "depth": { "type": "int" } } },
+  "@questReachDepthTitle": {
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
   "questReachDepthDesc": "Alcanza una profundidad de {depth}m o más",
-  "@questReachDepthDesc": { "placeholders": { "depth": { "type": "int" } } },
+  "@questReachDepthDesc": {
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
   "questSellOreTitle": "Vender por ${value}",
-  "@questSellOreTitle": { "placeholders": { "value": { "type": "int" } } },
+  "@questSellOreTitle": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
   "questSellOreDesc": "Vende mineral por un total de ${value}",
-  "@questSellOreDesc": { "placeholders": { "value": { "type": "int" } } },
+  "@questSellOreDesc": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
   "questRepairTitle": "Reparar {amount} PV",
-  "@questRepairTitle": { "placeholders": { "amount": { "type": "int" } } },
+  "@questRepairTitle": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
   "questRepairDesc": "Repara un total de {amount} PV de casco",
-  "@questRepairDesc": { "placeholders": { "amount": { "type": "int" } } },
+  "@questRepairDesc": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
   "questUseItemsTitle": "Usar {count} objetos",
-  "@questUseItemsTitle": { "placeholders": { "count": { "type": "int" } } },
+  "@questUseItemsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "questUseItemsDesc": "Usa {count} objetos de tu inventario",
-  "@questUseItemsDesc": { "placeholders": { "count": { "type": "int" } } },
+  "@questUseItemsDesc": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "questFollowTwitterTitle": "Seguir en X",
   "questFollowTwitterDesc": "Sigue a @DiggleGame en X (Twitter)",
   "questJoinDiscordTitle": "Unirse a Discord",
@@ -372,5 +606,52 @@
   "streakStartToday": "Juega hoy para empezar una racha",
   "streakNextReward": "Siguiente: +{xp} XP, +{points} pts",
   "streakJackpotReached": "Nivel máximo: recompensa diaria máxima",
-  "streakToJackpot": "{count, plural, =1{1 día para el premio mayor} other{{count} días para el premio mayor}}"
+  "streakToJackpot": "{count, plural, =1{1 día para el premio mayor} other{{count} días para el premio mayor}}",
+  "menuWeeklyChallenge": "Weekly Challenge",
+  "menuLeaderboard": "Leaderboard",
+  "menuHangar": "Hangar",
+  "museumTitle": "MUSEUM",
+  "achievementsTab": "ACHIEVEMENTS",
+  "leaderboardHeading": "🏆 LEADERBOARD",
+  "leaderboardEmpty": "No entries yet.\nBe the first on the board!",
+  "hangarHeading": "🛠️ HANGAR",
+  "hangarMachineCount": "{count} Diggle Machines in this wallet — one can be equipped at a time.",
+  "hangarSeekerVerified": "SEEKER GENESIS VERIFIED",
+  "hangarSeekerBlurb": "Solana Mobile pioneer — +5% XP & Points, always on.",
+  "hangarSealedCrate": "SEALED CRATE",
+  "hangarSealedBlurb": "This machine hasn't been revealed yet. Until then it grants the flat +25% XP & Points holder boost.\n\nAfter the reveal, its five gear traits (Hull, Thruster, Fuel Tank, Drill, Cargo Hold) become equippable with rarity-based stat bonuses. Tap refresh after reveal day!",
+  "hangarEquipped": "✅ Equipped — bonuses active in normal runs.\nWeekly Challenge uses a standardized loadout (no gear).",
+  "quantity": "Quantity",
+  "airdrop": "Airdrop",
+  "questsWeeklyTab": "Weekly",
+  "questsWeeklyInfo": "Big challenges, big rewards. Resets every Monday (UTC).",
+  "questsNotEnoughPoints": "Not enough points ({cost} needed). Grab a points pack in the store!",
+  "questJoinDiscordServer": "Join Discord Server",
+  "questCheckingMembership": "Checking membership...",
+  "questVerifyMembership": "Verify Membership",
+  "questDiscordHint": "Join the server first, then tap Verify to confirm with Discord",
+  "questPostOnX": "Post on X",
+  "questTweetHint": "Post the tweet above, then paste the URL to verify",
+  "questDiscordUnavailable": "Discord verification not available. Try again later.",
+  "questDiscordOpenFailed": "Could not open Discord. Please try again.",
+  "questDiscordVerified": "Discord membership verified! 🎉",
+  "questDiscordVerifyFailed": "Could not verify membership. Make sure you joined the server and authorized Discord.",
+  "signNewContract": "Sign New Contract",
+  "corporateContract": "⭐ Corporate Contract",
+  "prestigeDialogBody": "Sign Contract #{level}?\n\nRESETS: world, cash, ship upgrades\nKEEPS: XP, points, NFTs, achievements, collection\n\nPERMANENT PERKS:\n• +{sellBonus}% ore sell price\n• ${startCash} starting cash + starter kit\n{hardcore}• {badge} leaderboard badge",
+  "prestigeHardcoreLine": "• Hardcore seams: richer ore, deadlier hazards\n",
+  "notYet": "Not yet",
+  "signContract": "Sign Contract",
+  "recoveryFailedPoints": "Recovery failed — not enough points",
+  "emergencyRecoveryCost": "Emergency Recovery ({cost} pts)",
+  "emergencyRecoveryNeed": "Need {cost} pts — open Store",
+  "keepsCargo": "Keeps your ${value} cargo!",
+  "titleUnlocked": "Title unlocked: {title}",
+  "titleProspector": "Prospector",
+  "titleExcavator": "Excavator",
+  "titleDemolitionist": "Demolitionist",
+  "titleDeepMiner": "Deep Miner",
+  "titleVoidwalker": "Voidwalker",
+  "titleCoreBreaker": "Core Breaker",
+  "titleDiggleLegend": "Diggle Legend"
 }

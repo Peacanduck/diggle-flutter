@@ -11,6 +11,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../game/systems/achievement_system.dart';
 import '../game/systems/collection_system.dart';
 import '../game/world/biome.dart';
@@ -39,7 +40,7 @@ class CollectionOverlay extends StatelessWidget {
             child: SafeArea(
               child: Column(
                 children: [
-                  _buildHeader(),
+                  _buildHeader(AppLocalizations.of(context)!),
                   const TabBar(
                     indicatorColor: Colors.amber,
                     labelColor: Colors.amber,
@@ -59,7 +60,7 @@ class CollectionOverlay extends StatelessWidget {
                               _buildBiomeSection(biome.name),
                           ],
                         ),
-                        _buildRecordsTab(),
+                        _buildRecordsTab(AppLocalizations.of(context)!),
                       ],
                     ),
                   ),
@@ -72,16 +73,16 @@ class CollectionOverlay extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(AppLocalizations l10n) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
       child: Row(
         children: [
           const Text('🏛️', style: TextStyle(fontSize: 24)),
           const SizedBox(width: 8),
-          const Text(
-            'MUSEUM',
-            style: TextStyle(
+          Text(
+            l10n.museumTitle,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -106,15 +107,15 @@ class CollectionOverlay extends StatelessWidget {
     );
   }
 
-  Widget _buildRecordsTab() {
+  Widget _buildRecordsTab(AppLocalizations l10n) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         Row(
           children: [
             Text(
-              'ACHIEVEMENTS',
-              style: TextStyle(
+              l10n.achievementsTab,
+              style: const TextStyle(
                 color: Colors.white70,
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
