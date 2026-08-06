@@ -1,13 +1,34 @@
 # Translation TODO
 
-47 keys were added for the v2 screens (Museum, Achievements, Leaderboard,
-Hangar, Quests) plus the prestige dialog and level titles. Every locale
-already **has** these keys so nothing falls back at runtime — but in
-`app_es/fr/ja/ko/ru/zh.arb` the values are still the **English text**,
-sitting there as placeholders for a translator.
+179 keys were added in two passes — **UI chrome** (47) and the **content
+catalogue** (132). Every locale already **has** these keys so nothing
+falls back at runtime, but in `app_es/fr/ja/ko/ru/zh.arb` the values are
+still the **English text**, sitting there as placeholders for a
+translator.
 
-Everything else in those files is genuinely translated. These 47 are the
-outstanding work:
+Everything else in those files is genuinely translated.
+
+## Pass 2 — content catalogue (132 keys)
+
+Generated, so they are listed by prefix rather than one by one:
+
+| Prefix | Count | What |
+|---|---|---|
+| `artifact*` | 40 | 20 museum artifacts, name + description |
+| `achievement*` | 54 | 27 achievements, name + description |
+| `item*` | 21 | consumables and their shop descriptions |
+| `tile*` | 20 | ore and terrain names |
+| `rarity*` | 5 | Common … Legendary |
+| `questUseExplosives*`, `questFindArtifact*`, `questOpenCrate*` | 6 | v2 quests |
+
+These are **game content**, so translate for flavour, not literally —
+artifact names and descriptions are meant to have character.
+
+Do **not** rename the keys: they are generated from content ids by
+`tool/gen_content_l10n.py`, and `test/content_l10n_test.dart` fails if a
+catalogue entry loses its key.
+
+## Pass 1 — UI chrome (47 keys)
 
 ```
 menuWeeklyChallenge      menuLeaderboard          menuHangar

@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
+import 'content_l10n.dart';
 import '../game/diggle_game.dart';
 import '../game/systems/economy_system.dart';
 import '../game/systems/item_system.dart';
@@ -344,7 +345,7 @@ class _ShopOverlayState extends State<ShopOverlay>
               );
             },
           ),
-          ...ItemType.values.map((type) => _buildItemPurchaseRow(type)),
+          ...ItemType.values.map((type) => _buildItemPurchaseRow(l10n, type)),
         ],
       ),
     );
@@ -363,7 +364,7 @@ class _ShopOverlayState extends State<ShopOverlay>
           child: Column(
             children: [
               if (hasOre)
-                ...economy.cargoItems.map((item) => _buildCargoRow(item))
+                ...economy.cargoItems.map((item) => _buildCargoRow(l10n, item))
               else
                 Text(l10n.noOreToSell,
                     style: const TextStyle(color: Colors.white54)),
@@ -402,14 +403,16 @@ class _ShopOverlayState extends State<ShopOverlay>
     );
   }
 
-  Widget _buildCargoRow(CargoItem item) {
+  Widget _buildCargoRow(AppLocalizations l10n, CargoItem item) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           _buildTileIcon(item.oreType,size: 28),
           const SizedBox(width: 12),
-          Text(item.oreType.displayName,
+          Text(
+              localizedTileName(l10n, item.oreType.name,
+                  item.oreType.displayName),
               style: const TextStyle(color: Colors.white)),
           const SizedBox(width: 8),
           Text('x${item.quantity}',
@@ -796,7 +799,7 @@ class _ShopOverlayState extends State<ShopOverlay>
     );
   }
 
-  Widget _buildItemPurchaseRow(ItemType type) {
+  Widget _buildItemPurchaseRow(AppLocalizations l10n, ItemType type) {
     return ListenableBuilder(
       listenable: widget.game.itemSystem,
       builder: (context, _) {
@@ -823,7 +826,9 @@ class _ShopOverlayState extends State<ShopOverlay>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(type.displayName,
+                    Text(
+                        localizedItemName(
+                            l10n, type.name, type.displayName),
                         style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold)),
@@ -1036,7 +1041,8 @@ class _ShopOverlayState extends State<ShopOverlay>
 
   void _buyItem(ItemType type) {
     final l10n = AppLocalizations.of(context)!;
-    if (widget.game.buyItem(type)) _showMessage(l10n.purchased(type.displayName));
+    if (widget.game.buyItem(type)) _showMessage(l10n.purchased(localizedItemName(
+        AppLocalizations.of(context)!, type.name, type.displayName)));
   }
 
   void _buyItemWithPoints(ItemType type) {

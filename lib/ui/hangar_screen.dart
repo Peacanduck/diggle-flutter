@@ -12,6 +12,7 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import 'content_l10n.dart';
 import '../game/systems/gear_sprites.dart';
 import '../game/systems/gear_system.dart';
 import '../solana/candy_machine_service.dart';
@@ -445,7 +446,9 @@ class _HangarScreenState extends State<HangarScreen> {
               border: Border.all(color: color),
             ),
             child: Text(
-              trait.rarity.displayName.toUpperCase(),
+              localizedRarity(AppLocalizations.of(context)!,
+                      trait.rarity.name, trait.rarity.displayName)
+                  .toUpperCase(),
               style: TextStyle(
                   color: color, fontSize: 10, fontWeight: FontWeight.bold),
             ),

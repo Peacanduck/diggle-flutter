@@ -1196,4 +1196,433 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get titleDiggleLegend => 'Diggle Legend';
+
+  @override
+  String get artifactTsFossilFern => 'Fern Fossil';
+
+  @override
+  String get artifactTsFossilFernDesc =>
+      'A perfect imprint of a prehistoric fern.';
+
+  @override
+  String get artifactTsOldBoot => 'Prospector\'s Boot';
+
+  @override
+  String get artifactTsOldBootDesc => 'Somebody dug here long before you.';
+
+  @override
+  String get artifactTsClayJar => 'Clay Jar';
+
+  @override
+  String get artifactTsClayJarDesc => 'Ancient storage, miraculously unbroken.';
+
+  @override
+  String get artifactTsArrowhead => 'Flint Arrowhead';
+
+  @override
+  String get artifactTsArrowheadDesc =>
+      'Knapped by hands ten thousand years gone.';
+
+  @override
+  String get artifactTsCoinHoard => 'Coin Hoard';
+
+  @override
+  String get artifactTsCoinHoardDesc => 'Corroded coins from a forgotten mint.';
+
+  @override
+  String get artifactPfMammothTusk => 'Mammoth Tusk';
+
+  @override
+  String get artifactPfMammothTuskDesc => 'Curved ivory, cold to the touch.';
+
+  @override
+  String get artifactPfIceLens => 'Ice Lens';
+
+  @override
+  String get artifactPfIceLensDesc => 'A naturally formed lens of ancient ice.';
+
+  @override
+  String get artifactPfFrozenFlower => 'Frozen Flower';
+
+  @override
+  String get artifactPfFrozenFlowerDesc =>
+      'A bloom preserved mid-blossom for millennia.';
+
+  @override
+  String get artifactPfSledRunner => 'Sled Runner';
+
+  @override
+  String get artifactPfSledRunnerDesc =>
+      'Part of an expedition that never returned.';
+
+  @override
+  String get artifactPfAmberInsect => 'Amber Insect';
+
+  @override
+  String get artifactPfAmberInsectDesc =>
+      'A tiny passenger frozen in golden resin.';
+
+  @override
+  String get artifactCcSingingGeode => 'Singing Geode';
+
+  @override
+  String get artifactCcSingingGeodeDesc => 'It hums a note just below hearing.';
+
+  @override
+  String get artifactCcPrismCore => 'Prism Core';
+
+  @override
+  String get artifactCcPrismCoreDesc =>
+      'Splits lamplight into colors with no names.';
+
+  @override
+  String get artifactCcPetrifiedEye => 'Petrified Eye';
+
+  @override
+  String get artifactCcPetrifiedEyeDesc =>
+      'You are certain it was watching you.';
+
+  @override
+  String get artifactCcResonantShard => 'Resonant Shard';
+
+  @override
+  String get artifactCcResonantShardDesc =>
+      'Vibrates when other crystals are near.';
+
+  @override
+  String get artifactCcHollowBell => 'Hollow Bell';
+
+  @override
+  String get artifactCcHollowBellDesc =>
+      'A crystal bell that rings in silence.';
+
+  @override
+  String get artifactMcObsidianBlade => 'Obsidian Blade';
+
+  @override
+  String get artifactMcObsidianBladeDesc =>
+      'Volcanic glass, sharper than any drill.';
+
+  @override
+  String get artifactMcFireOpal => 'Fire Opal';
+
+  @override
+  String get artifactMcFireOpalDesc => 'A stone with a living ember inside.';
+
+  @override
+  String get artifactMcBasaltIdol => 'Basalt Idol';
+
+  @override
+  String get artifactMcBasaltIdolDesc =>
+      'Carved by something that liked the heat.';
+
+  @override
+  String get artifactMcMeteorFragment => 'Meteor Fragment';
+
+  @override
+  String get artifactMcMeteorFragmentDesc =>
+      'It fell from above and sank this deep.';
+
+  @override
+  String get artifactMcHeartOfCore => 'Heart of the Core';
+
+  @override
+  String get artifactMcHeartOfCoreDesc => 'Still warm. Still beating?';
+
+  @override
+  String get achievementOre10 => 'First Haul';
+
+  @override
+  String get achievementOre10Desc => 'Mine 10 ores';
+
+  @override
+  String get achievementOre100 => 'Ore Hound';
+
+  @override
+  String get achievementOre100Desc => 'Mine 100 ores';
+
+  @override
+  String get achievementOre500 => 'Vein Chaser';
+
+  @override
+  String get achievementOre500Desc => 'Mine 500 ores';
+
+  @override
+  String get achievementOre2000 => 'Strip Miner';
+
+  @override
+  String get achievementOre2000Desc => 'Mine 2,000 ores';
+
+  @override
+  String get achievementOre10000 => 'Planet Eater';
+
+  @override
+  String get achievementOre10000Desc => 'Mine 10,000 ores';
+
+  @override
+  String get achievementDepth50 => 'Below the Roots';
+
+  @override
+  String get achievementDepth50Desc => 'Reach depth 50';
+
+  @override
+  String get achievementDepth120 => 'Into the Frost';
+
+  @override
+  String get achievementDepth120Desc => 'Reach the Permafrost (depth 120)';
+
+  @override
+  String get achievementDepth240 => 'Crystal Gazer';
+
+  @override
+  String get achievementDepth240Desc => 'Reach the Crystal Caverns (depth 240)';
+
+  @override
+  String get achievementDepth360 => 'Magma Diver';
+
+  @override
+  String get achievementDepth360Desc => 'Reach the Magma Core (depth 360)';
+
+  @override
+  String get achievementDepth445 => 'Rock Bottom';
+
+  @override
+  String get achievementDepth445Desc => 'Touch the world floor (depth 445)';
+
+  @override
+  String get achievementCash1k => 'Pocket Money';
+
+  @override
+  String get achievementCash1kDesc => 'Earn \\\$1,000 lifetime';
+
+  @override
+  String get achievementCash25k => 'Business Miner';
+
+  @override
+  String get achievementCash25kDesc => 'Earn \\\$25,000 lifetime';
+
+  @override
+  String get achievementCash250k => 'Ore Baron';
+
+  @override
+  String get achievementCash250kDesc => 'Earn \\\$250,000 lifetime';
+
+  @override
+  String get achievementCash1m => 'Diggle Tycoon';
+
+  @override
+  String get achievementCash1mDesc => 'Earn \\\$1,000,000 lifetime';
+
+  @override
+  String get achievementLevel5 => 'Getting Serious';
+
+  @override
+  String get achievementLevel5Desc => 'Reach level 5';
+
+  @override
+  String get achievementLevel10 => 'Double Digits';
+
+  @override
+  String get achievementLevel10Desc => 'Reach level 10';
+
+  @override
+  String get achievementLevel18 => 'Deep Veteran';
+
+  @override
+  String get achievementLevel18Desc => 'Reach level 18';
+
+  @override
+  String get achievementLevel25 => 'Maximum Diggle';
+
+  @override
+  String get achievementLevel25Desc => 'Reach level 25';
+
+  @override
+  String get achievementArtifact1 => 'Amateur Archaeologist';
+
+  @override
+  String get achievementArtifact1Desc => 'Find your first artifact';
+
+  @override
+  String get achievementArtifact10 => 'Museum Donor';
+
+  @override
+  String get achievementArtifact10Desc => 'Find 10 artifacts';
+
+  @override
+  String get achievementArtifact20 => 'Master Curator';
+
+  @override
+  String get achievementArtifact20Desc => 'Complete the full collection';
+
+  @override
+  String get achievementBlast5 => 'Fire in the Hole';
+
+  @override
+  String get achievementBlast5Desc => 'Detonate 5 explosives';
+
+  @override
+  String get achievementBlast50 => 'Controlled Demolition';
+
+  @override
+  String get achievementBlast50Desc => 'Detonate 50 explosives';
+
+  @override
+  String get achievementSales10 => 'Regular Customer';
+
+  @override
+  String get achievementSales10Desc => 'Sell ore 10 times';
+
+  @override
+  String get achievementSales100 => 'Market Mover';
+
+  @override
+  String get achievementSales100Desc => 'Sell ore 100 times';
+
+  @override
+  String get achievementDeath1 => 'Occupational Hazard';
+
+  @override
+  String get achievementDeath1Desc => 'Lose your first drill';
+
+  @override
+  String get achievementDeath25 => 'Never Say Die';
+
+  @override
+  String get achievementDeath25Desc => 'Lose 25 drills and keep digging';
+
+  @override
+  String get itemBackupFuel => '⛽';
+
+  @override
+  String get itemRepairBot => '🔧';
+
+  @override
+  String get itemDynamite => '🧨';
+
+  @override
+  String get itemC4 => '💣';
+
+  @override
+  String get itemSpaceRift => '🌀';
+
+  @override
+  String get itemOreScanner => '📡';
+
+  @override
+  String get itemHeatShield => '🛡️';
+
+  @override
+  String get tileEmpty => 'Empty';
+
+  @override
+  String get tileDirt => 'Dirt';
+
+  @override
+  String get tileRock => 'Rock';
+
+  @override
+  String get tileCoal => 'Coal';
+
+  @override
+  String get tileCopper => 'Copper';
+
+  @override
+  String get tileSilver => 'Silver';
+
+  @override
+  String get tileGold => 'Gold';
+
+  @override
+  String get tileSapphire => 'Sapphire';
+
+  @override
+  String get tileEmerald => 'Emerald';
+
+  @override
+  String get tileRuby => 'Ruby';
+
+  @override
+  String get tileDiamond => 'Diamond';
+
+  @override
+  String get tileLava => 'Lava';
+
+  @override
+  String get tileGas => 'Gas Pocket';
+
+  @override
+  String get tileFrozenDirt => 'Frozen Dirt';
+
+  @override
+  String get tileMagmaRock => 'Magma Rock';
+
+  @override
+  String get tileCrystalOre => 'Crystal';
+
+  @override
+  String get tileUnstableRock => 'Unstable Rock';
+
+  @override
+  String get tileLootCrate => 'Supply Crate';
+
+  @override
+  String get tileArtifact => 'Artifact';
+
+  @override
+  String get tileBedrock => 'Bedrock';
+
+  @override
+  String questUseExplosivesTitle(int count) {
+    return 'Detonate $count explosives';
+  }
+
+  @override
+  String questUseExplosivesDesc(int count) {
+    return 'Use dynamite or C4 $count times';
+  }
+
+  @override
+  String questFindArtifactTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Find $count artifacts',
+      one: 'Find an artifact',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get questFindArtifactDesc => 'Dig up buried artifacts in ruins';
+
+  @override
+  String questOpenCrateTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Open $count supply crates',
+      one: 'Open a supply crate',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get questOpenCrateDesc =>
+      'Crack open supply crates in abandoned shafts';
+
+  @override
+  String get rarityCommon => 'Common';
+
+  @override
+  String get rarityUncommon => 'Uncommon';
+
+  @override
+  String get rarityRare => 'Rare';
+
+  @override
+  String get rarityEpic => 'Epic';
+
+  @override
+  String get rarityLegendary => 'Legendary';
 }

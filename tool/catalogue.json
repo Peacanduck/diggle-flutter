@@ -1,0 +1,462 @@
+{
+ "artifacts": [
+  {
+   "id": "ts_fossil_fern",
+   "name": "Fern Fossil",
+   "desc": "A perfect imprint of a prehistoric fern."
+  },
+  {
+   "id": "ts_old_boot",
+   "name": "Prospector\\'s Boot",
+   "desc": "Somebody dug here long before you."
+  },
+  {
+   "id": "ts_clay_jar",
+   "name": "Clay Jar",
+   "desc": "Ancient storage, miraculously unbroken."
+  },
+  {
+   "id": "ts_arrowhead",
+   "name": "Flint Arrowhead",
+   "desc": "Knapped by hands ten thousand years gone."
+  },
+  {
+   "id": "ts_coin_hoard",
+   "name": "Coin Hoard",
+   "desc": "Corroded coins from a forgotten mint."
+  },
+  {
+   "id": "pf_mammoth_tusk",
+   "name": "Mammoth Tusk",
+   "desc": "Curved ivory, cold to the touch."
+  },
+  {
+   "id": "pf_ice_lens",
+   "name": "Ice Lens",
+   "desc": "A naturally formed lens of ancient ice."
+  },
+  {
+   "id": "pf_frozen_flower",
+   "name": "Frozen Flower",
+   "desc": "A bloom preserved mid-blossom for millennia."
+  },
+  {
+   "id": "pf_sled_runner",
+   "name": "Sled Runner",
+   "desc": "Part of an expedition that never returned."
+  },
+  {
+   "id": "pf_amber_insect",
+   "name": "Amber Insect",
+   "desc": "A tiny passenger frozen in golden resin."
+  },
+  {
+   "id": "cc_singing_geode",
+   "name": "Singing Geode",
+   "desc": "It hums a note just below hearing."
+  },
+  {
+   "id": "cc_prism_core",
+   "name": "Prism Core",
+   "desc": "Splits lamplight into colors with no names."
+  },
+  {
+   "id": "cc_petrified_eye",
+   "name": "Petrified Eye",
+   "desc": "You are certain it was watching you."
+  },
+  {
+   "id": "cc_resonant_shard",
+   "name": "Resonant Shard",
+   "desc": "Vibrates when other crystals are near."
+  },
+  {
+   "id": "cc_hollow_bell",
+   "name": "Hollow Bell",
+   "desc": "A crystal bell that rings in silence."
+  },
+  {
+   "id": "mc_obsidian_blade",
+   "name": "Obsidian Blade",
+   "desc": "Volcanic glass, sharper than any drill."
+  },
+  {
+   "id": "mc_fire_opal",
+   "name": "Fire Opal",
+   "desc": "A stone with a living ember inside."
+  },
+  {
+   "id": "mc_basalt_idol",
+   "name": "Basalt Idol",
+   "desc": "Carved by something that liked the heat."
+  },
+  {
+   "id": "mc_meteor_fragment",
+   "name": "Meteor Fragment",
+   "desc": "It fell from above and sank this deep."
+  },
+  {
+   "id": "mc_heart_of_core",
+   "name": "Heart of the Core",
+   "desc": "Still warm. Still beating?"
+  }
+ ],
+ "achievements": [
+  {
+   "id": "ore_10",
+   "name": "First Haul",
+   "desc": "Mine 10 ores"
+  },
+  {
+   "id": "ore_100",
+   "name": "Ore Hound",
+   "desc": "Mine 100 ores"
+  },
+  {
+   "id": "ore_500",
+   "name": "Vein Chaser",
+   "desc": "Mine 500 ores"
+  },
+  {
+   "id": "ore_2000",
+   "name": "Strip Miner",
+   "desc": "Mine 2,000 ores"
+  },
+  {
+   "id": "ore_10000",
+   "name": "Planet Eater",
+   "desc": "Mine 10,000 ores"
+  },
+  {
+   "id": "depth_50",
+   "name": "Below the Roots",
+   "desc": "Reach depth 50"
+  },
+  {
+   "id": "depth_120",
+   "name": "Into the Frost",
+   "desc": "Reach the Permafrost (depth 120)"
+  },
+  {
+   "id": "depth_240",
+   "name": "Crystal Gazer",
+   "desc": "Reach the Crystal Caverns (depth 240)"
+  },
+  {
+   "id": "depth_360",
+   "name": "Magma Diver",
+   "desc": "Reach the Magma Core (depth 360)"
+  },
+  {
+   "id": "depth_445",
+   "name": "Rock Bottom",
+   "desc": "Touch the world floor (depth 445)"
+  },
+  {
+   "id": "cash_1k",
+   "name": "Pocket Money",
+   "desc": "Earn \\$1,000 lifetime"
+  },
+  {
+   "id": "cash_25k",
+   "name": "Business Miner",
+   "desc": "Earn \\$25,000 lifetime"
+  },
+  {
+   "id": "cash_250k",
+   "name": "Ore Baron",
+   "desc": "Earn \\$250,000 lifetime"
+  },
+  {
+   "id": "cash_1m",
+   "name": "Diggle Tycoon",
+   "desc": "Earn \\$1,000,000 lifetime"
+  },
+  {
+   "id": "level_5",
+   "name": "Getting Serious",
+   "desc": "Reach level 5"
+  },
+  {
+   "id": "level_10",
+   "name": "Double Digits",
+   "desc": "Reach level 10"
+  },
+  {
+   "id": "level_18",
+   "name": "Deep Veteran",
+   "desc": "Reach level 18"
+  },
+  {
+   "id": "level_25",
+   "name": "Maximum Diggle",
+   "desc": "Reach level 25"
+  },
+  {
+   "id": "artifact_1",
+   "name": "Amateur Archaeologist",
+   "desc": "Find your first artifact"
+  },
+  {
+   "id": "artifact_10",
+   "name": "Museum Donor",
+   "desc": "Find 10 artifacts"
+  },
+  {
+   "id": "artifact_20",
+   "name": "Master Curator",
+   "desc": "Complete the full collection"
+  },
+  {
+   "id": "blast_5",
+   "name": "Fire in the Hole",
+   "desc": "Detonate 5 explosives"
+  },
+  {
+   "id": "blast_50",
+   "name": "Controlled Demolition",
+   "desc": "Detonate 50 explosives"
+  },
+  {
+   "id": "sales_10",
+   "name": "Regular Customer",
+   "desc": "Sell ore 10 times"
+  },
+  {
+   "id": "sales_100",
+   "name": "Market Mover",
+   "desc": "Sell ore 100 times"
+  },
+  {
+   "id": "death_1",
+   "name": "Occupational Hazard",
+   "desc": "Lose your first drill"
+  },
+  {
+   "id": "death_25",
+   "name": "Never Say Die",
+   "desc": "Lose 25 drills and keep digging"
+  }
+ ],
+ "items": [
+  {
+   "id": "backupFuel",
+   "name": "Backup Fuel",
+   "desc": null
+  },
+  {
+   "id": "repairBot",
+   "name": "Repair Bot",
+   "desc": null
+  },
+  {
+   "id": "dynamite",
+   "name": "Dynamite",
+   "desc": null
+  },
+  {
+   "id": "c4",
+   "name": "C4",
+   "desc": null
+  },
+  {
+   "id": "spaceRift",
+   "name": "Space Rift",
+   "desc": null
+  },
+  {
+   "id": "oreScanner",
+   "name": "Ore Scanner",
+   "desc": null
+  },
+  {
+   "id": "heatShield",
+   "name": "Heat Shield",
+   "desc": null
+  },
+  {
+   "id": "backupFuel",
+   "name": "Restores 50 fuel",
+   "desc": null
+  },
+  {
+   "id": "repairBot",
+   "name": "Repairs 40 hull HP",
+   "desc": null
+  },
+  {
+   "id": "dynamite",
+   "name": "Blows up 3x3 area",
+   "desc": null
+  },
+  {
+   "id": "c4",
+   "name": "Blows up 5x5 area",
+   "desc": null
+  },
+  {
+   "id": "spaceRift",
+   "name": "Teleport to surface",
+   "desc": null
+  },
+  {
+   "id": "oreScanner",
+   "name": "Reveals terrain in a wide radius",
+   "desc": null
+  },
+  {
+   "id": "heatShield",
+   "name": "60s of lava immunity",
+   "desc": null
+  },
+  {
+   "id": "backupFuel",
+   "name": "⛽",
+   "desc": null
+  },
+  {
+   "id": "repairBot",
+   "name": "🔧",
+   "desc": null
+  },
+  {
+   "id": "dynamite",
+   "name": "🧨",
+   "desc": null
+  },
+  {
+   "id": "c4",
+   "name": "💣",
+   "desc": null
+  },
+  {
+   "id": "spaceRift",
+   "name": "🌀",
+   "desc": null
+  },
+  {
+   "id": "oreScanner",
+   "name": "📡",
+   "desc": null
+  },
+  {
+   "id": "heatShield",
+   "name": "🛡️",
+   "desc": null
+  }
+ ],
+ "tiles": [
+  {
+   "id": "empty",
+   "name": "Empty",
+   "desc": null
+  },
+  {
+   "id": "dirt",
+   "name": "Dirt",
+   "desc": null
+  },
+  {
+   "id": "rock",
+   "name": "Rock",
+   "desc": null
+  },
+  {
+   "id": "coal",
+   "name": "Coal",
+   "desc": null
+  },
+  {
+   "id": "copper",
+   "name": "Copper",
+   "desc": null
+  },
+  {
+   "id": "silver",
+   "name": "Silver",
+   "desc": null
+  },
+  {
+   "id": "gold",
+   "name": "Gold",
+   "desc": null
+  },
+  {
+   "id": "sapphire",
+   "name": "Sapphire",
+   "desc": null
+  },
+  {
+   "id": "emerald",
+   "name": "Emerald",
+   "desc": null
+  },
+  {
+   "id": "ruby",
+   "name": "Ruby",
+   "desc": null
+  },
+  {
+   "id": "diamond",
+   "name": "Diamond",
+   "desc": null
+  },
+  {
+   "id": "lava",
+   "name": "Lava",
+   "desc": null
+  },
+  {
+   "id": "gas",
+   "name": "Gas Pocket",
+   "desc": null
+  },
+  {
+   "id": "frozenDirt",
+   "name": "Frozen Dirt",
+   "desc": null
+  },
+  {
+   "id": "magmaRock",
+   "name": "Magma Rock",
+   "desc": null
+  },
+  {
+   "id": "crystalOre",
+   "name": "Crystal",
+   "desc": null
+  },
+  {
+   "id": "unstableRock",
+   "name": "Unstable Rock",
+   "desc": null
+  },
+  {
+   "id": "lootCrate",
+   "name": "Supply Crate",
+   "desc": null
+  },
+  {
+   "id": "artifact",
+   "name": "Artifact",
+   "desc": null
+  },
+  {
+   "id": "bedrock",
+   "name": "Bedrock",
+   "desc": null
+  }
+ ],
+ "gear_parts": [
+  {
+   "id": "Cargo Hold",
+   "name": "Cargo Hold",
+   "desc": null
+  },
+  {
+   "id": "Fuel Tank",
+   "name": "Fuel Tank",
+   "desc": null
+  }
+ ]
+}

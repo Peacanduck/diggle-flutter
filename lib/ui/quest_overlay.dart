@@ -980,17 +980,12 @@ class _QuestOverlayState extends State<QuestOverlay>
         return l10n.questJoinDiscordTitle;
       case QuestType.postTweet:
         return l10n.questPostTweetTitle;
-      // v2 content quests — English until the l10n batch pass
       case QuestType.useExplosives:
-        return 'Detonate ${def.target} explosives';
+        return l10n.questUseExplosivesTitle(def.target);
       case QuestType.findArtifact:
-        return def.target == 1
-            ? 'Find an artifact'
-            : 'Find ${def.target} artifacts';
+        return l10n.questFindArtifactTitle(def.target);
       case QuestType.openCrate:
-        return def.target == 1
-            ? 'Open a supply crate'
-            : 'Open ${def.target} supply crates';
+        return l10n.questOpenCrateTitle(def.target);
     }
   }
 
@@ -1014,13 +1009,12 @@ class _QuestOverlayState extends State<QuestOverlay>
         return l10n.questJoinDiscordDesc;
       case QuestType.postTweet:
         return l10n.questPostTweetDesc;
-      // v2 content quests — English until the l10n batch pass
       case QuestType.useExplosives:
-        return 'Use dynamite or C4 ${def.target} times';
+        return l10n.questUseExplosivesDesc(def.target);
       case QuestType.findArtifact:
-        return 'Dig up buried artifacts in ruins';
+        return l10n.questFindArtifactDesc;
       case QuestType.openCrate:
-        return 'Crack open supply crates in abandoned shafts';
+        return l10n.questOpenCrateDesc;
     }
   }
 }

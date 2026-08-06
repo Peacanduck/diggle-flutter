@@ -2219,6 +2219,798 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Diggle Legend'**
   String get titleDiggleLegend;
+
+  /// No description provided for @artifactTsFossilFern.
+  ///
+  /// In en, this message translates to:
+  /// **'Fern Fossil'**
+  String get artifactTsFossilFern;
+
+  /// No description provided for @artifactTsFossilFernDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'A perfect imprint of a prehistoric fern.'**
+  String get artifactTsFossilFernDesc;
+
+  /// No description provided for @artifactTsOldBoot.
+  ///
+  /// In en, this message translates to:
+  /// **'Prospector\'s Boot'**
+  String get artifactTsOldBoot;
+
+  /// No description provided for @artifactTsOldBootDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Somebody dug here long before you.'**
+  String get artifactTsOldBootDesc;
+
+  /// No description provided for @artifactTsClayJar.
+  ///
+  /// In en, this message translates to:
+  /// **'Clay Jar'**
+  String get artifactTsClayJar;
+
+  /// No description provided for @artifactTsClayJarDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Ancient storage, miraculously unbroken.'**
+  String get artifactTsClayJarDesc;
+
+  /// No description provided for @artifactTsArrowhead.
+  ///
+  /// In en, this message translates to:
+  /// **'Flint Arrowhead'**
+  String get artifactTsArrowhead;
+
+  /// No description provided for @artifactTsArrowheadDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Knapped by hands ten thousand years gone.'**
+  String get artifactTsArrowheadDesc;
+
+  /// No description provided for @artifactTsCoinHoard.
+  ///
+  /// In en, this message translates to:
+  /// **'Coin Hoard'**
+  String get artifactTsCoinHoard;
+
+  /// No description provided for @artifactTsCoinHoardDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Corroded coins from a forgotten mint.'**
+  String get artifactTsCoinHoardDesc;
+
+  /// No description provided for @artifactPfMammothTusk.
+  ///
+  /// In en, this message translates to:
+  /// **'Mammoth Tusk'**
+  String get artifactPfMammothTusk;
+
+  /// No description provided for @artifactPfMammothTuskDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Curved ivory, cold to the touch.'**
+  String get artifactPfMammothTuskDesc;
+
+  /// No description provided for @artifactPfIceLens.
+  ///
+  /// In en, this message translates to:
+  /// **'Ice Lens'**
+  String get artifactPfIceLens;
+
+  /// No description provided for @artifactPfIceLensDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'A naturally formed lens of ancient ice.'**
+  String get artifactPfIceLensDesc;
+
+  /// No description provided for @artifactPfFrozenFlower.
+  ///
+  /// In en, this message translates to:
+  /// **'Frozen Flower'**
+  String get artifactPfFrozenFlower;
+
+  /// No description provided for @artifactPfFrozenFlowerDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'A bloom preserved mid-blossom for millennia.'**
+  String get artifactPfFrozenFlowerDesc;
+
+  /// No description provided for @artifactPfSledRunner.
+  ///
+  /// In en, this message translates to:
+  /// **'Sled Runner'**
+  String get artifactPfSledRunner;
+
+  /// No description provided for @artifactPfSledRunnerDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Part of an expedition that never returned.'**
+  String get artifactPfSledRunnerDesc;
+
+  /// No description provided for @artifactPfAmberInsect.
+  ///
+  /// In en, this message translates to:
+  /// **'Amber Insect'**
+  String get artifactPfAmberInsect;
+
+  /// No description provided for @artifactPfAmberInsectDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'A tiny passenger frozen in golden resin.'**
+  String get artifactPfAmberInsectDesc;
+
+  /// No description provided for @artifactCcSingingGeode.
+  ///
+  /// In en, this message translates to:
+  /// **'Singing Geode'**
+  String get artifactCcSingingGeode;
+
+  /// No description provided for @artifactCcSingingGeodeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'It hums a note just below hearing.'**
+  String get artifactCcSingingGeodeDesc;
+
+  /// No description provided for @artifactCcPrismCore.
+  ///
+  /// In en, this message translates to:
+  /// **'Prism Core'**
+  String get artifactCcPrismCore;
+
+  /// No description provided for @artifactCcPrismCoreDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Splits lamplight into colors with no names.'**
+  String get artifactCcPrismCoreDesc;
+
+  /// No description provided for @artifactCcPetrifiedEye.
+  ///
+  /// In en, this message translates to:
+  /// **'Petrified Eye'**
+  String get artifactCcPetrifiedEye;
+
+  /// No description provided for @artifactCcPetrifiedEyeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'You are certain it was watching you.'**
+  String get artifactCcPetrifiedEyeDesc;
+
+  /// No description provided for @artifactCcResonantShard.
+  ///
+  /// In en, this message translates to:
+  /// **'Resonant Shard'**
+  String get artifactCcResonantShard;
+
+  /// No description provided for @artifactCcResonantShardDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibrates when other crystals are near.'**
+  String get artifactCcResonantShardDesc;
+
+  /// No description provided for @artifactCcHollowBell.
+  ///
+  /// In en, this message translates to:
+  /// **'Hollow Bell'**
+  String get artifactCcHollowBell;
+
+  /// No description provided for @artifactCcHollowBellDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'A crystal bell that rings in silence.'**
+  String get artifactCcHollowBellDesc;
+
+  /// No description provided for @artifactMcObsidianBlade.
+  ///
+  /// In en, this message translates to:
+  /// **'Obsidian Blade'**
+  String get artifactMcObsidianBlade;
+
+  /// No description provided for @artifactMcObsidianBladeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Volcanic glass, sharper than any drill.'**
+  String get artifactMcObsidianBladeDesc;
+
+  /// No description provided for @artifactMcFireOpal.
+  ///
+  /// In en, this message translates to:
+  /// **'Fire Opal'**
+  String get artifactMcFireOpal;
+
+  /// No description provided for @artifactMcFireOpalDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'A stone with a living ember inside.'**
+  String get artifactMcFireOpalDesc;
+
+  /// No description provided for @artifactMcBasaltIdol.
+  ///
+  /// In en, this message translates to:
+  /// **'Basalt Idol'**
+  String get artifactMcBasaltIdol;
+
+  /// No description provided for @artifactMcBasaltIdolDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Carved by something that liked the heat.'**
+  String get artifactMcBasaltIdolDesc;
+
+  /// No description provided for @artifactMcMeteorFragment.
+  ///
+  /// In en, this message translates to:
+  /// **'Meteor Fragment'**
+  String get artifactMcMeteorFragment;
+
+  /// No description provided for @artifactMcMeteorFragmentDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'It fell from above and sank this deep.'**
+  String get artifactMcMeteorFragmentDesc;
+
+  /// No description provided for @artifactMcHeartOfCore.
+  ///
+  /// In en, this message translates to:
+  /// **'Heart of the Core'**
+  String get artifactMcHeartOfCore;
+
+  /// No description provided for @artifactMcHeartOfCoreDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Still warm. Still beating?'**
+  String get artifactMcHeartOfCoreDesc;
+
+  /// No description provided for @achievementOre10.
+  ///
+  /// In en, this message translates to:
+  /// **'First Haul'**
+  String get achievementOre10;
+
+  /// No description provided for @achievementOre10Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Mine 10 ores'**
+  String get achievementOre10Desc;
+
+  /// No description provided for @achievementOre100.
+  ///
+  /// In en, this message translates to:
+  /// **'Ore Hound'**
+  String get achievementOre100;
+
+  /// No description provided for @achievementOre100Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Mine 100 ores'**
+  String get achievementOre100Desc;
+
+  /// No description provided for @achievementOre500.
+  ///
+  /// In en, this message translates to:
+  /// **'Vein Chaser'**
+  String get achievementOre500;
+
+  /// No description provided for @achievementOre500Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Mine 500 ores'**
+  String get achievementOre500Desc;
+
+  /// No description provided for @achievementOre2000.
+  ///
+  /// In en, this message translates to:
+  /// **'Strip Miner'**
+  String get achievementOre2000;
+
+  /// No description provided for @achievementOre2000Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Mine 2,000 ores'**
+  String get achievementOre2000Desc;
+
+  /// No description provided for @achievementOre10000.
+  ///
+  /// In en, this message translates to:
+  /// **'Planet Eater'**
+  String get achievementOre10000;
+
+  /// No description provided for @achievementOre10000Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Mine 10,000 ores'**
+  String get achievementOre10000Desc;
+
+  /// No description provided for @achievementDepth50.
+  ///
+  /// In en, this message translates to:
+  /// **'Below the Roots'**
+  String get achievementDepth50;
+
+  /// No description provided for @achievementDepth50Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach depth 50'**
+  String get achievementDepth50Desc;
+
+  /// No description provided for @achievementDepth120.
+  ///
+  /// In en, this message translates to:
+  /// **'Into the Frost'**
+  String get achievementDepth120;
+
+  /// No description provided for @achievementDepth120Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach the Permafrost (depth 120)'**
+  String get achievementDepth120Desc;
+
+  /// No description provided for @achievementDepth240.
+  ///
+  /// In en, this message translates to:
+  /// **'Crystal Gazer'**
+  String get achievementDepth240;
+
+  /// No description provided for @achievementDepth240Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach the Crystal Caverns (depth 240)'**
+  String get achievementDepth240Desc;
+
+  /// No description provided for @achievementDepth360.
+  ///
+  /// In en, this message translates to:
+  /// **'Magma Diver'**
+  String get achievementDepth360;
+
+  /// No description provided for @achievementDepth360Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach the Magma Core (depth 360)'**
+  String get achievementDepth360Desc;
+
+  /// No description provided for @achievementDepth445.
+  ///
+  /// In en, this message translates to:
+  /// **'Rock Bottom'**
+  String get achievementDepth445;
+
+  /// No description provided for @achievementDepth445Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Touch the world floor (depth 445)'**
+  String get achievementDepth445Desc;
+
+  /// No description provided for @achievementCash1k.
+  ///
+  /// In en, this message translates to:
+  /// **'Pocket Money'**
+  String get achievementCash1k;
+
+  /// No description provided for @achievementCash1kDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Earn \\\$1,000 lifetime'**
+  String get achievementCash1kDesc;
+
+  /// No description provided for @achievementCash25k.
+  ///
+  /// In en, this message translates to:
+  /// **'Business Miner'**
+  String get achievementCash25k;
+
+  /// No description provided for @achievementCash25kDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Earn \\\$25,000 lifetime'**
+  String get achievementCash25kDesc;
+
+  /// No description provided for @achievementCash250k.
+  ///
+  /// In en, this message translates to:
+  /// **'Ore Baron'**
+  String get achievementCash250k;
+
+  /// No description provided for @achievementCash250kDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Earn \\\$250,000 lifetime'**
+  String get achievementCash250kDesc;
+
+  /// No description provided for @achievementCash1m.
+  ///
+  /// In en, this message translates to:
+  /// **'Diggle Tycoon'**
+  String get achievementCash1m;
+
+  /// No description provided for @achievementCash1mDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Earn \\\$1,000,000 lifetime'**
+  String get achievementCash1mDesc;
+
+  /// No description provided for @achievementLevel5.
+  ///
+  /// In en, this message translates to:
+  /// **'Getting Serious'**
+  String get achievementLevel5;
+
+  /// No description provided for @achievementLevel5Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach level 5'**
+  String get achievementLevel5Desc;
+
+  /// No description provided for @achievementLevel10.
+  ///
+  /// In en, this message translates to:
+  /// **'Double Digits'**
+  String get achievementLevel10;
+
+  /// No description provided for @achievementLevel10Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach level 10'**
+  String get achievementLevel10Desc;
+
+  /// No description provided for @achievementLevel18.
+  ///
+  /// In en, this message translates to:
+  /// **'Deep Veteran'**
+  String get achievementLevel18;
+
+  /// No description provided for @achievementLevel18Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach level 18'**
+  String get achievementLevel18Desc;
+
+  /// No description provided for @achievementLevel25.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum Diggle'**
+  String get achievementLevel25;
+
+  /// No description provided for @achievementLevel25Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach level 25'**
+  String get achievementLevel25Desc;
+
+  /// No description provided for @achievementArtifact1.
+  ///
+  /// In en, this message translates to:
+  /// **'Amateur Archaeologist'**
+  String get achievementArtifact1;
+
+  /// No description provided for @achievementArtifact1Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Find your first artifact'**
+  String get achievementArtifact1Desc;
+
+  /// No description provided for @achievementArtifact10.
+  ///
+  /// In en, this message translates to:
+  /// **'Museum Donor'**
+  String get achievementArtifact10;
+
+  /// No description provided for @achievementArtifact10Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Find 10 artifacts'**
+  String get achievementArtifact10Desc;
+
+  /// No description provided for @achievementArtifact20.
+  ///
+  /// In en, this message translates to:
+  /// **'Master Curator'**
+  String get achievementArtifact20;
+
+  /// No description provided for @achievementArtifact20Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete the full collection'**
+  String get achievementArtifact20Desc;
+
+  /// No description provided for @achievementBlast5.
+  ///
+  /// In en, this message translates to:
+  /// **'Fire in the Hole'**
+  String get achievementBlast5;
+
+  /// No description provided for @achievementBlast5Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Detonate 5 explosives'**
+  String get achievementBlast5Desc;
+
+  /// No description provided for @achievementBlast50.
+  ///
+  /// In en, this message translates to:
+  /// **'Controlled Demolition'**
+  String get achievementBlast50;
+
+  /// No description provided for @achievementBlast50Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Detonate 50 explosives'**
+  String get achievementBlast50Desc;
+
+  /// No description provided for @achievementSales10.
+  ///
+  /// In en, this message translates to:
+  /// **'Regular Customer'**
+  String get achievementSales10;
+
+  /// No description provided for @achievementSales10Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell ore 10 times'**
+  String get achievementSales10Desc;
+
+  /// No description provided for @achievementSales100.
+  ///
+  /// In en, this message translates to:
+  /// **'Market Mover'**
+  String get achievementSales100;
+
+  /// No description provided for @achievementSales100Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell ore 100 times'**
+  String get achievementSales100Desc;
+
+  /// No description provided for @achievementDeath1.
+  ///
+  /// In en, this message translates to:
+  /// **'Occupational Hazard'**
+  String get achievementDeath1;
+
+  /// No description provided for @achievementDeath1Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Lose your first drill'**
+  String get achievementDeath1Desc;
+
+  /// No description provided for @achievementDeath25.
+  ///
+  /// In en, this message translates to:
+  /// **'Never Say Die'**
+  String get achievementDeath25;
+
+  /// No description provided for @achievementDeath25Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Lose 25 drills and keep digging'**
+  String get achievementDeath25Desc;
+
+  /// No description provided for @itemBackupFuel.
+  ///
+  /// In en, this message translates to:
+  /// **'⛽'**
+  String get itemBackupFuel;
+
+  /// No description provided for @itemRepairBot.
+  ///
+  /// In en, this message translates to:
+  /// **'🔧'**
+  String get itemRepairBot;
+
+  /// No description provided for @itemDynamite.
+  ///
+  /// In en, this message translates to:
+  /// **'🧨'**
+  String get itemDynamite;
+
+  /// No description provided for @itemC4.
+  ///
+  /// In en, this message translates to:
+  /// **'💣'**
+  String get itemC4;
+
+  /// No description provided for @itemSpaceRift.
+  ///
+  /// In en, this message translates to:
+  /// **'🌀'**
+  String get itemSpaceRift;
+
+  /// No description provided for @itemOreScanner.
+  ///
+  /// In en, this message translates to:
+  /// **'📡'**
+  String get itemOreScanner;
+
+  /// No description provided for @itemHeatShield.
+  ///
+  /// In en, this message translates to:
+  /// **'🛡️'**
+  String get itemHeatShield;
+
+  /// No description provided for @tileEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty'**
+  String get tileEmpty;
+
+  /// No description provided for @tileDirt.
+  ///
+  /// In en, this message translates to:
+  /// **'Dirt'**
+  String get tileDirt;
+
+  /// No description provided for @tileRock.
+  ///
+  /// In en, this message translates to:
+  /// **'Rock'**
+  String get tileRock;
+
+  /// No description provided for @tileCoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Coal'**
+  String get tileCoal;
+
+  /// No description provided for @tileCopper.
+  ///
+  /// In en, this message translates to:
+  /// **'Copper'**
+  String get tileCopper;
+
+  /// No description provided for @tileSilver.
+  ///
+  /// In en, this message translates to:
+  /// **'Silver'**
+  String get tileSilver;
+
+  /// No description provided for @tileGold.
+  ///
+  /// In en, this message translates to:
+  /// **'Gold'**
+  String get tileGold;
+
+  /// No description provided for @tileSapphire.
+  ///
+  /// In en, this message translates to:
+  /// **'Sapphire'**
+  String get tileSapphire;
+
+  /// No description provided for @tileEmerald.
+  ///
+  /// In en, this message translates to:
+  /// **'Emerald'**
+  String get tileEmerald;
+
+  /// No description provided for @tileRuby.
+  ///
+  /// In en, this message translates to:
+  /// **'Ruby'**
+  String get tileRuby;
+
+  /// No description provided for @tileDiamond.
+  ///
+  /// In en, this message translates to:
+  /// **'Diamond'**
+  String get tileDiamond;
+
+  /// No description provided for @tileLava.
+  ///
+  /// In en, this message translates to:
+  /// **'Lava'**
+  String get tileLava;
+
+  /// No description provided for @tileGas.
+  ///
+  /// In en, this message translates to:
+  /// **'Gas Pocket'**
+  String get tileGas;
+
+  /// No description provided for @tileFrozenDirt.
+  ///
+  /// In en, this message translates to:
+  /// **'Frozen Dirt'**
+  String get tileFrozenDirt;
+
+  /// No description provided for @tileMagmaRock.
+  ///
+  /// In en, this message translates to:
+  /// **'Magma Rock'**
+  String get tileMagmaRock;
+
+  /// No description provided for @tileCrystalOre.
+  ///
+  /// In en, this message translates to:
+  /// **'Crystal'**
+  String get tileCrystalOre;
+
+  /// No description provided for @tileUnstableRock.
+  ///
+  /// In en, this message translates to:
+  /// **'Unstable Rock'**
+  String get tileUnstableRock;
+
+  /// No description provided for @tileLootCrate.
+  ///
+  /// In en, this message translates to:
+  /// **'Supply Crate'**
+  String get tileLootCrate;
+
+  /// No description provided for @tileArtifact.
+  ///
+  /// In en, this message translates to:
+  /// **'Artifact'**
+  String get tileArtifact;
+
+  /// No description provided for @tileBedrock.
+  ///
+  /// In en, this message translates to:
+  /// **'Bedrock'**
+  String get tileBedrock;
+
+  /// No description provided for @questUseExplosivesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Detonate {count} explosives'**
+  String questUseExplosivesTitle(int count);
+
+  /// No description provided for @questUseExplosivesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Use dynamite or C4 {count} times'**
+  String questUseExplosivesDesc(int count);
+
+  /// No description provided for @questFindArtifactTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Find an artifact} other{Find {count} artifacts}}'**
+  String questFindArtifactTitle(int count);
+
+  /// No description provided for @questFindArtifactDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Dig up buried artifacts in ruins'**
+  String get questFindArtifactDesc;
+
+  /// No description provided for @questOpenCrateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Open a supply crate} other{Open {count} supply crates}}'**
+  String questOpenCrateTitle(int count);
+
+  /// No description provided for @questOpenCrateDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Crack open supply crates in abandoned shafts'**
+  String get questOpenCrateDesc;
+
+  /// No description provided for @rarityCommon.
+  ///
+  /// In en, this message translates to:
+  /// **'Common'**
+  String get rarityCommon;
+
+  /// No description provided for @rarityUncommon.
+  ///
+  /// In en, this message translates to:
+  /// **'Uncommon'**
+  String get rarityUncommon;
+
+  /// No description provided for @rarityRare.
+  ///
+  /// In en, this message translates to:
+  /// **'Rare'**
+  String get rarityRare;
+
+  /// No description provided for @rarityEpic.
+  ///
+  /// In en, this message translates to:
+  /// **'Epic'**
+  String get rarityEpic;
+
+  /// No description provided for @rarityLegendary.
+  ///
+  /// In en, this message translates to:
+  /// **'Legendary'**
+  String get rarityLegendary;
 }
 
 class _AppLocalizationsDelegate

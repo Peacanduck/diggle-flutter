@@ -12,6 +12,7 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import 'content_l10n.dart';
 import '../game/systems/achievement_system.dart';
 import '../game/systems/collection_system.dart';
 import '../game/world/biome.dart';
@@ -57,7 +58,9 @@ class CollectionOverlay extends StatelessWidget {
                           padding: const EdgeInsets.all(16),
                           children: [
                             for (final biome in Biome.strata)
-                              _buildBiomeSection(biome.name),
+                              _buildBiomeSection(
+                                  AppLocalizations.of(context)!,
+                                  biome.name),
                           ],
                         ),
                         _buildRecordsTab(AppLocalizations.of(context)!),
@@ -131,12 +134,13 @@ class CollectionOverlay extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         for (final def in AchievementSystem.catalog)
-          _buildAchievementRow(def),
+          _buildAchievementRow(l10n, def),
       ],
     );
   }
 
-  Widget _buildAchievementRow(AchievementDefinition def) {
+  Widget _buildAchievementRow(
+      AppLocalizations l10n, AchievementDefinition def) {
     final unlocked = achievementSystem.isUnlocked(def.id);
     final progress = achievementSystem.progressFor(def);
 
@@ -162,7 +166,7 @@ class CollectionOverlay extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  def.name,
+                  localizedAchievementName(l10n, def.id, def.name),
                   style: TextStyle(
                     color: unlocked ? Colors.white : Colors.white60,
                     fontSize: 13,
@@ -170,7 +174,8 @@ class CollectionOverlay extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  def.description,
+                  localizedAchievementDescription(
+                      l10n, def.id, def.description),
                   style: const TextStyle(
                       color: Colors.white38, fontSize: 11),
                 ),
@@ -212,7 +217,7 @@ class CollectionOverlay extends StatelessWidget {
     );
   }
 
-  Widget _buildBiomeSection(String biomeName) {
+  Widget _buildBiomeSection(AppLocalizations l10n, String biomeName) {
     final artifacts = CollectionSystem.catalogForBiome(biomeName);
     if (artifacts.isEmpty) return const SizedBox.shrink();
     final complete = collectionSystem.isSetComplete(biomeName);
@@ -249,7 +254,8 @@ class CollectionOverlay extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final artifact in artifacts) _buildArtifactCard(artifact),
+              for (final artifact in artifacts)
+                _buildArtifactCard(l10n, artifact),
             ],
           ),
         ],
@@ -257,7 +263,8 @@ class CollectionOverlay extends StatelessWidget {
     );
   }
 
-  Widget _buildArtifactCard(ArtifactDefinition artifact) {
+  Widget _buildArtifactCard(
+      AppLocalizations l10n, ArtifactDefinition artifact) {
     final found = collectionSystem.isFound(artifact.id);
 
     return Container(
@@ -282,7 +289,9 @@ class CollectionOverlay extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            found ? artifact.name : '???',
+            found
+                ? localizedArtifactName(l10n, artifact.id, artifact.name)
+                : '???',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: found ? Colors.white : Colors.white30,
@@ -293,7 +302,8 @@ class CollectionOverlay extends StatelessWidget {
           if (found) ...[
             const SizedBox(height: 3),
             Text(
-              artifact.description,
+              localizedArtifactDescription(
+                  l10n, artifact.id, artifact.description),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.white54,
