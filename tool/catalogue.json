@@ -242,107 +242,37 @@
   {
    "id": "backupFuel",
    "name": "Backup Fuel",
-   "desc": null
+   "desc": "Restores 50 fuel"
   },
   {
    "id": "repairBot",
    "name": "Repair Bot",
-   "desc": null
+   "desc": "Repairs 40 hull HP"
   },
   {
    "id": "dynamite",
    "name": "Dynamite",
-   "desc": null
+   "desc": "Blows up 3x3 area"
   },
   {
    "id": "c4",
    "name": "C4",
-   "desc": null
+   "desc": "Blows up 5x5 area"
   },
   {
    "id": "spaceRift",
    "name": "Space Rift",
-   "desc": null
+   "desc": "Teleport to surface"
   },
   {
    "id": "oreScanner",
    "name": "Ore Scanner",
-   "desc": null
+   "desc": "Reveals terrain in a wide radius"
   },
   {
    "id": "heatShield",
    "name": "Heat Shield",
-   "desc": null
-  },
-  {
-   "id": "backupFuel",
-   "name": "Restores 50 fuel",
-   "desc": null
-  },
-  {
-   "id": "repairBot",
-   "name": "Repairs 40 hull HP",
-   "desc": null
-  },
-  {
-   "id": "dynamite",
-   "name": "Blows up 3x3 area",
-   "desc": null
-  },
-  {
-   "id": "c4",
-   "name": "Blows up 5x5 area",
-   "desc": null
-  },
-  {
-   "id": "spaceRift",
-   "name": "Teleport to surface",
-   "desc": null
-  },
-  {
-   "id": "oreScanner",
-   "name": "Reveals terrain in a wide radius",
-   "desc": null
-  },
-  {
-   "id": "heatShield",
-   "name": "60s of lava immunity",
-   "desc": null
-  },
-  {
-   "id": "backupFuel",
-   "name": "⛽",
-   "desc": null
-  },
-  {
-   "id": "repairBot",
-   "name": "🔧",
-   "desc": null
-  },
-  {
-   "id": "dynamite",
-   "name": "🧨",
-   "desc": null
-  },
-  {
-   "id": "c4",
-   "name": "💣",
-   "desc": null
-  },
-  {
-   "id": "spaceRift",
-   "name": "🌀",
-   "desc": null
-  },
-  {
-   "id": "oreScanner",
-   "name": "📡",
-   "desc": null
-  },
-  {
-   "id": "heatShield",
-   "name": "🛡️",
-   "desc": null
+   "desc": "60s of lava immunity"
   }
  ],
  "tiles": [

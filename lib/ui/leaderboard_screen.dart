@@ -75,10 +75,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           indicatorColor: Colors.amber,
           labelColor: Colors.amber,
           unselectedLabelColor: Colors.white54,
-          tabs: const [
-            Tab(text: 'DEPTH'),
-            Tab(text: 'POINTS'),
-            Tab(text: 'THIS WEEK'),
+          tabs: [
+            Tab(text: l10n.leaderboardDepthTab),
+            Tab(text: l10n.leaderboardPointsTab),
+            Tab(text: l10n.leaderboardWeeklyTab),
           ],
         ),
       ),
@@ -90,13 +90,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
               children: [
                 _buildGlobalList(
                   _byDepth ?? [],
-                  (e) => '${e.maxDepth} m',
+                  (e) => l10n.depthMeter(e.maxDepth),
                 ),
                 _buildGlobalList(
                   _byPoints ?? [],
                   (e) => '${e.totalPointsEarned} pts',
                 ),
-                _buildWeeklyList(_weekly ?? []),
+                _buildWeeklyList(l10n, _weekly ?? []),
               ],
             ),
     );
@@ -118,14 +118,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     );
   }
 
-  Widget _buildWeeklyList(List<WeeklyScoreEntry> entries) {
+  Widget _buildWeeklyList(
+      AppLocalizations l10n, List<WeeklyScoreEntry> entries) {
     if (entries.isEmpty) return _buildEmpty();
     return ListView.builder(
       padding: const EdgeInsets.all(12),
       itemCount: entries.length,
       itemBuilder: (context, i) {
         final e = entries[i];
-        return _buildRow(i, e.displayName, '${e.depth} m');
+        return _buildRow(i, e.displayName, l10n.depthMeter(e.depth));
       },
     );
   }

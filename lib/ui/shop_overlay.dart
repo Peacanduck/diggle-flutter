@@ -832,7 +832,9 @@ class _ShopOverlayState extends State<ShopOverlay>
                         style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold)),
-                    Text(type.description,
+                    Text(
+                        localizedItemDescription(
+                            l10n, type.name, type.description),
                         style: const TextStyle(
                             color: Colors.white54, fontSize: 11)),
                   ],
@@ -1041,14 +1043,17 @@ class _ShopOverlayState extends State<ShopOverlay>
 
   void _buyItem(ItemType type) {
     final l10n = AppLocalizations.of(context)!;
-    if (widget.game.buyItem(type)) _showMessage(l10n.purchased(localizedItemName(
-        AppLocalizations.of(context)!, type.name, type.displayName)));
+    if (widget.game.buyItem(type)) {
+      _showMessage(l10n.purchased(
+          localizedItemName(l10n, type.name, type.displayName)));
+    }
   }
 
   void _buyItemWithPoints(ItemType type) {
     final l10n = AppLocalizations.of(context)!;
     if (widget.game.buyItemWithPoints(type)) {
-      _showMessage(l10n.purchased(type.displayName));
+      _showMessage(l10n.purchased(
+          localizedItemName(l10n, type.name, type.displayName)));
     }
   }
 

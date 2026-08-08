@@ -1049,110 +1049,111 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get menuWeeklyChallenge => 'Weekly Challenge';
+  String get menuWeeklyChallenge => 'Недельный вызов';
 
   @override
-  String get menuLeaderboard => 'Leaderboard';
+  String get menuLeaderboard => 'Рейтинг';
 
   @override
-  String get menuHangar => 'Hangar';
+  String get menuHangar => 'Ангар';
 
   @override
-  String get museumTitle => 'MUSEUM';
+  String get museumTitle => 'МУЗЕЙ';
 
   @override
-  String get achievementsTab => 'ACHIEVEMENTS';
+  String get achievementsTab => 'ДОСТИЖЕНИЯ';
 
   @override
-  String get leaderboardHeading => '🏆 LEADERBOARD';
+  String get leaderboardHeading => '🏆 РЕЙТИНГ';
 
   @override
-  String get leaderboardEmpty => 'No entries yet.\nBe the first on the board!';
+  String get leaderboardEmpty =>
+      'Записей пока нет.\nСтаньте первым в рейтинге!';
 
   @override
-  String get hangarHeading => '🛠️ HANGAR';
+  String get hangarHeading => '🛠️ АНГАР';
 
   @override
   String hangarMachineCount(int count) {
-    return '$count Diggle Machines in this wallet — one can be equipped at a time.';
+    return 'Diggle Machines в этом кошельке: $count — экипировать можно только одну.';
   }
 
   @override
-  String get hangarSeekerVerified => 'SEEKER GENESIS VERIFIED';
+  String get hangarSeekerVerified => 'SEEKER GENESIS ПОДТВЕРЖДЁН';
 
   @override
   String get hangarSeekerBlurb =>
-      'Solana Mobile pioneer — +5% XP & Points, always on.';
+      'Пионер Solana Mobile — +5% XP и очков, всегда активно.';
 
   @override
-  String get hangarSealedCrate => 'SEALED CRATE';
+  String get hangarSealedCrate => 'ЗАПЕЧАТАННЫЙ ЯЩИК';
 
   @override
   String get hangarSealedBlurb =>
-      'This machine hasn\'t been revealed yet. Until then it grants the flat +25% XP & Points holder boost.\n\nAfter the reveal, its five gear traits (Hull, Thruster, Fuel Tank, Drill, Cargo Hold) become equippable with rarity-based stat bonuses. Tap refresh after reveal day!';
+      'Эта машина ещё не раскрыта. До этого она даёт фиксированный буст владельца: +25% XP и очков.\n\nПосле раскрытия её пять частей снаряжения (корпус, двигатель, топливный бак, бур, грузовой отсек) можно будет экипировать с бонусами по редкости. В день раскрытия нажмите «Обновить»!';
 
   @override
   String get hangarEquipped =>
-      '✅ Equipped — bonuses active in normal runs.\nWeekly Challenge uses a standardized loadout (no gear).';
+      '✅ Экипировано — бонусы активны в обычных заходах.\nВ недельном вызове используется стандартное снаряжение (без гира).';
 
   @override
-  String get quantity => 'Quantity';
+  String get quantity => 'Количество';
 
   @override
-  String get airdrop => 'Airdrop';
+  String get airdrop => 'Аирдроп';
 
   @override
-  String get questsWeeklyTab => 'Weekly';
+  String get questsWeeklyTab => 'Недельные';
 
   @override
   String get questsWeeklyInfo =>
-      'Big challenges, big rewards. Resets every Monday (UTC).';
+      'Большие испытания — большие награды. Сброс каждый понедельник (UTC).';
 
   @override
   String questsNotEnoughPoints(int cost) {
-    return 'Not enough points ($cost needed). Grab a points pack in the store!';
+    return 'Недостаточно очков (нужно $cost). Купите набор очков в магазине!';
   }
 
   @override
-  String get questJoinDiscordServer => 'Join Discord Server';
+  String get questJoinDiscordServer => 'Вступить в Discord-сервер';
 
   @override
-  String get questCheckingMembership => 'Checking membership...';
+  String get questCheckingMembership => 'Проверяем участие...';
 
   @override
-  String get questVerifyMembership => 'Verify Membership';
+  String get questVerifyMembership => 'Проверить участие';
 
   @override
   String get questDiscordHint =>
-      'Join the server first, then tap Verify to confirm with Discord';
+      'Сначала вступите в сервер, затем нажмите «Проверить», чтобы подтвердить через Discord';
 
   @override
-  String get questPostOnX => 'Post on X';
+  String get questPostOnX => 'Опубликовать в X';
 
   @override
   String get questTweetHint =>
-      'Post the tweet above, then paste the URL to verify';
+      'Опубликуйте твит выше, затем вставьте ссылку для проверки';
 
   @override
   String get questDiscordUnavailable =>
-      'Discord verification not available. Try again later.';
+      'Проверка через Discord недоступна. Попробуйте позже.';
 
   @override
   String get questDiscordOpenFailed =>
-      'Could not open Discord. Please try again.';
+      'Не удалось открыть Discord. Попробуйте снова.';
 
   @override
-  String get questDiscordVerified => 'Discord membership verified! 🎉';
+  String get questDiscordVerified => 'Участие в Discord подтверждено! 🎉';
 
   @override
   String get questDiscordVerifyFailed =>
-      'Could not verify membership. Make sure you joined the server and authorized Discord.';
+      'Не удалось подтвердить участие. Убедитесь, что вы вступили в сервер и авторизовали Discord.';
 
   @override
-  String get signNewContract => 'Sign New Contract';
+  String get signNewContract => 'Подписать новый контракт';
 
   @override
-  String get corporateContract => '⭐ Corporate Contract';
+  String get corporateContract => '⭐ Корпоративный контракт';
 
   @override
   String prestigeDialogBody(
@@ -1162,446 +1163,449 @@ class AppLocalizationsRu extends AppLocalizations {
     String hardcore,
     String badge,
   ) {
-    return 'Sign Contract #$level?\n\nRESETS: world, cash, ship upgrades\nKEEPS: XP, points, NFTs, achievements, collection\n\nPERMANENT PERKS:\n• +$sellBonus% ore sell price\n• \$$startCash starting cash + starter kit\n$hardcore• $badge leaderboard badge';
+    return 'Подписать контракт №$level?\n\nСБРОС: мир, деньги, улучшения корабля\nСОХРАНЯЕТСЯ: XP, очки, NFT, достижения, коллекция\n\nПОСТОЯННЫЕ БОНУСЫ:\n• +$sellBonus% к цене продажи руды\n• \$$startCash стартовых денег + набор новичка\n$hardcore• Значок $badge в рейтинге';
   }
 
   @override
   String get prestigeHardcoreLine =>
-      '• Hardcore seams: richer ore, deadlier hazards\n';
+      '• Хардкорные жилы: руда богаче, опасности смертоноснее\n';
 
   @override
-  String get notYet => 'Not yet';
+  String get notYet => 'Пока нет';
 
   @override
-  String get signContract => 'Sign Contract';
+  String get signContract => 'Подписать контракт';
 
   @override
-  String get recoveryFailedPoints => 'Recovery failed — not enough points';
+  String get recoveryFailedPoints => 'Спасение не удалось — недостаточно очков';
 
   @override
   String emergencyRecoveryCost(int cost) {
-    return 'Emergency Recovery ($cost pts)';
+    return 'Экстренное спасение ($cost оч.)';
   }
 
   @override
   String emergencyRecoveryNeed(int cost) {
-    return 'Need $cost pts — open Store';
+    return 'Нужно $cost оч. — откройте магазин';
   }
 
   @override
   String keepsCargo(int value) {
-    return 'Keeps your \$$value cargo!';
+    return 'Груз на \$$value останется при вас!';
   }
 
   @override
   String titleUnlocked(String title) {
-    return 'Title unlocked: $title';
+    return 'Открыт титул: $title';
   }
 
   @override
-  String get titleProspector => 'Prospector';
+  String get titleProspector => 'Изыскатель';
 
   @override
-  String get titleExcavator => 'Excavator';
+  String get titleExcavator => 'Землекоп';
 
   @override
-  String get titleDemolitionist => 'Demolitionist';
+  String get titleDemolitionist => 'Подрывник';
 
   @override
-  String get titleDeepMiner => 'Deep Miner';
+  String get titleDeepMiner => 'Глубинный шахтёр';
 
   @override
-  String get titleVoidwalker => 'Voidwalker';
+  String get titleVoidwalker => 'Ходок Пустоты';
 
   @override
-  String get titleCoreBreaker => 'Core Breaker';
+  String get titleCoreBreaker => 'Сокрушитель Ядра';
 
   @override
-  String get titleDiggleLegend => 'Diggle Legend';
+  String get titleDiggleLegend => 'Легенда Diggle';
 
   @override
-  String get artifactTsFossilFern => 'Fern Fossil';
+  String get artifactTsFossilFern => 'Окаменелый папоротник';
 
   @override
   String get artifactTsFossilFernDesc =>
-      'A perfect imprint of a prehistoric fern.';
+      'Идеальный отпечаток древнего папоротника.';
 
   @override
-  String get artifactTsOldBoot => 'Prospector\'s Boot';
+  String get artifactTsOldBoot => 'Сапог изыскателя';
 
   @override
-  String get artifactTsOldBootDesc => 'Somebody dug here long before you.';
+  String get artifactTsOldBootDesc => 'Кто-то копал здесь задолго до вас.';
 
   @override
-  String get artifactTsClayJar => 'Clay Jar';
+  String get artifactTsClayJar => 'Глиняный сосуд';
 
   @override
-  String get artifactTsClayJarDesc => 'Ancient storage, miraculously unbroken.';
+  String get artifactTsClayJarDesc => 'Древняя тара, чудом целая.';
 
   @override
-  String get artifactTsArrowhead => 'Flint Arrowhead';
+  String get artifactTsArrowhead => 'Кремнёвый наконечник';
 
   @override
   String get artifactTsArrowheadDesc =>
-      'Knapped by hands ten thousand years gone.';
+      'Обработан руками, ушедшими десять тысяч лет назад.';
 
   @override
-  String get artifactTsCoinHoard => 'Coin Hoard';
+  String get artifactTsCoinHoard => 'Клад монет';
 
   @override
-  String get artifactTsCoinHoardDesc => 'Corroded coins from a forgotten mint.';
+  String get artifactTsCoinHoardDesc =>
+      'Изъеденные монеты забытого монетного двора.';
 
   @override
-  String get artifactPfMammothTusk => 'Mammoth Tusk';
+  String get artifactPfMammothTusk => 'Клык мамонта';
 
   @override
-  String get artifactPfMammothTuskDesc => 'Curved ivory, cold to the touch.';
+  String get artifactPfMammothTuskDesc => 'Изогнутая кость, холодная на ощупь.';
 
   @override
-  String get artifactPfIceLens => 'Ice Lens';
+  String get artifactPfIceLens => 'Ледяная линза';
 
   @override
-  String get artifactPfIceLensDesc => 'A naturally formed lens of ancient ice.';
+  String get artifactPfIceLensDesc =>
+      'Линза, естественно намёрзшая из древнего льда.';
 
   @override
-  String get artifactPfFrozenFlower => 'Frozen Flower';
+  String get artifactPfFrozenFlower => 'Замёрзший цветок';
 
   @override
   String get artifactPfFrozenFlowerDesc =>
-      'A bloom preserved mid-blossom for millennia.';
+      'Бутон, застывший в цвету на тысячелетия.';
 
   @override
-  String get artifactPfSledRunner => 'Sled Runner';
+  String get artifactPfSledRunner => 'Полоз от нарт';
 
   @override
   String get artifactPfSledRunnerDesc =>
-      'Part of an expedition that never returned.';
+      'Часть экспедиции, которая не вернулась.';
 
   @override
-  String get artifactPfAmberInsect => 'Amber Insect';
+  String get artifactPfAmberInsect => 'Насекомое в янтаре';
 
   @override
   String get artifactPfAmberInsectDesc =>
-      'A tiny passenger frozen in golden resin.';
+      'Крошечный пассажир, застывший в золотой смоле.';
 
   @override
-  String get artifactCcSingingGeode => 'Singing Geode';
+  String get artifactCcSingingGeode => 'Поющая жеода';
 
   @override
-  String get artifactCcSingingGeodeDesc => 'It hums a note just below hearing.';
+  String get artifactCcSingingGeodeDesc => 'Гудит на ноте чуть ниже слышимой.';
 
   @override
-  String get artifactCcPrismCore => 'Prism Core';
+  String get artifactCcPrismCore => 'Призменное ядро';
 
   @override
   String get artifactCcPrismCoreDesc =>
-      'Splits lamplight into colors with no names.';
+      'Разлагает свет лампы на цвета без названий.';
 
   @override
-  String get artifactCcPetrifiedEye => 'Petrified Eye';
+  String get artifactCcPetrifiedEye => 'Окаменевший глаз';
 
   @override
-  String get artifactCcPetrifiedEyeDesc =>
-      'You are certain it was watching you.';
+  String get artifactCcPetrifiedEyeDesc => 'Вы уверены: он за вами следил.';
 
   @override
-  String get artifactCcResonantShard => 'Resonant Shard';
+  String get artifactCcResonantShard => 'Резонирующий осколок';
 
   @override
   String get artifactCcResonantShardDesc =>
-      'Vibrates when other crystals are near.';
+      'Дрожит, когда рядом другие кристаллы.';
 
   @override
-  String get artifactCcHollowBell => 'Hollow Bell';
+  String get artifactCcHollowBell => 'Пустотелый колокол';
 
   @override
   String get artifactCcHollowBellDesc =>
-      'A crystal bell that rings in silence.';
+      'Кристальный колокол, звенящий в тишине.';
 
   @override
-  String get artifactMcObsidianBlade => 'Obsidian Blade';
+  String get artifactMcObsidianBlade => 'Обсидиановый клинок';
 
   @override
   String get artifactMcObsidianBladeDesc =>
-      'Volcanic glass, sharper than any drill.';
+      'Вулканическое стекло острее любого бура.';
 
   @override
-  String get artifactMcFireOpal => 'Fire Opal';
+  String get artifactMcFireOpal => 'Огненный опал';
 
   @override
-  String get artifactMcFireOpalDesc => 'A stone with a living ember inside.';
+  String get artifactMcFireOpalDesc => 'Камень с живым угольком внутри.';
 
   @override
-  String get artifactMcBasaltIdol => 'Basalt Idol';
+  String get artifactMcBasaltIdol => 'Базальтовый идол';
 
   @override
-  String get artifactMcBasaltIdolDesc =>
-      'Carved by something that liked the heat.';
+  String get artifactMcBasaltIdolDesc => 'Вырезан кем-то, кто любил жару.';
 
   @override
-  String get artifactMcMeteorFragment => 'Meteor Fragment';
+  String get artifactMcMeteorFragment => 'Обломок метеорита';
 
   @override
   String get artifactMcMeteorFragmentDesc =>
-      'It fell from above and sank this deep.';
+      'Упал сверху и погрузился так глубоко.';
 
   @override
-  String get artifactMcHeartOfCore => 'Heart of the Core';
+  String get artifactMcHeartOfCore => 'Сердце Ядра';
 
   @override
-  String get artifactMcHeartOfCoreDesc => 'Still warm. Still beating?';
+  String get artifactMcHeartOfCoreDesc => 'Всё ещё тёплое. Всё ещё бьётся?';
 
   @override
-  String get achievementOre10 => 'First Haul';
+  String get achievementOre10 => 'Первая добыча';
 
   @override
-  String get achievementOre10Desc => 'Mine 10 ores';
+  String get achievementOre10Desc => 'Добудьте 10 руд';
 
   @override
-  String get achievementOre100 => 'Ore Hound';
+  String get achievementOre100 => 'Рудная гончая';
 
   @override
-  String get achievementOre100Desc => 'Mine 100 ores';
+  String get achievementOre100Desc => 'Добудьте 100 руд';
 
   @override
-  String get achievementOre500 => 'Vein Chaser';
+  String get achievementOre500 => 'Охотник за жилами';
 
   @override
-  String get achievementOre500Desc => 'Mine 500 ores';
+  String get achievementOre500Desc => 'Добудьте 500 руд';
 
   @override
-  String get achievementOre2000 => 'Strip Miner';
+  String get achievementOre2000 => 'Карьерщик';
 
   @override
-  String get achievementOre2000Desc => 'Mine 2,000 ores';
+  String get achievementOre2000Desc => 'Добудьте 2 000 руд';
 
   @override
-  String get achievementOre10000 => 'Planet Eater';
+  String get achievementOre10000 => 'Пожиратель планет';
 
   @override
-  String get achievementOre10000Desc => 'Mine 10,000 ores';
+  String get achievementOre10000Desc => 'Добудьте 10 000 руд';
 
   @override
-  String get achievementDepth50 => 'Below the Roots';
+  String get achievementDepth50 => 'Ниже корней';
 
   @override
-  String get achievementDepth50Desc => 'Reach depth 50';
+  String get achievementDepth50Desc => 'Достигните глубины 50';
 
   @override
-  String get achievementDepth120 => 'Into the Frost';
+  String get achievementDepth120 => 'В мерзлоту';
 
   @override
-  String get achievementDepth120Desc => 'Reach the Permafrost (depth 120)';
+  String get achievementDepth120Desc => 'Дойдите до Мерзлоты (глубина 120)';
 
   @override
-  String get achievementDepth240 => 'Crystal Gazer';
+  String get achievementDepth240 => 'Смотрящий в кристалл';
 
   @override
-  String get achievementDepth240Desc => 'Reach the Crystal Caverns (depth 240)';
+  String get achievementDepth240Desc =>
+      'Дойдите до Кристальных пещер (глубина 240)';
 
   @override
-  String get achievementDepth360 => 'Magma Diver';
+  String get achievementDepth360 => 'Ныряльщик в магму';
 
   @override
-  String get achievementDepth360Desc => 'Reach the Magma Core (depth 360)';
+  String get achievementDepth360Desc =>
+      'Дойдите до Магмового ядра (глубина 360)';
 
   @override
-  String get achievementDepth445 => 'Rock Bottom';
+  String get achievementDepth445 => 'Самое дно';
 
   @override
-  String get achievementDepth445Desc => 'Touch the world floor (depth 445)';
+  String get achievementDepth445Desc => 'Коснитесь дна мира (глубина 445)';
 
   @override
-  String get achievementCash1k => 'Pocket Money';
+  String get achievementCash1k => 'Карманные деньги';
 
   @override
-  String get achievementCash1kDesc => 'Earn \\\$1,000 lifetime';
+  String get achievementCash1kDesc => 'Заработайте \$1 000 за всё время';
 
   @override
-  String get achievementCash25k => 'Business Miner';
+  String get achievementCash25k => 'Шахтёр-коммерсант';
 
   @override
-  String get achievementCash25kDesc => 'Earn \\\$25,000 lifetime';
+  String get achievementCash25kDesc => 'Заработайте \$25 000 за всё время';
 
   @override
-  String get achievementCash250k => 'Ore Baron';
+  String get achievementCash250k => 'Рудный барон';
 
   @override
-  String get achievementCash250kDesc => 'Earn \\\$250,000 lifetime';
+  String get achievementCash250kDesc => 'Заработайте \$250 000 за всё время';
 
   @override
-  String get achievementCash1m => 'Diggle Tycoon';
+  String get achievementCash1m => 'Магнат Diggle';
 
   @override
-  String get achievementCash1mDesc => 'Earn \\\$1,000,000 lifetime';
+  String get achievementCash1mDesc => 'Заработайте \$1 000 000 за всё время';
 
   @override
-  String get achievementLevel5 => 'Getting Serious';
+  String get achievementLevel5 => 'Всё серьёзнее';
 
   @override
-  String get achievementLevel5Desc => 'Reach level 5';
+  String get achievementLevel5Desc => 'Достигните 5 уровня';
 
   @override
-  String get achievementLevel10 => 'Double Digits';
+  String get achievementLevel10 => 'Двузначный';
 
   @override
-  String get achievementLevel10Desc => 'Reach level 10';
+  String get achievementLevel10Desc => 'Достигните 10 уровня';
 
   @override
-  String get achievementLevel18 => 'Deep Veteran';
+  String get achievementLevel18 => 'Ветеран глубин';
 
   @override
-  String get achievementLevel18Desc => 'Reach level 18';
+  String get achievementLevel18Desc => 'Достигните 18 уровня';
 
   @override
-  String get achievementLevel25 => 'Maximum Diggle';
+  String get achievementLevel25 => 'Максимальный Diggle';
 
   @override
-  String get achievementLevel25Desc => 'Reach level 25';
+  String get achievementLevel25Desc => 'Достигните 25 уровня';
 
   @override
-  String get achievementArtifact1 => 'Amateur Archaeologist';
+  String get achievementArtifact1 => 'Археолог-любитель';
 
   @override
-  String get achievementArtifact1Desc => 'Find your first artifact';
+  String get achievementArtifact1Desc => 'Найдите свой первый артефакт';
 
   @override
-  String get achievementArtifact10 => 'Museum Donor';
+  String get achievementArtifact10 => 'Даритель музея';
 
   @override
-  String get achievementArtifact10Desc => 'Find 10 artifacts';
+  String get achievementArtifact10Desc => 'Найдите 10 артефактов';
 
   @override
-  String get achievementArtifact20 => 'Master Curator';
+  String get achievementArtifact20 => 'Главный куратор';
 
   @override
-  String get achievementArtifact20Desc => 'Complete the full collection';
+  String get achievementArtifact20Desc => 'Соберите всю коллекцию';
 
   @override
-  String get achievementBlast5 => 'Fire in the Hole';
+  String get achievementBlast5 => 'Ложись, рвём!';
 
   @override
-  String get achievementBlast5Desc => 'Detonate 5 explosives';
+  String get achievementBlast5Desc => 'Взорвите 5 зарядов';
 
   @override
-  String get achievementBlast50 => 'Controlled Demolition';
+  String get achievementBlast50 => 'Контролируемый взрыв';
 
   @override
-  String get achievementBlast50Desc => 'Detonate 50 explosives';
+  String get achievementBlast50Desc => 'Взорвите 50 зарядов';
 
   @override
-  String get achievementSales10 => 'Regular Customer';
+  String get achievementSales10 => 'Постоянный клиент';
 
   @override
-  String get achievementSales10Desc => 'Sell ore 10 times';
+  String get achievementSales10Desc => 'Продайте руду 10 раз';
 
   @override
-  String get achievementSales100 => 'Market Mover';
+  String get achievementSales100 => 'Двигатель рынка';
 
   @override
-  String get achievementSales100Desc => 'Sell ore 100 times';
+  String get achievementSales100Desc => 'Продайте руду 100 раз';
 
   @override
-  String get achievementDeath1 => 'Occupational Hazard';
+  String get achievementDeath1 => 'Профессиональный риск';
 
   @override
-  String get achievementDeath1Desc => 'Lose your first drill';
+  String get achievementDeath1Desc => 'Потеряйте свой первый бур';
 
   @override
-  String get achievementDeath25 => 'Never Say Die';
+  String get achievementDeath25 => 'Никогда не сдавайся';
 
   @override
-  String get achievementDeath25Desc => 'Lose 25 drills and keep digging';
+  String get achievementDeath25Desc =>
+      'Потеряйте 25 буров и продолжайте копать';
 
   @override
-  String get itemBackupFuel => '⛽';
+  String get itemBackupFuel => 'Запасное топливо';
 
   @override
-  String get itemRepairBot => '🔧';
+  String get itemRepairBot => 'Ремонтный бот';
 
   @override
-  String get itemDynamite => '🧨';
+  String get itemDynamite => 'Динамит';
 
   @override
-  String get itemC4 => '💣';
+  String get itemC4 => 'C4';
 
   @override
-  String get itemSpaceRift => '🌀';
+  String get itemSpaceRift => 'Пространственный разлом';
 
   @override
-  String get itemOreScanner => '📡';
+  String get itemOreScanner => 'Сканер руды';
 
   @override
-  String get itemHeatShield => '🛡️';
+  String get itemHeatShield => 'Термощит';
 
   @override
-  String get tileEmpty => 'Empty';
+  String get tileEmpty => 'Пусто';
 
   @override
-  String get tileDirt => 'Dirt';
+  String get tileDirt => 'Земля';
 
   @override
-  String get tileRock => 'Rock';
+  String get tileRock => 'Камень';
 
   @override
-  String get tileCoal => 'Coal';
+  String get tileCoal => 'Уголь';
 
   @override
-  String get tileCopper => 'Copper';
+  String get tileCopper => 'Медь';
 
   @override
-  String get tileSilver => 'Silver';
+  String get tileSilver => 'Серебро';
 
   @override
-  String get tileGold => 'Gold';
+  String get tileGold => 'Золото';
 
   @override
-  String get tileSapphire => 'Sapphire';
+  String get tileSapphire => 'Сапфир';
 
   @override
-  String get tileEmerald => 'Emerald';
+  String get tileEmerald => 'Изумруд';
 
   @override
-  String get tileRuby => 'Ruby';
+  String get tileRuby => 'Рубин';
 
   @override
-  String get tileDiamond => 'Diamond';
+  String get tileDiamond => 'Алмаз';
 
   @override
-  String get tileLava => 'Lava';
+  String get tileLava => 'Лава';
 
   @override
-  String get tileGas => 'Gas Pocket';
+  String get tileGas => 'Газовый карман';
 
   @override
-  String get tileFrozenDirt => 'Frozen Dirt';
+  String get tileFrozenDirt => 'Мёрзлая земля';
 
   @override
-  String get tileMagmaRock => 'Magma Rock';
+  String get tileMagmaRock => 'Магмовая порода';
 
   @override
-  String get tileCrystalOre => 'Crystal';
+  String get tileCrystalOre => 'Кристалл';
 
   @override
-  String get tileUnstableRock => 'Unstable Rock';
+  String get tileUnstableRock => 'Нестабильная порода';
 
   @override
-  String get tileLootCrate => 'Supply Crate';
+  String get tileLootCrate => 'Ящик с припасами';
 
   @override
-  String get tileArtifact => 'Artifact';
+  String get tileArtifact => 'Артефакт';
 
   @override
-  String get tileBedrock => 'Bedrock';
+  String get tileBedrock => 'Скальное основание';
 
   @override
   String questUseExplosivesTitle(int count) {
-    return 'Detonate $count explosives';
+    return 'Взорвите $count зарядов';
   }
 
   @override
   String questUseExplosivesDesc(int count) {
-    return 'Use dynamite or C4 $count times';
+    return 'Используйте динамит или C4 $count раз';
   }
 
   @override
@@ -1609,42 +1613,92 @@ class AppLocalizationsRu extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Find $count artifacts',
-      one: 'Find an artifact',
+      other: 'Найдите $count артефактов',
+      few: 'Найдите $count артефакта',
+      one: 'Найдите $count артефакт',
     );
     return '$_temp0';
   }
 
   @override
-  String get questFindArtifactDesc => 'Dig up buried artifacts in ruins';
+  String get questFindArtifactDesc => 'Выкапывайте артефакты в руинах';
 
   @override
   String questOpenCrateTitle(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Open $count supply crates',
-      one: 'Open a supply crate',
+      other: 'Откройте $count ящиков с припасами',
+      few: 'Откройте $count ящика с припасами',
+      one: 'Откройте $count ящик с припасами',
     );
     return '$_temp0';
   }
 
   @override
   String get questOpenCrateDesc =>
-      'Crack open supply crates in abandoned shafts';
+      'Вскрывайте ящики с припасами в заброшенных шахтах';
 
   @override
-  String get rarityCommon => 'Common';
+  String get rarityCommon => 'Обычный';
 
   @override
-  String get rarityUncommon => 'Uncommon';
+  String get rarityUncommon => 'Необычный';
 
   @override
-  String get rarityRare => 'Rare';
+  String get rarityRare => 'Редкий';
 
   @override
-  String get rarityEpic => 'Epic';
+  String get rarityEpic => 'Эпический';
 
   @override
-  String get rarityLegendary => 'Legendary';
+  String get rarityLegendary => 'Легендарный';
+
+  @override
+  String get itemBackupFuelDesc => 'Восстанавливает 50 топлива';
+
+  @override
+  String get itemRepairBotDesc => 'Восстанавливает 40 HP корпуса';
+
+  @override
+  String get itemDynamiteDesc => 'Взрывает область 3×3';
+
+  @override
+  String get itemC4Desc => 'Взрывает область 5×5';
+
+  @override
+  String get itemSpaceRiftDesc => 'Телепорт на поверхность';
+
+  @override
+  String get itemOreScannerDesc => 'Открывает рельеф в широком радиусе';
+
+  @override
+  String get itemHeatShieldDesc => '60 с невосприимчивости к лаве';
+
+  @override
+  String get biomeTopsoil => 'ВЕРХНИЙ СЛОЙ';
+
+  @override
+  String get biomePermafrost => 'МЕРЗЛОТА';
+
+  @override
+  String get biomeCrystalCaverns => 'КРИСТАЛЬНЫЕ ПЕЩЕРЫ';
+
+  @override
+  String get biomeMagmaCore => 'МАГМОВОЕ ЯДРО';
+
+  @override
+  String get museumArtifactsTab => 'АРТЕФАКТЫ';
+
+  @override
+  String get museumRecordsTab => 'РЕКОРДЫ';
+
+  @override
+  String get leaderboardDepthTab => 'МЕТРЫ';
+
+  @override
+  String get leaderboardPointsTab => 'ОЧКИ';
+
+  @override
+  String get leaderboardWeeklyTab => 'ЗА НЕДЕЛЮ';
 }

@@ -36,19 +36,20 @@ class CollectionOverlay extends StatelessWidget {
       child: AnimatedBuilder(
         animation: Listenable.merge([collectionSystem, achievementSystem]),
         builder: (context, _) {
+          final l10n = AppLocalizations.of(context)!;
           return Container(
             color: Colors.black.withOpacity(0.88),
             child: SafeArea(
               child: Column(
                 children: [
-                  _buildHeader(AppLocalizations.of(context)!),
-                  const TabBar(
+                  _buildHeader(l10n),
+                  TabBar(
                     indicatorColor: Colors.amber,
                     labelColor: Colors.amber,
                     unselectedLabelColor: Colors.white54,
                     tabs: [
-                      Tab(text: 'ARTIFACTS'),
-                      Tab(text: 'RECORDS'),
+                      Tab(text: l10n.museumArtifactsTab),
+                      Tab(text: l10n.museumRecordsTab),
                     ],
                   ),
                   Expanded(
@@ -58,12 +59,10 @@ class CollectionOverlay extends StatelessWidget {
                           padding: const EdgeInsets.all(16),
                           children: [
                             for (final biome in Biome.strata)
-                              _buildBiomeSection(
-                                  AppLocalizations.of(context)!,
-                                  biome.name),
+                              _buildBiomeSection(l10n, biome.name),
                           ],
                         ),
-                        _buildRecordsTab(AppLocalizations.of(context)!),
+                        _buildRecordsTab(l10n),
                       ],
                     ),
                   ),
@@ -230,7 +229,11 @@ class CollectionOverlay extends StatelessWidget {
           Row(
             children: [
               Text(
-                biomeName.toUpperCase(),
+                // Each locale's arb value carries its own casing, so the
+                // header renders it as-is; the fallback is upper-cased to
+                // match for a biome we have no key for yet.
+                localizedBiomeName(
+                    l10n, biomeName, biomeName.toUpperCase()),
                 style: TextStyle(
                   color: complete ? Colors.amber : Colors.white70,
                   fontSize: 14,

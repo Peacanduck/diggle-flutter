@@ -2589,7 +2589,7 @@ abstract class AppLocalizations {
   /// No description provided for @achievementCash1kDesc.
   ///
   /// In en, this message translates to:
-  /// **'Earn \\\$1,000 lifetime'**
+  /// **'Earn \$1,000 lifetime'**
   String get achievementCash1kDesc;
 
   /// No description provided for @achievementCash25k.
@@ -2601,7 +2601,7 @@ abstract class AppLocalizations {
   /// No description provided for @achievementCash25kDesc.
   ///
   /// In en, this message translates to:
-  /// **'Earn \\\$25,000 lifetime'**
+  /// **'Earn \$25,000 lifetime'**
   String get achievementCash25kDesc;
 
   /// No description provided for @achievementCash250k.
@@ -2613,7 +2613,7 @@ abstract class AppLocalizations {
   /// No description provided for @achievementCash250kDesc.
   ///
   /// In en, this message translates to:
-  /// **'Earn \\\$250,000 lifetime'**
+  /// **'Earn \$250,000 lifetime'**
   String get achievementCash250kDesc;
 
   /// No description provided for @achievementCash1m.
@@ -2625,7 +2625,7 @@ abstract class AppLocalizations {
   /// No description provided for @achievementCash1mDesc.
   ///
   /// In en, this message translates to:
-  /// **'Earn \\\$1,000,000 lifetime'**
+  /// **'Earn \$1,000,000 lifetime'**
   String get achievementCash1mDesc;
 
   /// No description provided for @achievementLevel5.
@@ -2787,43 +2787,43 @@ abstract class AppLocalizations {
   /// No description provided for @itemBackupFuel.
   ///
   /// In en, this message translates to:
-  /// **'⛽'**
+  /// **'Backup Fuel'**
   String get itemBackupFuel;
 
   /// No description provided for @itemRepairBot.
   ///
   /// In en, this message translates to:
-  /// **'🔧'**
+  /// **'Repair Bot'**
   String get itemRepairBot;
 
   /// No description provided for @itemDynamite.
   ///
   /// In en, this message translates to:
-  /// **'🧨'**
+  /// **'Dynamite'**
   String get itemDynamite;
 
   /// No description provided for @itemC4.
   ///
   /// In en, this message translates to:
-  /// **'💣'**
+  /// **'C4'**
   String get itemC4;
 
   /// No description provided for @itemSpaceRift.
   ///
   /// In en, this message translates to:
-  /// **'🌀'**
+  /// **'Space Rift'**
   String get itemSpaceRift;
 
   /// No description provided for @itemOreScanner.
   ///
   /// In en, this message translates to:
-  /// **'📡'**
+  /// **'Ore Scanner'**
   String get itemOreScanner;
 
   /// No description provided for @itemHeatShield.
   ///
   /// In en, this message translates to:
-  /// **'🛡️'**
+  /// **'Heat Shield'**
   String get itemHeatShield;
 
   /// No description provided for @tileEmpty.
@@ -3011,6 +3011,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Legendary'**
   String get rarityLegendary;
+
+  /// No description provided for @itemBackupFuelDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Restores 50 fuel'**
+  String get itemBackupFuelDesc;
+
+  /// No description provided for @itemRepairBotDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Repairs 40 hull HP'**
+  String get itemRepairBotDesc;
+
+  /// No description provided for @itemDynamiteDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Blows up 3x3 area'**
+  String get itemDynamiteDesc;
+
+  /// No description provided for @itemC4Desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Blows up 5x5 area'**
+  String get itemC4Desc;
+
+  /// No description provided for @itemSpaceRiftDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Teleport to surface'**
+  String get itemSpaceRiftDesc;
+
+  /// No description provided for @itemOreScannerDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Reveals terrain in a wide radius'**
+  String get itemOreScannerDesc;
+
+  /// No description provided for @itemHeatShieldDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'60s of lava immunity'**
+  String get itemHeatShieldDesc;
+
+  /// No description provided for @biomeTopsoil.
+  ///
+  /// In en, this message translates to:
+  /// **'TOPSOIL'**
+  String get biomeTopsoil;
+
+  /// No description provided for @biomePermafrost.
+  ///
+  /// In en, this message translates to:
+  /// **'PERMAFROST'**
+  String get biomePermafrost;
+
+  /// No description provided for @biomeCrystalCaverns.
+  ///
+  /// In en, this message translates to:
+  /// **'CRYSTAL CAVERNS'**
+  String get biomeCrystalCaverns;
+
+  /// No description provided for @biomeMagmaCore.
+  ///
+  /// In en, this message translates to:
+  /// **'MAGMA CORE'**
+  String get biomeMagmaCore;
+
+  /// No description provided for @museumArtifactsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'ARTIFACTS'**
+  String get museumArtifactsTab;
+
+  /// No description provided for @museumRecordsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'RECORDS'**
+  String get museumRecordsTab;
+
+  /// No description provided for @leaderboardDepthTab.
+  ///
+  /// In en, this message translates to:
+  /// **'DEPTH'**
+  String get leaderboardDepthTab;
+
+  /// No description provided for @leaderboardPointsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'POINTS'**
+  String get leaderboardPointsTab;
+
+  /// No description provided for @leaderboardWeeklyTab.
+  ///
+  /// In en, this message translates to:
+  /// **'THIS WEEK'**
+  String get leaderboardWeeklyTab;
 }
 
 class _AppLocalizationsDelegate

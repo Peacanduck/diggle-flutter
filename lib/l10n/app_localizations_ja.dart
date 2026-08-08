@@ -1027,110 +1027,104 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get menuWeeklyChallenge => 'Weekly Challenge';
+  String get menuWeeklyChallenge => 'ウィークリーチャレンジ';
 
   @override
-  String get menuLeaderboard => 'Leaderboard';
+  String get menuLeaderboard => 'ランキング';
 
   @override
-  String get menuHangar => 'Hangar';
+  String get menuHangar => 'ハンガー';
 
   @override
-  String get museumTitle => 'MUSEUM';
+  String get museumTitle => '博物館';
 
   @override
-  String get achievementsTab => 'ACHIEVEMENTS';
+  String get achievementsTab => '実績';
 
   @override
-  String get leaderboardHeading => '🏆 LEADERBOARD';
+  String get leaderboardHeading => '🏆 ランキング';
 
   @override
-  String get leaderboardEmpty => 'No entries yet.\nBe the first on the board!';
+  String get leaderboardEmpty => 'まだ記録がありません。\n最初のランカーになろう！';
 
   @override
-  String get hangarHeading => '🛠️ HANGAR';
+  String get hangarHeading => '🛠️ ハンガー';
 
   @override
   String hangarMachineCount(int count) {
-    return '$count Diggle Machines in this wallet — one can be equipped at a time.';
+    return 'このウォレットにDiggle Machineが$count台 — 装備できるのは1台だけです。';
   }
 
   @override
-  String get hangarSeekerVerified => 'SEEKER GENESIS VERIFIED';
+  String get hangarSeekerVerified => 'SEEKER GENESIS 認証済み';
 
   @override
-  String get hangarSeekerBlurb =>
-      'Solana Mobile pioneer — +5% XP & Points, always on.';
+  String get hangarSeekerBlurb => 'Solana Mobileのパイオニア — XPとポイント+5%、常時有効。';
 
   @override
-  String get hangarSealedCrate => 'SEALED CRATE';
+  String get hangarSealedCrate => '未開封クレート';
 
   @override
   String get hangarSealedBlurb =>
-      'This machine hasn\'t been revealed yet. Until then it grants the flat +25% XP & Points holder boost.\n\nAfter the reveal, its five gear traits (Hull, Thruster, Fuel Tank, Drill, Cargo Hold) become equippable with rarity-based stat bonuses. Tap refresh after reveal day!';
+      'このマシンはまだ公開されていません。それまでは保有者ブーストとしてXPとポイントが一律+25%になります。\n\n公開後は5つのギアトレイト（船体、スラスター、燃料タンク、ドリル、貨物室）がレアリティに応じたステータスボーナス付きで装備可能になります。公開日には更新をタップしてください！';
 
   @override
   String get hangarEquipped =>
-      '✅ Equipped — bonuses active in normal runs.\nWeekly Challenge uses a standardized loadout (no gear).';
+      '✅ 装備中 — 通常プレイでボーナスが有効です。\nウィークリーチャレンジは統一装備（ギアなし）で行われます。';
 
   @override
-  String get quantity => 'Quantity';
+  String get quantity => '数量';
 
   @override
-  String get airdrop => 'Airdrop';
+  String get airdrop => 'エアドロップ';
 
   @override
-  String get questsWeeklyTab => 'Weekly';
+  String get questsWeeklyTab => 'ウィークリー';
 
   @override
-  String get questsWeeklyInfo =>
-      'Big challenges, big rewards. Resets every Monday (UTC).';
+  String get questsWeeklyInfo => '大きな挑戦、大きな報酬。毎週月曜日（UTC）にリセットされます。';
 
   @override
   String questsNotEnoughPoints(int cost) {
-    return 'Not enough points ($cost needed). Grab a points pack in the store!';
+    return 'ポイントが足りません（$cost必要）。ストアでポイントパックを入手しよう！';
   }
 
   @override
-  String get questJoinDiscordServer => 'Join Discord Server';
+  String get questJoinDiscordServer => 'Discordサーバーに参加';
 
   @override
-  String get questCheckingMembership => 'Checking membership...';
+  String get questCheckingMembership => 'メンバーシップを確認中...';
 
   @override
-  String get questVerifyMembership => 'Verify Membership';
+  String get questVerifyMembership => 'メンバーシップを確認';
 
   @override
-  String get questDiscordHint =>
-      'Join the server first, then tap Verify to confirm with Discord';
+  String get questDiscordHint => 'まずサーバーに参加し、「確認」をタップしてDiscordで認証してください';
 
   @override
-  String get questPostOnX => 'Post on X';
+  String get questPostOnX => 'Xに投稿';
 
   @override
-  String get questTweetHint =>
-      'Post the tweet above, then paste the URL to verify';
+  String get questTweetHint => '上のツイートを投稿し、URLを貼り付けて確認してください';
 
   @override
-  String get questDiscordUnavailable =>
-      'Discord verification not available. Try again later.';
+  String get questDiscordUnavailable => 'Discord認証は利用できません。後でもう一度お試しください。';
 
   @override
-  String get questDiscordOpenFailed =>
-      'Could not open Discord. Please try again.';
+  String get questDiscordOpenFailed => 'Discordを開けませんでした。もう一度お試しください。';
 
   @override
-  String get questDiscordVerified => 'Discord membership verified! 🎉';
+  String get questDiscordVerified => 'Discordメンバーシップを確認しました！🎉';
 
   @override
   String get questDiscordVerifyFailed =>
-      'Could not verify membership. Make sure you joined the server and authorized Discord.';
+      'メンバーシップを確認できませんでした。サーバーに参加し、Discordを認可したか確認してください。';
 
   @override
-  String get signNewContract => 'Sign New Contract';
+  String get signNewContract => '新しい契約を結ぶ';
 
   @override
-  String get corporateContract => '⭐ Corporate Contract';
+  String get corporateContract => '⭐ 企業契約';
 
   @override
   String prestigeDialogBody(
@@ -1140,446 +1134,433 @@ class AppLocalizationsJa extends AppLocalizations {
     String hardcore,
     String badge,
   ) {
-    return 'Sign Contract #$level?\n\nRESETS: world, cash, ship upgrades\nKEEPS: XP, points, NFTs, achievements, collection\n\nPERMANENT PERKS:\n• +$sellBonus% ore sell price\n• \$$startCash starting cash + starter kit\n$hardcore• $badge leaderboard badge';
+    return '契約#$levelを結びますか？\n\nリセット：ワールド、資金、機体アップグレード\n引き継ぎ：XP、ポイント、NFT、実績、コレクション\n\n永久特典：\n• 鉱石の売却価格+$sellBonus%\n• 開始資金\$$startCash＋スターターキット\n$hardcore• ランキングに$badgeバッジ';
   }
 
   @override
-  String get prestigeHardcoreLine =>
-      '• Hardcore seams: richer ore, deadlier hazards\n';
+  String get prestigeHardcoreLine => '• ハードコア鉱脈：鉱石はより豊かに、危険はより致命的に\n';
 
   @override
-  String get notYet => 'Not yet';
+  String get notYet => 'まだやめておく';
 
   @override
-  String get signContract => 'Sign Contract';
+  String get signContract => '契約を結ぶ';
 
   @override
-  String get recoveryFailedPoints => 'Recovery failed — not enough points';
+  String get recoveryFailedPoints => '救助失敗 — ポイントが足りません';
 
   @override
   String emergencyRecoveryCost(int cost) {
-    return 'Emergency Recovery ($cost pts)';
+    return '緊急救助（${cost}pt）';
   }
 
   @override
   String emergencyRecoveryNeed(int cost) {
-    return 'Need $cost pts — open Store';
+    return '${cost}pt必要 — ストアを開く';
   }
 
   @override
   String keepsCargo(int value) {
-    return 'Keeps your \$$value cargo!';
+    return '\$$value分の積荷を維持できます！';
   }
 
   @override
   String titleUnlocked(String title) {
-    return 'Title unlocked: $title';
+    return '称号を獲得：$title';
   }
 
   @override
-  String get titleProspector => 'Prospector';
+  String get titleProspector => '探鉱者';
 
   @override
-  String get titleExcavator => 'Excavator';
+  String get titleExcavator => '掘削者';
 
   @override
-  String get titleDemolitionist => 'Demolitionist';
+  String get titleDemolitionist => '爆破工';
 
   @override
-  String get titleDeepMiner => 'Deep Miner';
+  String get titleDeepMiner => '深層採掘者';
 
   @override
-  String get titleVoidwalker => 'Voidwalker';
+  String get titleVoidwalker => '虚空歩き';
 
   @override
-  String get titleCoreBreaker => 'Core Breaker';
+  String get titleCoreBreaker => 'コアブレイカー';
 
   @override
-  String get titleDiggleLegend => 'Diggle Legend';
+  String get titleDiggleLegend => 'Diggleの伝説';
 
   @override
-  String get artifactTsFossilFern => 'Fern Fossil';
+  String get artifactTsFossilFern => 'シダの化石';
 
   @override
-  String get artifactTsFossilFernDesc =>
-      'A perfect imprint of a prehistoric fern.';
+  String get artifactTsFossilFernDesc => '先史時代のシダが完璧に刻まれている。';
 
   @override
-  String get artifactTsOldBoot => 'Prospector\'s Boot';
+  String get artifactTsOldBoot => '探鉱者のブーツ';
 
   @override
-  String get artifactTsOldBootDesc => 'Somebody dug here long before you.';
+  String get artifactTsOldBootDesc => 'ずっと昔、誰かがここを掘っていた。';
 
   @override
-  String get artifactTsClayJar => 'Clay Jar';
+  String get artifactTsClayJar => '土器の壺';
 
   @override
-  String get artifactTsClayJarDesc => 'Ancient storage, miraculously unbroken.';
+  String get artifactTsClayJarDesc => '古代の容器が、奇跡的に割れずに残っていた。';
 
   @override
-  String get artifactTsArrowhead => 'Flint Arrowhead';
+  String get artifactTsArrowhead => '火打石の矢尻';
 
   @override
-  String get artifactTsArrowheadDesc =>
-      'Knapped by hands ten thousand years gone.';
+  String get artifactTsArrowheadDesc => '一万年前に消えた手が打ち出したもの。';
 
   @override
-  String get artifactTsCoinHoard => 'Coin Hoard';
+  String get artifactTsCoinHoard => '古銭の隠し財';
 
   @override
-  String get artifactTsCoinHoardDesc => 'Corroded coins from a forgotten mint.';
+  String get artifactTsCoinHoardDesc => '忘れられた造幣所の、腐食した硬貨。';
 
   @override
-  String get artifactPfMammothTusk => 'Mammoth Tusk';
+  String get artifactPfMammothTusk => 'マンモスの牙';
 
   @override
-  String get artifactPfMammothTuskDesc => 'Curved ivory, cold to the touch.';
+  String get artifactPfMammothTuskDesc => '湾曲した象牙は、触れると冷たい。';
 
   @override
-  String get artifactPfIceLens => 'Ice Lens';
+  String get artifactPfIceLens => '氷のレンズ';
 
   @override
-  String get artifactPfIceLensDesc => 'A naturally formed lens of ancient ice.';
+  String get artifactPfIceLensDesc => '古代の氷が自然に作り上げたレンズ。';
 
   @override
-  String get artifactPfFrozenFlower => 'Frozen Flower';
+  String get artifactPfFrozenFlower => '凍った花';
 
   @override
-  String get artifactPfFrozenFlowerDesc =>
-      'A bloom preserved mid-blossom for millennia.';
+  String get artifactPfFrozenFlowerDesc => '咲きかけのまま、幾千年も保たれていた。';
 
   @override
-  String get artifactPfSledRunner => 'Sled Runner';
+  String get artifactPfSledRunner => 'そりの滑走部';
 
   @override
-  String get artifactPfSledRunnerDesc =>
-      'Part of an expedition that never returned.';
+  String get artifactPfSledRunnerDesc => '帰らなかった探検隊の遺品。';
 
   @override
-  String get artifactPfAmberInsect => 'Amber Insect';
+  String get artifactPfAmberInsect => '琥珀の中の虫';
 
   @override
-  String get artifactPfAmberInsectDesc =>
-      'A tiny passenger frozen in golden resin.';
+  String get artifactPfAmberInsectDesc => '黄金の樹脂に閉じ込められた小さな乗客。';
 
   @override
-  String get artifactCcSingingGeode => 'Singing Geode';
+  String get artifactCcSingingGeode => '歌う晶洞石';
 
   @override
-  String get artifactCcSingingGeodeDesc => 'It hums a note just below hearing.';
+  String get artifactCcSingingGeodeDesc => '聞こえる限界のすぐ下で、一音を響かせている。';
 
   @override
-  String get artifactCcPrismCore => 'Prism Core';
+  String get artifactCcPrismCore => 'プリズムコア';
 
   @override
-  String get artifactCcPrismCoreDesc =>
-      'Splits lamplight into colors with no names.';
+  String get artifactCcPrismCoreDesc => 'ランプの光を、名のない色に分けてしまう。';
 
   @override
-  String get artifactCcPetrifiedEye => 'Petrified Eye';
+  String get artifactCcPetrifiedEye => '石化した眼';
 
   @override
-  String get artifactCcPetrifiedEyeDesc =>
-      'You are certain it was watching you.';
+  String get artifactCcPetrifiedEyeDesc => 'こちらを見ていた、と確信している。';
 
   @override
-  String get artifactCcResonantShard => 'Resonant Shard';
+  String get artifactCcResonantShard => '共鳴する破片';
 
   @override
-  String get artifactCcResonantShardDesc =>
-      'Vibrates when other crystals are near.';
+  String get artifactCcResonantShardDesc => '他の結晶が近づくと震え出す。';
 
   @override
-  String get artifactCcHollowBell => 'Hollow Bell';
+  String get artifactCcHollowBell => '空洞の鐘';
 
   @override
-  String get artifactCcHollowBellDesc =>
-      'A crystal bell that rings in silence.';
+  String get artifactCcHollowBellDesc => '静寂の中で鳴る、水晶の鐘。';
 
   @override
-  String get artifactMcObsidianBlade => 'Obsidian Blade';
+  String get artifactMcObsidianBlade => '黒曜石の刃';
 
   @override
-  String get artifactMcObsidianBladeDesc =>
-      'Volcanic glass, sharper than any drill.';
+  String get artifactMcObsidianBladeDesc => '火山ガラスは、どのドリルよりも鋭い。';
 
   @override
-  String get artifactMcFireOpal => 'Fire Opal';
+  String get artifactMcFireOpal => 'ファイアオパール';
 
   @override
-  String get artifactMcFireOpalDesc => 'A stone with a living ember inside.';
+  String get artifactMcFireOpalDesc => '内側に生きた熾火を宿した石。';
 
   @override
-  String get artifactMcBasaltIdol => 'Basalt Idol';
+  String get artifactMcBasaltIdol => '玄武岩の偶像';
 
   @override
-  String get artifactMcBasaltIdolDesc =>
-      'Carved by something that liked the heat.';
+  String get artifactMcBasaltIdolDesc => '熱を好む何かが彫ったもの。';
 
   @override
-  String get artifactMcMeteorFragment => 'Meteor Fragment';
+  String get artifactMcMeteorFragment => '隕石の破片';
 
   @override
-  String get artifactMcMeteorFragmentDesc =>
-      'It fell from above and sank this deep.';
+  String get artifactMcMeteorFragmentDesc => '空から落ち、これほど深くまで沈んだ。';
 
   @override
-  String get artifactMcHeartOfCore => 'Heart of the Core';
+  String get artifactMcHeartOfCore => 'コアの心臓';
 
   @override
-  String get artifactMcHeartOfCoreDesc => 'Still warm. Still beating?';
+  String get artifactMcHeartOfCoreDesc => 'まだ温かい。まだ脈打っている？';
 
   @override
-  String get achievementOre10 => 'First Haul';
+  String get achievementOre10 => '初めての積荷';
 
   @override
-  String get achievementOre10Desc => 'Mine 10 ores';
+  String get achievementOre10Desc => '鉱石を10個採掘する';
 
   @override
-  String get achievementOre100 => 'Ore Hound';
+  String get achievementOre100 => '鉱石ハウンド';
 
   @override
-  String get achievementOre100Desc => 'Mine 100 ores';
+  String get achievementOre100Desc => '鉱石を100個採掘する';
 
   @override
-  String get achievementOre500 => 'Vein Chaser';
+  String get achievementOre500 => '鉱脈追い';
 
   @override
-  String get achievementOre500Desc => 'Mine 500 ores';
+  String get achievementOre500Desc => '鉱石を500個採掘する';
 
   @override
-  String get achievementOre2000 => 'Strip Miner';
+  String get achievementOre2000 => '露天掘り';
 
   @override
-  String get achievementOre2000Desc => 'Mine 2,000 ores';
+  String get achievementOre2000Desc => '鉱石を2,000個採掘する';
 
   @override
-  String get achievementOre10000 => 'Planet Eater';
+  String get achievementOre10000 => '惑星喰い';
 
   @override
-  String get achievementOre10000Desc => 'Mine 10,000 ores';
+  String get achievementOre10000Desc => '鉱石を10,000個採掘する';
 
   @override
-  String get achievementDepth50 => 'Below the Roots';
+  String get achievementDepth50 => '根の下へ';
 
   @override
-  String get achievementDepth50Desc => 'Reach depth 50';
+  String get achievementDepth50Desc => '深度50に到達する';
 
   @override
-  String get achievementDepth120 => 'Into the Frost';
+  String get achievementDepth120 => '凍土の奥へ';
 
   @override
-  String get achievementDepth120Desc => 'Reach the Permafrost (depth 120)';
+  String get achievementDepth120Desc => '永久凍土に到達する（深度120）';
 
   @override
-  String get achievementDepth240 => 'Crystal Gazer';
+  String get achievementDepth240 => '水晶を覗く者';
 
   @override
-  String get achievementDepth240Desc => 'Reach the Crystal Caverns (depth 240)';
+  String get achievementDepth240Desc => 'クリスタル洞窟に到達する（深度240）';
 
   @override
-  String get achievementDepth360 => 'Magma Diver';
+  String get achievementDepth360 => 'マグマダイバー';
 
   @override
-  String get achievementDepth360Desc => 'Reach the Magma Core (depth 360)';
+  String get achievementDepth360Desc => 'マグマコアに到達する（深度360）';
 
   @override
-  String get achievementDepth445 => 'Rock Bottom';
+  String get achievementDepth445 => 'どん底';
 
   @override
-  String get achievementDepth445Desc => 'Touch the world floor (depth 445)';
+  String get achievementDepth445Desc => '世界の底に触れる（深度445）';
 
   @override
-  String get achievementCash1k => 'Pocket Money';
+  String get achievementCash1k => 'お小遣い';
 
   @override
-  String get achievementCash1kDesc => 'Earn \\\$1,000 lifetime';
+  String get achievementCash1kDesc => '累計\$1,000を稼ぐ';
 
   @override
-  String get achievementCash25k => 'Business Miner';
+  String get achievementCash25k => '商売上手の採掘者';
 
   @override
-  String get achievementCash25kDesc => 'Earn \\\$25,000 lifetime';
+  String get achievementCash25kDesc => '累計\$25,000を稼ぐ';
 
   @override
-  String get achievementCash250k => 'Ore Baron';
+  String get achievementCash250k => '鉱石男爵';
 
   @override
-  String get achievementCash250kDesc => 'Earn \\\$250,000 lifetime';
+  String get achievementCash250kDesc => '累計\$250,000を稼ぐ';
 
   @override
-  String get achievementCash1m => 'Diggle Tycoon';
+  String get achievementCash1m => 'Diggleの大富豪';
 
   @override
-  String get achievementCash1mDesc => 'Earn \\\$1,000,000 lifetime';
+  String get achievementCash1mDesc => '累計\$1,000,000を稼ぐ';
 
   @override
-  String get achievementLevel5 => 'Getting Serious';
+  String get achievementLevel5 => '本気になってきた';
 
   @override
-  String get achievementLevel5Desc => 'Reach level 5';
+  String get achievementLevel5Desc => 'レベル5に到達する';
 
   @override
-  String get achievementLevel10 => 'Double Digits';
+  String get achievementLevel10 => '二桁の壁';
 
   @override
-  String get achievementLevel10Desc => 'Reach level 10';
+  String get achievementLevel10Desc => 'レベル10に到達する';
 
   @override
-  String get achievementLevel18 => 'Deep Veteran';
+  String get achievementLevel18 => '深層のベテラン';
 
   @override
-  String get achievementLevel18Desc => 'Reach level 18';
+  String get achievementLevel18Desc => 'レベル18に到達する';
 
   @override
-  String get achievementLevel25 => 'Maximum Diggle';
+  String get achievementLevel25 => 'Diggleの極み';
 
   @override
-  String get achievementLevel25Desc => 'Reach level 25';
+  String get achievementLevel25Desc => 'レベル25に到達する';
 
   @override
-  String get achievementArtifact1 => 'Amateur Archaeologist';
+  String get achievementArtifact1 => 'アマチュア考古学者';
 
   @override
-  String get achievementArtifact1Desc => 'Find your first artifact';
+  String get achievementArtifact1Desc => '最初のアーティファクトを見つける';
 
   @override
-  String get achievementArtifact10 => 'Museum Donor';
+  String get achievementArtifact10 => '博物館の寄贈者';
 
   @override
-  String get achievementArtifact10Desc => 'Find 10 artifacts';
+  String get achievementArtifact10Desc => 'アーティファクトを10個見つける';
 
   @override
-  String get achievementArtifact20 => 'Master Curator';
+  String get achievementArtifact20 => 'マスターキュレーター';
 
   @override
-  String get achievementArtifact20Desc => 'Complete the full collection';
+  String get achievementArtifact20Desc => 'コレクションをすべて完成させる';
 
   @override
-  String get achievementBlast5 => 'Fire in the Hole';
+  String get achievementBlast5 => '退避、爆破！';
 
   @override
-  String get achievementBlast5Desc => 'Detonate 5 explosives';
+  String get achievementBlast5Desc => '爆薬を5回起爆する';
 
   @override
-  String get achievementBlast50 => 'Controlled Demolition';
+  String get achievementBlast50 => '制御爆破';
 
   @override
-  String get achievementBlast50Desc => 'Detonate 50 explosives';
+  String get achievementBlast50Desc => '爆薬を50回起爆する';
 
   @override
-  String get achievementSales10 => 'Regular Customer';
+  String get achievementSales10 => '常客';
 
   @override
-  String get achievementSales10Desc => 'Sell ore 10 times';
+  String get achievementSales10Desc => '鉱石を10回売却する';
 
   @override
-  String get achievementSales100 => 'Market Mover';
+  String get achievementSales100 => '相場を動かす者';
 
   @override
-  String get achievementSales100Desc => 'Sell ore 100 times';
+  String get achievementSales100Desc => '鉱石を100回売却する';
 
   @override
-  String get achievementDeath1 => 'Occupational Hazard';
+  String get achievementDeath1 => '職業上の危険';
 
   @override
-  String get achievementDeath1Desc => 'Lose your first drill';
+  String get achievementDeath1Desc => '最初の掘削機を失う';
 
   @override
-  String get achievementDeath25 => 'Never Say Die';
+  String get achievementDeath25 => '不屈の精神';
 
   @override
-  String get achievementDeath25Desc => 'Lose 25 drills and keep digging';
+  String get achievementDeath25Desc => '掘削機を25回失っても掘り続ける';
 
   @override
-  String get itemBackupFuel => '⛽';
+  String get itemBackupFuel => '予備燃料';
 
   @override
-  String get itemRepairBot => '🔧';
+  String get itemRepairBot => '修理ボット';
 
   @override
-  String get itemDynamite => '🧨';
+  String get itemDynamite => 'ダイナマイト';
 
   @override
-  String get itemC4 => '💣';
+  String get itemC4 => 'C4';
 
   @override
-  String get itemSpaceRift => '🌀';
+  String get itemSpaceRift => 'スペースリフト';
 
   @override
-  String get itemOreScanner => '📡';
+  String get itemOreScanner => '鉱石スキャナー';
 
   @override
-  String get itemHeatShield => '🛡️';
+  String get itemHeatShield => '耐熱シールド';
 
   @override
-  String get tileEmpty => 'Empty';
+  String get tileEmpty => '空洞';
 
   @override
-  String get tileDirt => 'Dirt';
+  String get tileDirt => '土';
 
   @override
-  String get tileRock => 'Rock';
+  String get tileRock => '岩';
 
   @override
-  String get tileCoal => 'Coal';
+  String get tileCoal => '石炭';
 
   @override
-  String get tileCopper => 'Copper';
+  String get tileCopper => '銅';
 
   @override
-  String get tileSilver => 'Silver';
+  String get tileSilver => '銀';
 
   @override
-  String get tileGold => 'Gold';
+  String get tileGold => '金';
 
   @override
-  String get tileSapphire => 'Sapphire';
+  String get tileSapphire => 'サファイア';
 
   @override
-  String get tileEmerald => 'Emerald';
+  String get tileEmerald => 'エメラルド';
 
   @override
-  String get tileRuby => 'Ruby';
+  String get tileRuby => 'ルビー';
 
   @override
-  String get tileDiamond => 'Diamond';
+  String get tileDiamond => 'ダイヤモンド';
 
   @override
-  String get tileLava => 'Lava';
+  String get tileLava => '溶岩';
 
   @override
-  String get tileGas => 'Gas Pocket';
+  String get tileGas => 'ガス溜まり';
 
   @override
-  String get tileFrozenDirt => 'Frozen Dirt';
+  String get tileFrozenDirt => '凍土';
 
   @override
-  String get tileMagmaRock => 'Magma Rock';
+  String get tileMagmaRock => 'マグマ岩';
 
   @override
-  String get tileCrystalOre => 'Crystal';
+  String get tileCrystalOre => 'クリスタル';
 
   @override
-  String get tileUnstableRock => 'Unstable Rock';
+  String get tileUnstableRock => '不安定な岩';
 
   @override
-  String get tileLootCrate => 'Supply Crate';
+  String get tileLootCrate => '物資クレート';
 
   @override
-  String get tileArtifact => 'Artifact';
+  String get tileArtifact => 'アーティファクト';
 
   @override
-  String get tileBedrock => 'Bedrock';
+  String get tileBedrock => '岩盤';
 
   @override
   String questUseExplosivesTitle(int count) {
-    return 'Detonate $count explosives';
+    return '爆薬を$count回起爆';
   }
 
   @override
   String questUseExplosivesDesc(int count) {
-    return 'Use dynamite or C4 $count times';
+    return 'ダイナマイトかC4を$count回使う';
   }
 
   @override
@@ -1587,42 +1568,87 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Find $count artifacts',
-      one: 'Find an artifact',
+      other: 'アーティファクトを$count個見つける',
     );
     return '$_temp0';
   }
 
   @override
-  String get questFindArtifactDesc => 'Dig up buried artifacts in ruins';
+  String get questFindArtifactDesc => '遺跡に埋もれたアーティファクトを掘り出す';
 
   @override
   String questOpenCrateTitle(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Open $count supply crates',
-      one: 'Open a supply crate',
+      other: '物資クレートを$count個開ける',
     );
     return '$_temp0';
   }
 
   @override
-  String get questOpenCrateDesc =>
-      'Crack open supply crates in abandoned shafts';
+  String get questOpenCrateDesc => '廃坑の物資クレートをこじ開ける';
 
   @override
-  String get rarityCommon => 'Common';
+  String get rarityCommon => 'コモン';
 
   @override
-  String get rarityUncommon => 'Uncommon';
+  String get rarityUncommon => 'アンコモン';
 
   @override
-  String get rarityRare => 'Rare';
+  String get rarityRare => 'レア';
 
   @override
-  String get rarityEpic => 'Epic';
+  String get rarityEpic => 'エピック';
 
   @override
-  String get rarityLegendary => 'Legendary';
+  String get rarityLegendary => 'レジェンダリー';
+
+  @override
+  String get itemBackupFuelDesc => '燃料を50回復';
+
+  @override
+  String get itemRepairBotDesc => '船体HPを40回復';
+
+  @override
+  String get itemDynamiteDesc => '3×3の範囲を爆破';
+
+  @override
+  String get itemC4Desc => '5×5の範囲を爆破';
+
+  @override
+  String get itemSpaceRiftDesc => '地上へテレポート';
+
+  @override
+  String get itemOreScannerDesc => '広範囲の地形を明らかにする';
+
+  @override
+  String get itemHeatShieldDesc => '60秒間溶岩に無敵';
+
+  @override
+  String get biomeTopsoil => '表土層';
+
+  @override
+  String get biomePermafrost => '永久凍土';
+
+  @override
+  String get biomeCrystalCaverns => 'クリスタル洞窟';
+
+  @override
+  String get biomeMagmaCore => 'マグマコア';
+
+  @override
+  String get museumArtifactsTab => 'アーティファクト';
+
+  @override
+  String get museumRecordsTab => '記録';
+
+  @override
+  String get leaderboardDepthTab => '深度';
+
+  @override
+  String get leaderboardPointsTab => 'ポイント';
+
+  @override
+  String get leaderboardWeeklyTab => '今週';
 }

@@ -1407,25 +1407,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get achievementCash1k => 'Pocket Money';
 
   @override
-  String get achievementCash1kDesc => 'Earn \\\$1,000 lifetime';
+  String get achievementCash1kDesc => 'Earn \$1,000 lifetime';
 
   @override
   String get achievementCash25k => 'Business Miner';
 
   @override
-  String get achievementCash25kDesc => 'Earn \\\$25,000 lifetime';
+  String get achievementCash25kDesc => 'Earn \$25,000 lifetime';
 
   @override
   String get achievementCash250k => 'Ore Baron';
 
   @override
-  String get achievementCash250kDesc => 'Earn \\\$250,000 lifetime';
+  String get achievementCash250kDesc => 'Earn \$250,000 lifetime';
 
   @override
   String get achievementCash1m => 'Diggle Tycoon';
 
   @override
-  String get achievementCash1mDesc => 'Earn \\\$1,000,000 lifetime';
+  String get achievementCash1mDesc => 'Earn \$1,000,000 lifetime';
 
   @override
   String get achievementLevel5 => 'Getting Serious';
@@ -1506,25 +1506,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get achievementDeath25Desc => 'Lose 25 drills and keep digging';
 
   @override
-  String get itemBackupFuel => '⛽';
+  String get itemBackupFuel => 'Backup Fuel';
 
   @override
-  String get itemRepairBot => '🔧';
+  String get itemRepairBot => 'Repair Bot';
 
   @override
-  String get itemDynamite => '🧨';
+  String get itemDynamite => 'Dynamite';
 
   @override
-  String get itemC4 => '💣';
+  String get itemC4 => 'C4';
 
   @override
-  String get itemSpaceRift => '🌀';
+  String get itemSpaceRift => 'Space Rift';
 
   @override
-  String get itemOreScanner => '📡';
+  String get itemOreScanner => 'Ore Scanner';
 
   @override
-  String get itemHeatShield => '🛡️';
+  String get itemHeatShield => 'Heat Shield';
 
   @override
   String get tileEmpty => 'Empty';
@@ -1639,4 +1639,52 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rarityLegendary => 'Legendary';
+
+  @override
+  String get itemBackupFuelDesc => 'Restores 50 fuel';
+
+  @override
+  String get itemRepairBotDesc => 'Repairs 40 hull HP';
+
+  @override
+  String get itemDynamiteDesc => 'Blows up 3x3 area';
+
+  @override
+  String get itemC4Desc => 'Blows up 5x5 area';
+
+  @override
+  String get itemSpaceRiftDesc => 'Teleport to surface';
+
+  @override
+  String get itemOreScannerDesc => 'Reveals terrain in a wide radius';
+
+  @override
+  String get itemHeatShieldDesc => '60s of lava immunity';
+
+  @override
+  String get biomeTopsoil => 'TOPSOIL';
+
+  @override
+  String get biomePermafrost => 'PERMAFROST';
+
+  @override
+  String get biomeCrystalCaverns => 'CRYSTAL CAVERNS';
+
+  @override
+  String get biomeMagmaCore => 'MAGMA CORE';
+
+  @override
+  String get museumArtifactsTab => 'ARTIFACTS';
+
+  @override
+  String get museumRecordsTab => 'RECORDS';
+
+  @override
+  String get leaderboardDepthTab => 'DEPTH';
+
+  @override
+  String get leaderboardPointsTab => 'POINTS';
+
+  @override
+  String get leaderboardWeeklyTab => 'THIS WEEK';
 }

@@ -31,15 +31,34 @@ grab('lib/game/systems/achievement_system.dart',
      r"\s*description:\s*\n?\s*'(?P<desc>(?:[^'\\]|\\.)*)'",
      'achievements')
 
-# enum members with a displayName switch: collect the case labels
-for path, label in [
-    ('lib/game/systems/item_system.dart', 'items'),
-    ('lib/game/world/tile.dart', 'tiles'),
-]:
+# enum members with String getters that switch on the member. Only the
+# named getters are read: an enum has other string switches (icon,
+# hardnessName) whose values are not translatable content, and scanning
+# the whole file collapses them onto the same enum-member key.
+def grab_enum(path, label, getters):
     src = open(path, encoding='utf-8').read()
-    names = re.findall(r"case \w+\.(\w+):\s*\n\s*return '([^']+)'", src)
-    out[label] = [{'id': a, 'name': b, 'desc': None} for a, b in names]
-    print(f'{label:22} {len(names):>4} case returns  ({path})')
+    fields = {}
+    order = []
+    for getter, field in getters.items():
+        block = re.search(r'String get %s \{(.*?)\n  \}' % getter, src, re.S)
+        if not block:
+            sys.exit(f'{path}: no "String get {getter}" getter')
+        cases = re.findall(
+            r"case \w+\.(\w+):\s*\n\s*return '(?P<v>(?:[^'\\]|\\.)*)'",
+            block.group(1))
+        for member, value in cases:
+            if member not in fields:
+                fields[member] = {}
+                order.append(member)
+            fields[member][field] = value
+    out[label] = [dict({'id': m, 'name': None, 'desc': None}, **fields[m])
+                  for m in order]
+    print(f'{label:22} {len(order):>4} enum members  ({path})')
+
+
+grab_enum('lib/game/systems/item_system.dart', 'items',
+          {'displayName': 'name', 'description': 'desc'})
+grab_enum('lib/game/world/tile.dart', 'tiles', {'displayName': 'name'})
 
 # gear part names
 src = open('lib/game/systems/gear_system.dart', encoding='utf-8').read()
