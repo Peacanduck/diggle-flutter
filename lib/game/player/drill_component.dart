@@ -17,6 +17,7 @@ import '../systems/gear_system.dart'
     show DiggleNFTTraits, GearRarity, GearSlot;
 import '../systems/gear_sprites.dart';
 import '../systems/light_system.dart';
+import '../systems/vfx_queue.dart';
 import '../diggle_game.dart';
 
 enum MoveDirection { left, right, down, up, none }
@@ -106,6 +107,11 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     x * TileMapComponent.tileSize + TileMapComponent.tileSize / 2,
     y * TileMapComponent.tileSize + TileMapComponent.tileSize / 2,
   );
+
+  // Scalar forms for VFX emission, which wants doubles rather than a
+  // throwaway Vector2.
+  static double _centerOf(int tile) =>
+      tile * TileMapComponent.tileSize + TileMapComponent.tileSize / 2;
 
   @override
   Future<void> onLoad() async {
@@ -357,12 +363,20 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     _fallStartY = 0;
     _currentFallY = 0;
 
+    // Dust on every landing, damaging or not. It is the most frequent
+    // movement event in the game and the cheapest way to make it feel
+    // physical rather than like a teleport onto the floor.
+    gameRef.vfx
+        .emitAt(VfxKind.landImpact, position.x, position.y + size.y / 2);
+
     // Legendary thruster (Quantum Glitch) extends the safe fall distance
     final safeDistance =
         safeFallDistance + gameRef.gearSystem.bonusSafeFallTiles;
     if (fallDistance > safeDistance) {
       final damageTiles = fallDistance - safeDistance;
       final damage = damageTiles * damagePerTile;
+      gameRef.vfx.emitAt(VfxKind.hullHit, position.x, position.y,
+          intensity: (damage / 60).clamp(0.2, 1.0));
       hullSystem.takeDamage(damage);
     }
   }
@@ -384,26 +398,48 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     final result = tileMap.updateDig(_digX, _digY, progress);
 
     if (result != null) {
+      final vfx = gameRef.vfx;
+      final tx = _centerOf(_digX);
+      final ty = _centerOf(_digY);
+
       if (result.isLethal) {
-        // Heat Shield consumable grants temporary lava immunity
+        // Lava always scalds visibly. Whether it kills is the Heat Shield's
+        // job — and that item had no confirmation it fired at all.
+        vfx.emitAt(VfxKind.lavaScald, tx, ty);
         if (!gameRef.heatShieldActive) {
+          // The death effect itself is emitted once from _handleGameOver, so
+          // it covers running out of fuel too rather than only lava.
           hullSystem.takeDamage(9999);
           _digging = false;
           return;
         }
+        vfx.emitAt(VfxKind.shieldAbsorb, tx, ty);
       }
 
       if (result.isHazard && result.hazardDamage > 0) {
         // Legendary hull (Ghost Stealth) halves gas damage
         final resist =
             result == TileType.gas && gameRef.gearSystem.gasResist ? 0.5 : 1.0;
+        // Half-strength burst when the damage is halved, so the legendary
+        // hull bonus is visible rather than buried in the hull number.
+        vfx.emitAt(VfxKind.gasBurst, tx, ty, intensity: resist);
+        vfx.emitAt(VfxKind.hullHit, position.x, position.y,
+            intensity: 0.35 * resist);
         hullSystem.takeDamage(result.hazardDamage * resist);
       }
 
       // Crystal shards pierce weaker hulls; Titanium Hull is immune.
-      if (result == TileType.crystalOre &&
-          hullSystem.hullLevel != HullLevel.level3) {
-        hullSystem.takeDamage(result.hazardDamage);
+      if (result == TileType.crystalOre) {
+        final shardArgb = TileType.crystalOre.color.toARGB32();
+        if (hullSystem.hullLevel != HullLevel.level3) {
+          vfx.emitAt(VfxKind.crystalShard, tx, ty, argb: shardArgb);
+          vfx.emitAt(VfxKind.hullHit, position.x, position.y, intensity: 0.2);
+          hullSystem.takeDamage(result.hazardDamage);
+        } else {
+          // Immune. A different effect entirely, so Titanium Hull reads as
+          // protection rather than as nothing having happened.
+          vfx.emitAt(VfxKind.shieldAbsorb, tx, ty, argb: shardArgb);
+        }
       }
 
       _consumeFuel(result.fuelCost);
@@ -428,12 +464,25 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
       if (collapsed.isNotEmpty) {
         // Rubble falling from directly above the dig column hits the drill.
         int hits = 0;
+        // Show every collapsed tile, not just the ones that connect — the
+        // point is that the ceiling visibly comes down. Capped, because past
+        // six the extra bursts are indistinguishable and just eat budget.
+        int shown = 0;
         for (final tile in collapsed) {
+          if (shown < 6) {
+            gameRef.vfx.emitAt(
+                VfxKind.rubbleFall, _centerOf(tile.x), _centerOf(tile.y));
+            shown++;
+          }
           if (tile.x == _digX && tile.y < _digY && _digY - tile.y <= 3) {
             hits++;
           }
         }
         if (hits > 0) {
+          // Up to 45 hull damage used to arrive with nothing on screen at
+          // all. Trauma scales with the hit count.
+          gameRef.vfx.emitAt(VfxKind.hullHit, position.x, position.y,
+              intensity: (0.25 * hits).clamp(0.0, 1.0));
           hullSystem.takeDamage((hits * 15.0).clamp(0, 45.0));
         }
       }

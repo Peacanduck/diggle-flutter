@@ -17,6 +17,11 @@ import 'world/tile.dart';
 import 'world/tile_map_component.dart';
 import 'world/world_generator.dart';
 import 'player/drill_component.dart';
+import 'effects/heat_shield_aura.dart';
+import 'effects/screen_vfx.dart';
+import 'effects/shake_world.dart';
+import 'effects/vfx_layer.dart';
+import 'systems/vfx_queue.dart';
 import 'systems/fuel_system.dart';
 import 'systems/economy_system.dart';
 import 'systems/hull_system.dart';
@@ -37,9 +42,21 @@ import 'systems/gear_system.dart';
 
 enum GameState { playing, shopping, gameOver, paused }
 
-class DiggleGame extends FlameGame with HasCollisionDetection {
+class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
   late TileMapComponent tileMap;
   late DrillComponent drill;
+
+  /// Cosmetic effect requests. Game logic emits, [vfxLayer] drains once per
+  /// frame. Deliberately not a ChangeNotifier and deliberately Flame-free —
+  /// see vfx_queue.dart.
+  final VfxQueue vfx = VfxQueue();
+
+  /// World-space particles (priority 10, above tile map and drill).
+  late VfxLayer vfxLayer;
+
+  /// Screen-space tints. Lives in `camera.viewport`, so it neither moves
+  /// with the camera nor picks up the world's shake transform.
+  late ScreenVfx screenVfx;
 
   // Joystick Control
   //late final JoystickComponent joystick;
@@ -111,7 +128,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     oreRichness: challengeMode ? 1.0 : (prestigeSystem?.oreRichness ?? 1.0),
     hazardIntensity:
         challengeMode ? 1.0 : (prestigeSystem?.hazardIntensity ?? 1.0),
-  ){
+  ), super(world: ShakeWorld()){
     xpPointsSystem = XPPointsSystem();
     lightSystem = LightSystem();
     questSystem = QuestSystem();
@@ -300,13 +317,26 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
       onReachSurface: _handleReachSurface,
     );
 
+    // The Heat Shield had no on-screen presence at all: no aura, and no
+    // event when it expired. This polls the flag and renders both.
+    drill.add(HeatShieldAura());
+
+    // Explicit priorities — both were 0, which left the paint order between
+    // the world and the drill up to insertion order.
+    tileMap.priority = 0;
+    drill.priority = 1;
+    vfxLayer = VfxLayer();
+
     // Add to world
     world.add(tileMap);
     world.add(drill);
+    world.add(vfxLayer);
 
     // --- 3. Add Joystick to Camera Viewport (HUD) ---
     // This ensures it stays fixed on screen while the camera moves
     // camera.viewport.add(joystick);
+    screenVfx = ScreenVfx();
+    camera.viewport.add(screenVfx);
 
     // Camera setup
     camera.viewfinder.anchor = Anchor.center;
@@ -366,6 +396,10 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   /// every frame so achievement progress never persists.
   void _handleGameOver() {
     if (_state == GameState.gameOver) return;
+    // Emitted here rather than at each cause, so every death gets it and the
+    // re-entry guard above keeps it to exactly one. VfxLayer deliberately
+    // does NOT gate on gameOver — this fires on the frame the state flips.
+    vfx.emitAt(VfxKind.death, drill.position.x, drill.position.y);
     _state = GameState.gameOver;
     achievementSystem.recordDeath();
     fuelSystem.pause();
@@ -429,6 +463,13 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     xpPointsSystem.resetSession();
     lightSystem.reset();
     questSystem.reset();
+
+    // tileMap.reset() is `async void` and leaves a blank grid for a few
+    // hundred ms — live particles would be drawing over nothing.
+    vfx.clear();
+    vfxLayer.clearAll();
+    world.clearShake();
+    screenVfx.clear();
 
     tileMap.reset();
     drill.reset();
