@@ -817,15 +817,13 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
         break;
 
       case ItemType.dynamite:
-        _collectBlastYield(
-            tileMap.explode(drill.gridX, drill.gridY, type.explosionRadius));
+        _detonate(drill.gridX, drill.gridY, type.explosionRadius);
         achievementSystem.recordBlast();
         questSystem.onExplosiveUsed();
         break;
 
       case ItemType.c4:
-        _collectBlastYield(
-            tileMap.explode(drill.gridX, drill.gridY, type.explosionRadius));
+        _detonate(drill.gridX, drill.gridY, type.explosionRadius);
         achievementSystem.recordBlast();
         questSystem.onExplosiveUsed();
         break;
@@ -912,9 +910,62 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
     return true;
   }
 
+  /// Detonate, bank the surviving ore, and turn the blast into effects.
+  void _detonate(int gridX, int gridY, int radius) {
+    final result = tileMap.explode(gridX, gridY, radius);
+    _collectBlastYield(result.ores);
+    _emitBlastVfx(result);
+  }
+
+  /// Gas chain reactions destroy up to 160 tiles and were, until now,
+  /// entirely invisible — the old `explode` returned ore types and threw
+  /// every coordinate away.
+  void _emitBlastVfx(BlastResult result) {
+    const tile = TileMapComponent.tileSize;
+    double centre(int n) => n * tile + tile / 2;
+
+    // Debris first, flashes second: the component ceiling drops the OLDEST,
+    // so whatever is emitted last is what survives a big chain.
+    //
+    // Every 4th destroyed tile, capped at 8. Eight debris bursts plus up to
+    // 16 detonation flashes is exactly the layer's 24-component ceiling, so
+    // a blast on its own fits; only effects still fading from before it can
+    // push anything out, and the flashes emitted last are what survive.
+    // (The plan said cap debris at 24 — that would have evicted the flashes,
+    // which are the part that explains what happened.)
+    for (int i = 0, shown = 0;
+        i < result.destroyed.length && shown < 8;
+        i += 8, shown++) {
+      vfx.emitAt(VfxKind.tileBreak, centre(result.destroyed[i]),
+          centre(result.destroyed[i + 1]));
+    }
+
+    // One flash per detonation: the initial blast, then each gas chain in
+    // the order it went off. Chains are tinted so they read as gas rather
+    // than as one enormous explosion.
+    for (int i = 0; i < result.detonations.length; i += 3) {
+      final radius = result.detonations[i + 2];
+      vfx.emitAt(
+        VfxKind.explosion,
+        centre(result.detonations[i]),
+        centre(result.detonations[i + 1]),
+        argb: i == 0 ? null : _gasChainArgb,
+        intensity: (radius / 3).clamp(0.35, 1.0),
+      );
+    }
+  }
+
+  /// Gas chain detonations, tinted to distinguish them from the charge the
+  /// player actually placed.
+  static const int _gasChainArgb = 0xFFAED581;
+
   /// Blasted ore is partially recoverable: every other ore survives the
   /// explosion and goes to cargo (until full). No mining XP/points — the
   /// value comes from selling what survived.
+  ///
+  /// ⚠️ Order-dependent: this keeps every other entry, so it is coupled to
+  /// the tile visit order in `TileMapComponent.computeBlast`.
+  /// `blast_result_test.dart` pins the result.
   void _collectBlastYield(List<TileType> destroyedOres) {
     for (int i = 0; i < destroyedOres.length; i++) {
       if (i.isOdd) continue; // 50% yield

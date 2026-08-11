@@ -24,6 +24,36 @@ List<List<Tile>> _generateWorldInBackground(WorldConfig config) {
   return generator.generate();
 }
 
+/// What a blast destroyed, and where.
+///
+/// Coordinates are flat `int` lists rather than objects because a worst-case
+/// blast visits ~160 tiles and this is built inside a frame.
+class BlastResult {
+  const BlastResult({
+    required this.ores,
+    required this.destroyed,
+    required this.detonations,
+  });
+
+  static const BlastResult empty =
+      BlastResult(ores: [], destroyed: [], detonations: []);
+
+  /// Ore types destroyed, in visit order. **The order matters** — the
+  /// caller's 50% parity yield keeps every other entry.
+  final List<TileType> ores;
+
+  /// Flat x,y pairs of every tile turned to empty.
+  final List<int> destroyed;
+
+  /// Flat x,y,radius triples: the initial blast first, then each gas chain
+  /// reaction in the order it detonated. Never empty for a real blast, and
+  /// capped at [TileMapComponent.maxChainedBlasts] entries.
+  final List<int> detonations;
+
+  int get detonationCount => detonations.length ~/ 3;
+  int get destroyedCount => destroyed.length ~/ 2;
+}
+
 class TileMapComponent extends PositionComponent with HasGameRef {
   /// Size of each tile in pixels (Game World Size)
   static const double tileSize = 32.0;
@@ -397,29 +427,69 @@ class TileMapComponent extends PositionComponent with HasGameRef {
     return gridY <= config.surfaceRows;
   }
 
+  /// Cap on total chained blasts, keeping pathological gas fields bounded.
+  static const int maxChainedBlasts = 16;
+
   /// Detonate an explosion. Gas pockets caught in the blast chain-react
-  /// with their own radius-1 explosion. Returns all destroyed ore types
-  /// (the caller decides how much of the yield survives the blast).
-  List<TileType> explode(int centerX, int centerY, int radius) {
+  /// with their own radius-1 explosion.
+  BlastResult explode(int centerX, int centerY, int radius) {
+    if (_grid.isEmpty) return BlastResult.empty;
+
+    final result = computeBlast(_grid, config, centerX, centerY, radius);
+
+    // Reveals happen after the fact. They cannot affect what the blast
+    // destroys — the loop reads `tile.type`, never `isRevealed` — so
+    // keeping them out of computeBlast leaves it pure enough to unit-test.
+    for (int i = 0; i < result.detonations.length; i += 3) {
+      revealAround(result.detonations[i], result.detonations[i + 1],
+          radius: result.detonations[i + 2] + 1);
+    }
+    return result;
+  }
+
+  /// The blast itself, with no component state involved (static for unit
+  /// testing, following the [encodeTileGrid] precedent).
+  ///
+  /// Mutates [grid] — destroyed tiles become empty — but performs no
+  /// reveals and no rendering.
+  ///
+  /// ⚠️ **Tile visit order is load-bearing.** `DiggleGame._collectBlastYield`
+  /// keeps every *other* entry of [BlastResult.ores] (`if (i.isOdd)
+  /// continue`), so reordering these loops silently changes how much loot a
+  /// blast pays out. `blast_result_test.dart` pins today's yield.
+  static BlastResult computeBlast(
+    List<List<Tile>> grid,
+    WorldConfig config,
+    int centerX,
+    int centerY,
+    int radius,
+  ) {
     final destroyedOres = <TileType>[];
+    final destroyed = <int>[];
+    final detonations = <int>[];
     // Queue of (x, y, radius) blasts; gas chain reactions append to it.
     final pending = <List<int>>[
       [centerX, centerY, radius]
     ];
-    // Cap total chained blasts to keep pathological gas fields bounded.
-    int blastsLeft = 16;
+    int blastsLeft = maxChainedBlasts;
 
     while (pending.isNotEmpty && blastsLeft > 0) {
       blastsLeft--;
       final blast = pending.removeAt(0);
       final bx = blast[0], by = blast[1], br = blast[2];
+      detonations
+        ..add(bx)
+        ..add(by)
+        ..add(br);
 
       for (int dx = -br; dx <= br; dx++) {
         for (int dy = -br; dy <= br; dy++) {
           final x = bx + dx;
           final y = by + dy;
-          if (!_isInBounds(x, y)) continue;
-          final tile = _grid[x][y];
+          if (x < 0 || x >= config.width || y < 0 || y >= config.height) {
+            continue;
+          }
+          final tile = grid[x][y];
           if (tile.type == TileType.bedrock || tile.type == TileType.empty) {
             continue;
           }
@@ -430,14 +500,20 @@ class TileMapComponent extends PositionComponent with HasGameRef {
           if (tile.type.isOre) {
             destroyedOres.add(tile.type);
           }
+          destroyed
+            ..add(x)
+            ..add(y);
           tile.type = TileType.empty;
           tile.isRevealed = true;
           tile.resetDig();
         }
       }
-      revealAround(bx, by, radius: br + 1);
     }
-    return destroyedOres;
+    return BlastResult(
+      ores: destroyedOres,
+      destroyed: destroyed,
+      detonations: detonations,
+    );
   }
 
   /// Cascade-collapse unstable rock adjacent to (x, y).

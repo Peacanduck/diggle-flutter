@@ -149,6 +149,7 @@ class VfxLayer extends Component with HasGameReference<DiggleGame> {
   static const int _shieldArgb = 0xFF64FFDA;
   static const int _dustArgb = 0xFFBCAAA4;
   static const int _deathArgb = 0xFFFF8A65;
+  static const int _explosionArgb = 0xFFFFB74D;
 
   final math.Random _random = math.Random();
   final VfxPalette _palette = VfxPalette();
@@ -271,6 +272,30 @@ class VfxLayer extends Component with HasGameReference<DiggleGame> {
             lifespan: 0.35,
             yScale: 0.3);
 
+      case VfxKind.explosion:
+        // Emitted once per detonation, so a gas chain produces a visible
+        // run of these instead of one silent mass deletion. Trauma
+        // accumulates and saturates, which is why a 16-blast chain shakes
+        // harder than a single charge without any special-casing.
+        _burst(event, quality,
+            count: 12,
+            argb: event.argb ?? _explosionArgb,
+            speed: 55,
+            gravity: 20,
+            chipSize: 3,
+            lifespan: 0.6);
+        game.world.addTrauma(0.7 * intensity);
+        game.screenVfx.flash(_explosionArgb, 0.35 * intensity);
+
+      case VfxKind.tileBreak:
+        _burst(event, quality,
+            count: 4,
+            argb: event.argb ?? _rubbleArgb,
+            speed: 18,
+            gravity: 30,
+            chipSize: 2,
+            lifespan: 0.35);
+
       case VfxKind.shieldAbsorb:
         _ring(event, argb: event.argb ?? _shieldArgb);
 
@@ -286,10 +311,10 @@ class VfxLayer extends Component with HasGameReference<DiggleGame> {
         game.screenVfx.flash(_deathArgb, 1.0, decayPerSecond: 1.2);
 
       default:
-        // digChip / tileBreak / oreBurst / explosion / crateOpen /
-        // artifactNew / artifactDupe / scanPulse / repairSparkle /
-        // teleportOut / teleportIn / surfaced belong to A2 and A3. Ignored
-        // rather than shown as a placeholder that would have to be undone.
+        // digChip / oreBurst / crateOpen / artifactNew / artifactDupe /
+        // scanPulse / repairSparkle / teleportOut / teleportIn / surfaced
+        // belong to A3. Ignored rather than shown as a placeholder that
+        // would have to be undone.
         break;
     }
   }
