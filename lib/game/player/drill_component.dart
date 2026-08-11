@@ -15,6 +15,7 @@ import '../systems/engine_system.dart';
 import '../systems/cooling_system.dart';
 import '../systems/gear_system.dart'
     show DiggleNFTTraits, GearRarity, GearSlot;
+import '../systems/drill_anim.dart';
 import '../systems/gear_sprites.dart';
 import '../systems/light_system.dart';
 import '../systems/vfx_queue.dart';
@@ -46,6 +47,12 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
   // NFT gear sprite sheet (layered per-slot rendering when gear is equipped)
   Image? _gearSheet;
   final Map<int, Sprite> _gearSpriteCache = {};
+
+  /// Accumulated animation ticks (seconds x the current band's fps), and
+  /// the frame it resolves to. Both are advanced in [update] so [render]
+  /// stays free of work — see drill_anim.dart for the band table.
+  double _animPhase = 0;
+  int _animFrame = 0;
 
   // Target we're moving toward
   Vector2 _target = Vector2.zero();
@@ -163,8 +170,14 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     );
   }
 
-  Sprite _gearSprite(GearSlot slot, GearRarity rarity, {required bool down}) {
-    final (col, row) = GearSpriteSheet.cell(slot, rarity, down: down);
+  Sprite _gearSprite(
+    GearSlot slot,
+    GearRarity rarity, {
+    required bool down,
+    required int frame,
+  }) {
+    final (col, row) =
+        GearSpriteSheet.cell(slot, rarity, down: down, frame: frame);
     // Stride must be the sheet's real column count: a hardcoded stride
     // silently collides (wrong slot, no crash) the moment a column index
     // reaches it. GearSpriteSheet.columns is generated alongside the sheet,
@@ -193,6 +206,20 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
       onGameOver?.call();
       return;
     }
+
+    // --- GEAR ANIMATION PHASE ---
+    // Position matters. It is AFTER the game-over returns, so death
+    // correctly freezes the machine mid-pose; and BEFORE the `if (_digging)
+    // ... return` below, because that early return would otherwise freeze
+    // the animation during digs — exactly when the fastest spin belongs.
+    final action = drillActionFor(
+      digging: _digging,
+      flying: heldDirection == MoveDirection.up,
+      driving: heldDirection != MoveDirection.none,
+      falling: _isFalling,
+    );
+    _animPhase += dt * kDrillAnimBands[action]!.fps;
+    _animFrame = drillFrame(action, _animPhase);
 
     /* --- JOYSTICK LOGIC ---
     if (joystick != null) {
@@ -621,7 +648,10 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     for (final slot in GearSpriteSheet.drawOrder) {
       final trait = gear.traits[slot];
       if (trait == null) continue;
-      _gearSprite(slot, trait.rarity, down: !side)
+      // Zero new draw calls: this was already five sprite renders, and a
+      // frame only moves srcPosition. The whole cost of Phase B is 40
+      // cached Sprites (5 slots x 2 views x 4 frames) and one modulo a tick.
+      _gearSprite(slot, trait.rarity, down: !side, frame: _animFrame)
           .render(canvas, size: size, overridePaint: paint);
     }
     canvas.restore();
@@ -636,6 +666,11 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     _currentFallY = 0;
     heldDirection = MoveDirection.none;
     _facing = MoveDirection.down;
+    // Reset the animation HERE only. teleportToSurface and restorePosition
+    // deliberately leave the phase running, so the plume does not pop
+    // mid-flight; a fresh run is the one place a hard reset is right.
+    _animPhase = 0;
+    _animFrame = 0;
     tileMap.revealAround(gridX, gridY, radius: gameRef.lightSystem.revealRadius);
   }
 
