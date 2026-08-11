@@ -835,6 +835,30 @@ class AppLocalizationsRu extends AppLocalizations {
   String get systemDefault => 'Системный по умолчанию';
 
   @override
+  String get vfxQualitySection => 'Визуальные эффекты';
+
+  @override
+  String get vfxQualitySubtitle => 'Частицы, тряска экрана и вспышки от ударов';
+
+  @override
+  String get vfxQualityFull => 'Полные';
+
+  @override
+  String get vfxQualityFullDesc => 'Все эффекты с максимальной плотностью';
+
+  @override
+  String get vfxQualityLow => 'Сниженные';
+
+  @override
+  String get vfxQualityLowDesc => 'Меньше частиц — дольше держит батарея';
+
+  @override
+  String get vfxQualityOff => 'Выключены';
+
+  @override
+  String get vfxQualityOffDesc => 'Без частиц и тряски экрана';
+
+  @override
   String get pleaseFillAllFields => 'Заполните все поля';
 
   @override

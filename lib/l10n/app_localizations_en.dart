@@ -833,6 +833,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get systemDefault => 'System Default';
 
   @override
+  String get vfxQualitySection => 'Visual Effects';
+
+  @override
+  String get vfxQualitySubtitle => 'Particles, screen shake and impact flashes';
+
+  @override
+  String get vfxQualityFull => 'Full';
+
+  @override
+  String get vfxQualityFullDesc => 'Every effect at full density';
+
+  @override
+  String get vfxQualityLow => 'Reduced';
+
+  @override
+  String get vfxQualityLowDesc => 'Fewer particles — easier on the battery';
+
+  @override
+  String get vfxQualityOff => 'Off';
+
+  @override
+  String get vfxQualityOffDesc => 'No particles or screen shake';
+
+  @override
   String get pleaseFillAllFields => 'Please fill in all fields';
 
   @override

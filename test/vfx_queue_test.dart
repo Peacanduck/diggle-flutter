@@ -94,9 +94,16 @@ void main() {
     });
   });
 
-  group('VfxQueue settings', () {
-    test('enabled = false drops everything', () {
-      final queue = VfxQueue()..enabled = false;
+  group('VfxQueue quality setting', () {
+    test('defaults to full', () {
+      final queue = VfxQueue();
+      expect(queue.level, VfxQuality.full);
+      expect(queue.enabled, isTrue);
+      expect(queue.quality, 1.0);
+    });
+
+    test('off drops everything', () {
+      final queue = VfxQueue()..level = VfxQuality.off;
 
       queue.emit(_event(VfxKind.explosion));
       queue.emitAt(VfxKind.hullHit, 1, 2);
@@ -106,26 +113,43 @@ void main() {
       expect(queue.droppedCount, 0);
     });
 
-    test('quality 0 suppresses emission, quality 0.5 does not', () {
-      final queue = VfxQueue()..quality = 0;
-      queue.emit(_event(VfxKind.oreBurst));
-      expect(queue.isEmpty, isTrue);
-
-      // Fractional quality scales particle COUNT in the layer; the queue
-      // still carries every event.
-      queue.quality = 0.5;
-      queue.emit(_event(VfxKind.oreBurst));
+    test('switching to off discards what is already queued', () {
+      final queue = VfxQueue();
+      queue.emit(_event(VfxKind.explosion));
       expect(queue.pendingCount, 1);
+
+      // Nothing may spawn after the player asks for quiet.
+      queue.level = VfxQuality.off;
+      expect(queue.isEmpty, isTrue);
     });
 
-    test('re-enabling resumes emission', () {
-      final queue = VfxQueue()..enabled = false;
+    test('low still queues every event — it only scales particle count', () {
+      final queue = VfxQueue()..level = VfxQuality.low;
+
+      queue.emit(_event(VfxKind.oreBurst));
+
+      expect(queue.pendingCount, 1);
+      expect(queue.enabled, isTrue);
+      expect(queue.quality, 0.5);
+    });
+
+    test('returning to full resumes emission', () {
+      final queue = VfxQueue()..level = VfxQuality.off;
       queue.emit(_event(VfxKind.surfaced));
 
-      queue.enabled = true;
+      queue.level = VfxQuality.full;
       queue.emit(_event(VfxKind.surfaced));
 
       expect(queue.drain().length, 1);
+    });
+
+    test('enabled and quality stay consistent with level', () {
+      // They are derived getters precisely so they cannot disagree.
+      for (final level in VfxQuality.values) {
+        final queue = VfxQueue()..level = level;
+        expect(queue.enabled, level.enabled, reason: '$level enabled');
+        expect(queue.quality, level.scale, reason: '$level scale');
+      }
     });
   });
 }

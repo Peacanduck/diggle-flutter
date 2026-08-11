@@ -823,6 +823,30 @@ class AppLocalizationsKo extends AppLocalizations {
   String get systemDefault => '시스템 기본값';
 
   @override
+  String get vfxQualitySection => '시각 효과';
+
+  @override
+  String get vfxQualitySubtitle => '입자, 화면 흔들림, 피격 섬광';
+
+  @override
+  String get vfxQualityFull => '최대';
+
+  @override
+  String get vfxQualityFullDesc => '모든 효과를 최대 밀도로 표시';
+
+  @override
+  String get vfxQualityLow => '감소';
+
+  @override
+  String get vfxQualityLowDesc => '입자 감소 — 배터리 절약';
+
+  @override
+  String get vfxQualityOff => '끄기';
+
+  @override
+  String get vfxQualityOffDesc => '입자와 화면 흔들림 없음';
+
+  @override
   String get pleaseFillAllFields => '모든 항목을 입력해주세요';
 
   @override

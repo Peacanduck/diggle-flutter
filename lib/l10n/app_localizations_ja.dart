@@ -823,6 +823,30 @@ class AppLocalizationsJa extends AppLocalizations {
   String get systemDefault => 'システムデフォルト';
 
   @override
+  String get vfxQualitySection => '視覚エフェクト';
+
+  @override
+  String get vfxQualitySubtitle => 'パーティクル、画面の揺れ、被弾時のフラッシュ';
+
+  @override
+  String get vfxQualityFull => '最大';
+
+  @override
+  String get vfxQualityFullDesc => 'すべてのエフェクトを最大密度で表示';
+
+  @override
+  String get vfxQualityLow => '軽量';
+
+  @override
+  String get vfxQualityLowDesc => 'パーティクルを削減 — バッテリーにやさしい';
+
+  @override
+  String get vfxQualityOff => 'オフ';
+
+  @override
+  String get vfxQualityOffDesc => 'パーティクルと画面の揺れをすべて無効化';
+
+  @override
   String get pleaseFillAllFields => 'すべてのフィールドに入力してください';
 
   @override

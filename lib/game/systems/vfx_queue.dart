@@ -65,6 +65,22 @@ class VfxEvent {
   final double intensity;
 }
 
+/// User-facing effect quality. The only writable control on [VfxQueue] —
+/// `enabled` and `scale` are derived, so there is exactly one way to change
+/// the setting and no way for the two to disagree.
+enum VfxQuality {
+  off(enabled: false, scale: 0.0),
+  low(enabled: true, scale: 0.5),
+  full(enabled: true, scale: 1.0);
+
+  const VfxQuality({required this.enabled, required this.scale});
+
+  final bool enabled;
+
+  /// Multiplier applied to every burst's particle count by the layer.
+  final double scale;
+}
+
 /// Single-producer, single-consumer queue of pending [VfxEvent]s.
 ///
 /// Not a `ChangeNotifier`: this is polled by a Flame component every frame
@@ -79,13 +95,21 @@ class VfxQueue {
   final List<VfxEvent> _pending = [];
   int _droppedCount = 0;
 
-  /// Master switch — settings `vfxQuality: off`.
-  bool enabled = true;
+  VfxQuality _level = VfxQuality.full;
 
-  /// 0.0 / 0.5 / 1.0 for settings `off` / `low` / `full`. The layer
-  /// multiplies particle counts by this; the queue only reads it to
-  /// short-circuit emission entirely at zero.
-  double quality = 1.0;
+  /// The single writable knob. Turning effects off also discards whatever
+  /// is already queued, so nothing spawns after the player asks for quiet.
+  VfxQuality get level => _level;
+  set level(VfxQuality value) {
+    _level = value;
+    if (!value.enabled) _pending.clear();
+  }
+
+  /// Master switch. Derived from [level].
+  bool get enabled => _level.enabled;
+
+  /// Particle-count multiplier, read by the layer. Derived from [level].
+  double get quality => _level.scale;
 
   /// Events dropped since the last [clear], for profiling. A non-zero value
   /// in normal play means the cap or the drain rate is wrong.

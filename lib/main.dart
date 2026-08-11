@@ -47,6 +47,7 @@ import 'services/world_save_service.dart';
 import 'solana/wallet_service.dart';
 import 'solana/candy_machine_service.dart';
 import 'services/update_service.dart';
+import 'services/vfx_settings.dart';
 import 'ui/update_dialog.dart';
 import 'ui/main_menu.dart';
 import 'ui/save_slots_screen.dart';
@@ -113,6 +114,10 @@ void main() async {
   final localeProvider = LocaleProvider();
   await localeProvider.load();
 
+  // ── Visual effect quality (particles, shake, impact flashes) ──
+  final vfxSettings = VfxSettings();
+  await vfxSettings.load();
+
   // ── Prestige + Gear (global meta-progression) ────────────────
   final prestigeSystem = PrestigeSystem();
   await prestigeSystem.initialize();
@@ -139,6 +144,7 @@ void main() async {
         ChangeNotifierProvider.value(value: walletService),
         ChangeNotifierProvider.value(value: candyMachineService),
         ChangeNotifierProvider.value(value: localeProvider),
+        ChangeNotifierProvider.value(value: vfxSettings),
         ChangeNotifierProvider.value(value: prestigeSystem),
         ChangeNotifierProvider.value(value: gearSystem),
         ChangeNotifierProvider.value(value: streakSystem),
@@ -527,6 +533,9 @@ class _GameScreenState extends State<GameScreen>
   bool _isLoading = false;
   bool _weeklyScoreSubmitted = false;
   Timer? _autoSaveTimer;
+  late final VfxSettings _vfxSettings;
+
+  void _applyVfxQuality() => _game.vfx.level = _vfxSettings.quality;
 
   @override
   void initState() {
@@ -549,6 +558,12 @@ class _GameScreenState extends State<GameScreen>
       final l10n = AppLocalizations.of(context)!;
       return l10n.titleUnlocked(localizedLevelTitle(l10n, titleId));
     };
+
+    // Effect quality, applied now and kept live: changing it in Settings
+    // mid-session takes hold on the next emitted event.
+    _vfxSettings = context.read<VfxSettings>();
+    _game.vfx.level = _vfxSettings.quality;
+    _vfxSettings.addListener(_applyVfxQuality);
 
     final walletService = context.read<WalletService>();
     final candyMachineService = context.read<CandyMachineService>();
@@ -666,6 +681,7 @@ class _GameScreenState extends State<GameScreen>
   void dispose() {
     _submitWeeklyScore();
     _autoSaveTimer?.cancel();
+    _vfxSettings.removeListener(_applyVfxQuality);
     WidgetsBinding.instance.removeObserver(this);
     try {
       final statsService = context.read<StatsService>();

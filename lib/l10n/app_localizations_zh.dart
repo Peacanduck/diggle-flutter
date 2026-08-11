@@ -819,6 +819,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get systemDefault => '系统默认';
 
   @override
+  String get vfxQualitySection => '视觉特效';
+
+  @override
+  String get vfxQualitySubtitle => '粒子、屏幕震动和受击闪光';
+
+  @override
+  String get vfxQualityFull => '完整';
+
+  @override
+  String get vfxQualityFullDesc => '所有特效以最高密度显示';
+
+  @override
+  String get vfxQualityLow => '精简';
+
+  @override
+  String get vfxQualityLowDesc => '减少粒子 — 更省电';
+
+  @override
+  String get vfxQualityOff => '关闭';
+
+  @override
+  String get vfxQualityOffDesc => '不显示粒子和屏幕震动';
+
+  @override
   String get pleaseFillAllFields => '请填写所有字段';
 
   @override

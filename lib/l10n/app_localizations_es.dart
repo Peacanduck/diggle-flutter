@@ -839,6 +839,31 @@ class AppLocalizationsEs extends AppLocalizations {
   String get systemDefault => 'Predeterminado del sistema';
 
   @override
+  String get vfxQualitySection => 'Efectos visuales';
+
+  @override
+  String get vfxQualitySubtitle =>
+      'Partículas, vibración de pantalla y destellos de impacto';
+
+  @override
+  String get vfxQualityFull => 'Completos';
+
+  @override
+  String get vfxQualityFullDesc => 'Todos los efectos a máxima densidad';
+
+  @override
+  String get vfxQualityLow => 'Reducidos';
+
+  @override
+  String get vfxQualityLowDesc => 'Menos partículas — menor consumo de batería';
+
+  @override
+  String get vfxQualityOff => 'Desactivados';
+
+  @override
+  String get vfxQualityOffDesc => 'Sin partículas ni vibración de pantalla';
+
+  @override
   String get pleaseFillAllFields => 'Por favor completa todos los campos';
 
   @override

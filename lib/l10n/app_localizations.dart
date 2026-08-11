@@ -1608,6 +1608,54 @@ abstract class AppLocalizations {
   /// **'System Default'**
   String get systemDefault;
 
+  /// No description provided for @vfxQualitySection.
+  ///
+  /// In en, this message translates to:
+  /// **'Visual Effects'**
+  String get vfxQualitySection;
+
+  /// No description provided for @vfxQualitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Particles, screen shake and impact flashes'**
+  String get vfxQualitySubtitle;
+
+  /// No description provided for @vfxQualityFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Full'**
+  String get vfxQualityFull;
+
+  /// No description provided for @vfxQualityFullDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Every effect at full density'**
+  String get vfxQualityFullDesc;
+
+  /// No description provided for @vfxQualityLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Reduced'**
+  String get vfxQualityLow;
+
+  /// No description provided for @vfxQualityLowDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Fewer particles — easier on the battery'**
+  String get vfxQualityLowDesc;
+
+  /// No description provided for @vfxQualityOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get vfxQualityOff;
+
+  /// No description provided for @vfxQualityOffDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'No particles or screen shake'**
+  String get vfxQualityOffDesc;
+
   /// No description provided for @pleaseFillAllFields.
   ///
   /// In en, this message translates to:
