@@ -102,6 +102,45 @@ void main() {
     });
   });
 
+  group('BaseDrillSheet', () {
+    test('geometry is self-consistent', () {
+      expect(BaseDrillSheet.columns, BaseDrillSheet.frames);
+      expect(BaseDrillSheet.rows, 2); // side + down
+      expect(BaseDrillSheet.sheetWidth,
+          BaseDrillSheet.columns * BaseDrillSheet.cellSize);
+      expect(BaseDrillSheet.sheetHeight,
+          BaseDrillSheet.rows * BaseDrillSheet.cellSize);
+    });
+
+    test('runs on the same frame count as the gear sheet', () {
+      // Both are driven by one _animFrame in DrillComponent. If these ever
+      // diverge, the base drill would index off the end of its own sheet.
+      expect(BaseDrillSheet.frames, GearSpriteSheet.frames);
+    });
+
+    test('every view/frame maps to a distinct in-bounds cell', () {
+      final seen = <String>{};
+      for (final down in [false, true]) {
+        for (var frame = 0; frame < BaseDrillSheet.frames; frame++) {
+          final (col, row) = BaseDrillSheet.cell(down: down, frame: frame);
+          expect(col, inInclusiveRange(0, BaseDrillSheet.columns - 1));
+          expect(row, inInclusiveRange(0, BaseDrillSheet.rows - 1));
+          seen.add('$col,$row');
+        }
+      }
+      expect(seen.length, 2 * BaseDrillSheet.frames);
+    });
+
+    test('side is row 0 and down is row 1', () {
+      expect(BaseDrillSheet.cell().$2, 0);
+      expect(BaseDrillSheet.cell(down: true).$2, 1);
+    });
+
+    test('frame defaults to 0', () {
+      expect(BaseDrillSheet.cell(), BaseDrillSheet.cell(frame: 0));
+    });
+  });
+
   group('drawOrder', () {
     test('covers every slot exactly once', () {
       expect(GearSpriteSheet.drawOrder.toSet().length,

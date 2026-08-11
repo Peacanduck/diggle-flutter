@@ -100,3 +100,30 @@ class GearSpriteSheet {
     return file == null ? null : 'assets/images/gear/$file.png';
   }
 }
+
+/// The free starter machine, for players without a complete NFT.
+///
+/// Pre-composited rather than layered: there is exactly one of it, so there
+/// is nothing to mix and match. Same 4-frame band machinery as the gear
+/// sheet — the caller passes the frame it already computed.
+///
+/// Authored deliberately worse than Common (one thruster pod, stubby drill,
+/// no cargo hold) so equipping any NFT is a visible upgrade.
+class BaseDrillSheet {
+  /// Lives in assets/images/gear/, which pubspec already declares as a
+  /// DIRECTORY, so adding this needed no pubspec change. Flame's default
+  /// prefix is assets/images/.
+  static const String asset = 'gear/DiggleDrillSheet.png';
+  static const double cellSize = 32.0;
+
+  static const int frames = 4;
+  static const int columns = 4;
+  static const int rows = 2;
+  static const double sheetWidth = 128.0;
+  static const double sheetHeight = 64.0;
+
+  /// (column, row). Row 0 = side view, facing RIGHT (mirror for left);
+  /// row 1 = down view (rotate 180 for flying up).
+  static (int, int) cell({bool down = false, int frame = 0}) =>
+      (frame, down ? 1 : 0);
+}

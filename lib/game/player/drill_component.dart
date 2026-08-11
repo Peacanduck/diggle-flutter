@@ -39,14 +39,14 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
   // Track visual facing direction
   MoveDirection _facing = MoveDirection.down;
 
-  // Sprites
-  late Sprite _spriteFront;
-  late Sprite _spriteLeft;
-  late Sprite _spriteRight;
-
   // NFT gear sprite sheet (layered per-slot rendering when gear is equipped)
   Image? _gearSheet;
   final Map<int, Sprite> _gearSpriteCache = {};
+
+  /// The free starter machine, for everyone without a complete NFT.
+  /// Pre-composited, so one sprite per (view, frame) rather than five.
+  late Image _baseSheet;
+  final Map<int, Sprite> _baseSpriteCache = {};
 
   /// Accumulated animation ticks (seconds x the current band's fps), and
   /// the frame it resolves to. Both are advanced in [update] so [render]
@@ -138,22 +138,16 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     tileMap.revealAround(gridX, gridY, radius: gameRef.lightSystem.revealRadius);
 
     // --- LOAD SPRITES ---
-    final image = await gameRef.images.load('TerrainSpriteSheet.png');
-    const double tx = 32.0;
-
-    // Helper to grab sprite (1-based index to match user description)
-    Sprite getSprite(int row, int col) {
-      return Sprite(
-        image,
-        srcPosition: Vector2((col - 1) * tx, (row - 1) * tx),
-        srcSize: Vector2(tx, tx),
-      );
-    }
-
-    // Load Player Sprites (Row 7)
-    _spriteFront = getSprite(7, 4); // Front/Down/up
-    _spriteLeft = getSprite(7, 6);  // Left
-    _spriteRight = getSprite(7, 8); // Right
+    // The free starter machine. Replaces the three static TerrainSpriteSheet
+    // player cells the drill used to carry, which are now unreachable.
+    _baseSheet = await gameRef.images.load(BaseDrillSheet.asset);
+    assert(
+      _baseSheet.width == BaseDrillSheet.sheetWidth &&
+          _baseSheet.height == BaseDrillSheet.sheetHeight,
+      'Base drill sheet is ${_baseSheet.width}x${_baseSheet.height} but '
+      'gear_sprites.dart expects ${BaseDrillSheet.sheetWidth.toInt()}x'
+      '${BaseDrillSheet.sheetHeight.toInt()}.',
+    );
 
     // NFT gear sheet (layered per-slot sprites, DiggleAssets pixel art)
     _gearSheet = await gameRef.images.load(GearSpriteSheet.asset);
@@ -187,6 +181,20 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
       const cell = GearSpriteSheet.cellSize;
       return Sprite(
         _gearSheet!,
+        srcPosition: Vector2(col * cell, row * cell),
+        srcSize: Vector2.all(cell),
+      );
+    });
+  }
+
+  Sprite _baseSprite({required bool down, required int frame}) {
+    final (col, row) = BaseDrillSheet.cell(down: down, frame: frame);
+    // Same stride discipline as the gear cache, for the same reason.
+    final key = row * BaseDrillSheet.columns + col;
+    return _baseSpriteCache.putIfAbsent(key, () {
+      const cell = BaseDrillSheet.cellSize;
+      return Sprite(
+        _baseSheet,
         srcPosition: Vector2(col * cell, row * cell),
         srcSize: Vector2.all(cell),
       );
@@ -554,74 +562,12 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
 
   @override
   void render(Canvas canvas) {
-    // Layered NFT gear rendering when a fully-revealed machine is equipped
+    // Both loadouts — a complete NFT, or the free starter machine — are now
+    // frame-animated pixel art on the same 4-frame band machinery, so there
+    // is one render path and one place the facing transform lives.
     final gear = gameRef.gearSystem.equipped;
-    if (gear != null && gear.isComplete && _gearSheet != null) {
-      _renderGear(canvas, gear);
-      return;
-    }
+    final useGear = gear != null && gear.isComplete && _gearSheet != null;
 
-    // 1. Select the correct sprite based on facing
-    Sprite spriteToRender = _spriteFront;
-    bool rotate180 = false;
-
-    if (_facing == MoveDirection.left) {
-      spriteToRender = _spriteLeft;
-    } else if (_facing == MoveDirection.right) {
-      spriteToRender = _spriteRight;
-    } else if (_facing == MoveDirection.up) {
-      spriteToRender = _spriteFront;
-      rotate180 = true;
-    } else {
-      spriteToRender = _spriteFront;
-    }
-
-    // 2. Prepare paint for visual feedback (Damage/Fuel)
-    // We can use a color filter to tint the sprite red if damaged
-    final paint = Paint()..color = Colors.white;
-
-    if (hullSystem.isCritical) {
-      // Red flash/tint if critical hull
-      paint.colorFilter = const ColorFilter.mode(Colors.red, BlendMode.modulate);
-    } else if (fuelSystem.isEmpty) {
-      // Darken if out of fuel
-      paint.colorFilter = const ColorFilter.mode(Colors.grey, BlendMode.modulate);
-    } else {
-      // NFT gear rarity tint (until dedicated gear sprites are exported)
-      final tint = gameRef.gearSystem.equippedTint;
-      if (tint != null) {
-        paint.colorFilter = ColorFilter.mode(tint, BlendMode.modulate);
-      }
-    }
-
-    // 3. Render the sprite
-    // We render into the component's size
-    if (rotate180) {
-      canvas.save();
-      // Rotate around the center of the component
-      canvas.translate(size.x / 2, size.y / 2);
-      canvas.rotate(math.pi);
-      canvas.translate(-size.x / 2, -size.y / 2);
-      spriteToRender.render(
-        canvas,
-        size: size,
-        overridePaint: paint,
-      );
-      canvas.restore();
-    } else {
-      spriteToRender.render(
-        canvas,
-        size: size,
-        overridePaint: paint,
-      );
-    }
-  }
-
-  /// Draw the equipped machine as stacked per-slot sprites, in the same
-  /// painter's order the NFT reveal art uses. Side cells face right, so
-  /// facing left mirrors; up rotates the down view 180° (same convention
-  /// as the base sprite).
-  void _renderGear(Canvas canvas, DiggleNFTTraits gear) {
     final paint = Paint()..color = Colors.white;
     if (hullSystem.isCritical) {
       paint.colorFilter =
@@ -629,8 +575,18 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     } else if (fuelSystem.isEmpty) {
       paint.colorFilter =
           const ColorFilter.mode(Colors.grey, BlendMode.modulate);
+    } else if (!useGear) {
+      // Hull-rarity cast for a PARTIAL NFT flying the base machine. It is
+      // deliberately not applied to a complete set: those sprites are
+      // already per-rarity art, so tinting them would double-count.
+      final tint = gameRef.gearSystem.equippedTint;
+      if (tint != null) {
+        paint.colorFilter = ColorFilter.mode(tint, BlendMode.modulate);
+      }
     }
 
+    // Side cells face right, so facing left mirrors; up rotates the down
+    // view 180°.
     final side =
         _facing == MoveDirection.left || _facing == MoveDirection.right;
     final mirror = _facing == MoveDirection.left;
@@ -645,6 +601,20 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
       canvas.rotate(math.pi);
       canvas.translate(-size.x / 2, -size.y / 2);
     }
+    if (useGear) {
+      _renderGear(canvas, gear, side, paint);
+    } else {
+      _baseSprite(down: !side, frame: _animFrame)
+          .render(canvas, size: size, overridePaint: paint);
+    }
+    canvas.restore();
+  }
+
+  /// Draw the equipped machine as stacked per-slot sprites, in the same
+  /// painter's order the NFT reveal art uses. Caller owns the canvas
+  /// transform and the paint.
+  void _renderGear(
+      Canvas canvas, DiggleNFTTraits gear, bool side, Paint paint) {
     for (final slot in GearSpriteSheet.drawOrder) {
       final trait = gear.traits[slot];
       if (trait == null) continue;
@@ -654,7 +624,6 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
       _gearSprite(slot, trait.rarity, down: !side, frame: _animFrame)
           .render(canvas, size: size, overridePaint: paint);
     }
-    canvas.restore();
   }
 
   void reset() {
