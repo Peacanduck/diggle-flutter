@@ -150,6 +150,17 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
 
     // NFT gear sheet (layered per-slot sprites, DiggleAssets pixel art)
     _gearSheet = await gameRef.images.load(GearSpriteSheet.asset);
+    // gear_sprites.dart is generated but copied by hand, so it can fall out
+    // of step with the PNG beside it. That failure is otherwise silent — an
+    // invisible or wrongly-framed drill, never an exception.
+    assert(
+      _gearSheet!.width == GearSpriteSheet.sheetWidth &&
+          _gearSheet!.height == GearSpriteSheet.sheetHeight,
+      'Gear sheet is ${_gearSheet!.width}x${_gearSheet!.height} but '
+      'gear_sprites.dart expects ${GearSpriteSheet.sheetWidth.toInt()}x'
+      '${GearSpriteSheet.sheetHeight.toInt()} — re-copy both files from '
+      'DiggleAssets/svgart/sprites_out/.',
+    );
   }
 
   Sprite _gearSprite(GearSlot slot, GearRarity rarity, {required bool down}) {

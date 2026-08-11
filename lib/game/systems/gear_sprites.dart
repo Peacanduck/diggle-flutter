@@ -2,7 +2,8 @@
 /// hand-edit; regenerate instead.
 ///
 /// Cell lookup for assets/images/DiggleGearSpriteSheet.png (32px cells,
-/// 5 columns = GearRarity.index, 10 rows = slot x view).
+/// 5 rarities x 4 animation frames = 20 columns,
+/// 10 rows = slot x view).
 /// Side cells face RIGHT (mirror for left); down cells rotate 180 for up.
 library;
 
@@ -12,10 +13,21 @@ class GearSpriteSheet {
   static const String asset = 'DiggleGearSpriteSheet.png';
   static const double cellSize = 32.0;
 
+  /// Animation frames per rarity. Rarity selects the art; the caller's
+  /// action state selects the playback rate. Frame 0 is authored as the
+  /// shortest thruster plume, so clamping to frames 0-1 reads as idle.
+  static const int frames = 4;
+
   /// Sheet dimensions in cells. Callers keying a cache by (col, row) must
   /// use [columns] as the stride — a hardcoded one collides silently.
-  static const int columns = 5;
+  static const int columns = 20;
   static const int rows = 10;
+
+  /// Pixel width of the sheet. Assert the loaded image matches this — a
+  /// stale generated Dart against a new PNG otherwise shows up only as an
+  /// invisible or silently static drill.
+  static const double sheetWidth = 640.0;
+  static const double sheetHeight = 320.0;
 
   /// Painter's order — matches the NFT reveal compositor.
   static const List<GearSlot> drawOrder = [
@@ -35,9 +47,17 @@ class GearSpriteSheet {
   };
 
   /// (column, row) of a cell. [down] false = side view.
-  static (int, int) cell(GearSlot slot, GearRarity rarity, {bool down = false}) {
+  ///
+  /// [frame] defaults to 0, so every pre-animation call site keeps
+  /// compiling and keeps rendering exactly what it rendered before.
+  static (int, int) cell(
+    GearSlot slot,
+    GearRarity rarity, {
+    bool down = false,
+    int frame = 0,
+  }) {
     final row = _sideRow[slot]! + (down ? 5 : 0);
-    return (rarity.index, row);
+    return (rarity.index * frames + frame, row);
   }
 
   /// 512px transparent preview art for hangar/shop UI, keyed by the
