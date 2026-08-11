@@ -19,6 +19,8 @@ import 'package:flame/particles.dart';
 
 import '../diggle_game.dart';
 import '../systems/vfx_queue.dart';
+import '../world/tile_map_component.dart';
+import 'thruster_trail.dart';
 
 /// Cached `Paint`s, one per colour.
 ///
@@ -64,6 +66,7 @@ class ChipBurst {
     double coneCenter = 0,
     double coneSpread = math.pi * 2,
     this.yScale = 1.0,
+    this.implode = false,
   })  : _v = Float32List(count * 2),
         _r = (argb >> 16) & 0xff,
         _g = (argb >> 8) & 0xff,
@@ -82,6 +85,12 @@ class ChipBurst {
   final double gravity;
   final double chipSize;
   final double yScale;
+
+  /// Run the trajectory backwards: chips start spread out and collapse to
+  /// the centre. Reads as being pulled out of the world rather than blown
+  /// apart, which is what a teleport should look like.
+  final bool implode;
+
   final int _r;
   final int _g;
   final int _b;
@@ -95,10 +104,12 @@ class ChipBurst {
     if (alpha <= 0) return;
     paint.color = Color.fromARGB(alpha, _r, _g, _b);
 
+    // Alpha always fades on `progress`; only the trajectory reverses.
+    final t = implode ? 1.0 - progress : progress;
     final half = chipSize / 2;
     for (var i = 0; i < count; i++) {
-      final x = _v[i * 2] * progress;
-      final y = _v[i * 2 + 1] * progress + gravity * progress * progress;
+      final x = _v[i * 2] * t;
+      final y = _v[i * 2 + 1] * t + gravity * t * t;
       canvas.drawRect(
         Rect.fromLTWH(x - half, y - half, chipSize, chipSize),
         paint,
@@ -150,10 +161,24 @@ class VfxLayer extends Component with HasGameReference<DiggleGame> {
   static const int _dustArgb = 0xFFBCAAA4;
   static const int _deathArgb = 0xFFFF8A65;
   static const int _explosionArgb = 0xFFFFB74D;
+  static const int _coinArgb = 0xFFFFD54F;
+  static const int _artifactArgb = 0xFFFFC107;
+  static const int _scanArgb = 0xFF4DD0E1;
+  static const int _repairArgb = 0xFF81C784;
+  static const int _riftArgb = 0xFFBA68C8;
 
   final math.Random _random = math.Random();
   final VfxPalette _palette = VfxPalette();
   final List<ParticleSystemComponent> _live = [];
+
+  /// Flying has no visual otherwise. A continuous emitter rather than a
+  /// queue event — see thruster_trail.dart.
+  final ThrusterTrail thrusterTrail = ThrusterTrail();
+
+  @override
+  Future<void> onLoad() async {
+    add(thrusterTrail);
+  }
 
   /// Optional forward sink. [VfxQueue.drain] is single-consumer, so a future
   /// audio layer subscribes here rather than polling the queue itself —
@@ -190,9 +215,15 @@ class VfxLayer extends Component with HasGameReference<DiggleGame> {
   /// Restart / world regen. `tileMap.reset()` is `async void` and leaves a
   /// blank grid for a few hundred ms, during which live particles would be
   /// drawing over nothing.
+  ///
+  /// Only the tracked bursts go — [thrusterTrail] is a permanent child, not
+  /// a burst, so it is reset in place rather than removed.
   void clearAll() {
-    removeAll(children.toList());
+    for (final component in _live) {
+      component.removeFromParent();
+    }
     _live.clear();
+    thrusterTrail.clear();
   }
 
   // ============================================================
@@ -296,6 +327,98 @@ class VfxLayer extends Component with HasGameReference<DiggleGame> {
             chipSize: 2,
             lifespan: 0.35);
 
+      case VfxKind.oreBurst:
+        // In the ore's own colour, sized by its value: coal is a puff,
+        // diamond is an event. The cheapest effect in the game to get
+        // right, and the one that makes gold feel like gold.
+        _burst(event, quality,
+            count: (6 + 14 * intensity).round(),
+            argb: event.argb ?? _coinArgb,
+            speed: 22 + 26 * intensity,
+            gravity: 12,
+            chipSize: 2,
+            lifespan: 0.4 + 0.3 * intensity);
+
+      case VfxKind.crateOpen:
+        // Up and out, then falling — a fountain, not an explosion.
+        _burst(event, quality,
+            count: 16,
+            argb: _coinArgb,
+            speed: 46,
+            gravity: 90,
+            chipSize: 3,
+            lifespan: 0.9,
+            coneCenter: -math.pi / 2,
+            coneSpread: 1.6);
+
+      case VfxKind.artifactNew:
+        _burst(event, quality,
+            count: 20,
+            argb: _artifactArgb,
+            speed: 44,
+            gravity: -6,
+            chipSize: 3,
+            lifespan: 1.0);
+        _ring(event, argb: _artifactArgb, radius: 40, lifespan: 0.7);
+        game.screenVfx.flash(_artifactArgb, 0.3);
+
+      case VfxKind.artifactDupe:
+        // Deliberately dull, and deliberately not gold. A duplicate should
+        // feel like a duplicate the instant it lands.
+        _burst(event, quality,
+            count: 6,
+            argb: _dustArgb,
+            speed: 14,
+            gravity: 10,
+            chipSize: 2,
+            lifespan: 0.4);
+
+      case VfxKind.scanPulse:
+        // Radius matches the Ore Scanner's 6-tile reveal, so the ring
+        // lands exactly where the fog lifts.
+        _ring(event,
+            argb: _scanArgb,
+            radius: 6 * TileMapComponent.tileSize,
+            lifespan: 0.8);
+
+      case VfxKind.repairSparkle:
+        _burst(event, quality,
+            count: 12,
+            argb: _repairArgb,
+            speed: 20,
+            gravity: -22,
+            chipSize: 2,
+            lifespan: 0.7);
+
+      case VfxKind.teleportOut:
+        _burst(event, quality,
+            count: 16,
+            argb: _riftArgb,
+            speed: 34,
+            gravity: 0,
+            chipSize: 2,
+            lifespan: 0.5,
+            implode: true);
+
+      case VfxKind.teleportIn:
+        _burst(event, quality,
+            count: 16,
+            argb: _riftArgb,
+            speed: 34,
+            gravity: 0,
+            chipSize: 2,
+            lifespan: 0.5);
+
+      case VfxKind.surfaced:
+        _burst(event, quality,
+            count: 10,
+            argb: _dustArgb,
+            speed: 26,
+            gravity: 10,
+            chipSize: 2,
+            lifespan: 0.5,
+            yScale: 0.4);
+
       case VfxKind.shieldAbsorb:
         _ring(event, argb: event.argb ?? _shieldArgb);
 
@@ -311,10 +434,9 @@ class VfxLayer extends Component with HasGameReference<DiggleGame> {
         game.screenVfx.flash(_deathArgb, 1.0, decayPerSecond: 1.2);
 
       default:
-        // digChip / oreBurst / crateOpen / artifactNew / artifactDupe /
-        // scanPulse / repairSparkle / teleportOut / teleportIn / surfaced
-        // belong to A3. Ignored rather than shown as a placeholder that
-        // would have to be undone.
+        // Only digChip is left, and it is deliberately not a queue event:
+        // it fires on the frame the bit bites, which is Phase B's
+        // animation phase. Queueing it would mean an event at 60/s.
         break;
     }
   }
@@ -331,6 +453,7 @@ class VfxLayer extends Component with HasGameReference<DiggleGame> {
     double coneCenter = 0,
     double coneSpread = math.pi * 2,
     double yScale = 1.0,
+    bool implode = false,
   }) {
     final n = (count * quality).round().clamp(1, count);
     final burst = ChipBurst(
@@ -344,6 +467,7 @@ class VfxLayer extends Component with HasGameReference<DiggleGame> {
       coneCenter: coneCenter,
       coneSpread: coneSpread,
       yScale: yScale,
+      implode: implode,
     );
     _track(ParticleSystemComponent(
       particle: ComputedParticle(
@@ -354,7 +478,12 @@ class VfxLayer extends Component with HasGameReference<DiggleGame> {
     ));
   }
 
-  void _ring(VfxEvent event, {required int argb, double radius = 22}) {
+  void _ring(
+    VfxEvent event, {
+    required int argb,
+    double radius = 22,
+    double lifespan = 0.45,
+  }) {
     final pulse = RingPulse(
       paint: _palette.stroke(argb),
       argb: argb,
@@ -362,7 +491,7 @@ class VfxLayer extends Component with HasGameReference<DiggleGame> {
     );
     _track(ParticleSystemComponent(
       particle: ComputedParticle(
-        lifespan: 0.45,
+        lifespan: lifespan,
         renderer: (canvas, particle) => pulse.render(canvas, particle.progress),
       ),
       position: Vector2(event.worldX, event.worldY),

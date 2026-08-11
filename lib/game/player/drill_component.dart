@@ -113,6 +113,16 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
   static double _centerOf(int tile) =>
       tile * TileMapComponent.tileSize + TileMapComponent.tileSize / 2;
 
+  /// Ore burst size on a log curve over sell value, so the effect tracks
+  /// what the ore is actually worth: coal reads as a puff, diamond as an
+  /// event. Linear would make everything below sapphire indistinguishable.
+  static double _oreIntensity(TileType ore) {
+    final value = ore.value;
+    if (value <= 0) return 0.3;
+    // log10(5) ~= 0.7 (coal) .. log10(10000) = 4 (diamond).
+    return ((math.log(value) / math.ln10 - 0.7) / 3.3).clamp(0.25, 1.0);
+  }
+
   @override
   Future<void> onLoad() async {
     // Initialize Position
@@ -445,6 +455,8 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
       _consumeFuel(result.fuelCost);
 
       if (result.isOre) {
+        vfx.emitAt(VfxKind.oreBurst, tx, ty,
+            argb: result.color.toARGB32(), intensity: _oreIntensity(result));
         economySystem.collectOre(result);
         if (gameRef.statsBridge != null) {
           gameRef.statsBridge!.awardForMining(result, depth);
@@ -457,6 +469,11 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
         gameRef.onLootCrateOpened(_digX, _digY, depth);
       } else if (result == TileType.artifact) {
         gameRef.onArtifactFound(_digX, _digY, depth);
+      } else {
+        // Plain rock. Ore gets the richer oreBurst instead of this — one
+        // effect per dig rather than two muddying each other at the same
+        // point (the plan listed both; they overlap badly in practice).
+        vfx.emitAt(VfxKind.tileBreak, tx, ty, argb: result.color.toARGB32());
       }
 
       // Digging can destabilize adjacent unstable rock.

@@ -417,8 +417,12 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
   void _handleReachSurface() {
     if (_atSurface) return;
     _atSurface = true;
-    // Edge-triggered surface arrival. Effect hook goes here.
+    vfx.emitAt(VfxKind.surfaced, drill.position.x, drill.position.y);
   }
+
+  /// Grid coordinate to world-space pixel centre.
+  static double _tileCentre(int n) =>
+      n * TileMapComponent.tileSize + TileMapComponent.tileSize / 2;
 
   void openShop() {
     if (!drill.isAtSurface) return;
@@ -814,6 +818,8 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
 
       case ItemType.repairBot:
         hullSystem.repair(type.repairAmount);
+        vfx.emitAt(
+            VfxKind.repairSparkle, drill.position.x, drill.position.y);
         break;
 
       case ItemType.dynamite:
@@ -829,12 +835,21 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
         break;
 
       case ItemType.spaceRift:
+        // Read the departure point BEFORE teleporting. `drill.position` is
+        // mutated in place, so sampling it afterwards would silently play
+        // both halves of the effect at the surface.
+        final fromX = drill.position.x;
+        final fromY = drill.position.y;
         drill.teleportToSurface();
+        vfx.emitAt(VfxKind.teleportOut, fromX, fromY);
+        vfx.emitAt(
+            VfxKind.teleportIn, drill.position.x, drill.position.y);
         break;
 
       case ItemType.oreScanner:
         // Reveal a wide radius around the drill (fog of war)
         tileMap.revealAround(drill.gridX, drill.gridY, radius: 6);
+        vfx.emitAt(VfxKind.scanPulse, drill.position.x, drill.position.y);
         break;
 
       case ItemType.heatShield:
@@ -921,9 +936,6 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
   /// entirely invisible — the old `explode` returned ore types and threw
   /// every coordinate away.
   void _emitBlastVfx(BlastResult result) {
-    const tile = TileMapComponent.tileSize;
-    double centre(int n) => n * tile + tile / 2;
-
     // Debris first, flashes second: the component ceiling drops the OLDEST,
     // so whatever is emitted last is what survives a big chain.
     //
@@ -936,8 +948,8 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
     for (int i = 0, shown = 0;
         i < result.destroyed.length && shown < 8;
         i += 8, shown++) {
-      vfx.emitAt(VfxKind.tileBreak, centre(result.destroyed[i]),
-          centre(result.destroyed[i + 1]));
+      vfx.emitAt(VfxKind.tileBreak, _tileCentre(result.destroyed[i]),
+          _tileCentre(result.destroyed[i + 1]));
     }
 
     // One flash per detonation: the initial blast, then each gas chain in
@@ -947,8 +959,8 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
       final radius = result.detonations[i + 2];
       vfx.emitAt(
         VfxKind.explosion,
-        centre(result.detonations[i]),
-        centre(result.detonations[i + 1]),
+        _tileCentre(result.detonations[i]),
+        _tileCentre(result.detonations[i + 1]),
         argb: i == 0 ? null : _gasChainArgb,
         intensity: (radius / 3).clamp(0.35, 1.0),
       );
@@ -981,6 +993,7 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
   /// [x], [y] are the grid coordinates of the crate — the effect layer needs
   /// a position, and only the dig site knows it.
   void onLootCrateOpened(int x, int y, int depth) {
+    vfx.emitAt(VfxKind.crateOpen, _tileCentre(x), _tileCentre(y));
     final cash = 150 + depth * 2;
     economySystem.addCash(cash);
     questSystem.onCrateOpened();
@@ -1001,19 +1014,25 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
   /// CollectionSystem via its award callback.
   void onArtifactFound(int x, int y, int depth) {
     final result = collectionSystem.collect(x, y, depth, seed);
-    if (result.isNew) {
-      achievementSystem.recordArtifactFound();
-      questSystem.onArtifactFound();
-      final desc = 'Found ${result.artifact.icon} ${result.artifact.name}!';
-      if (statsBridge != null) {
-        statsBridge!.awardBonus(60, 25, 'achievement', desc, metadata: {
-          'bonus_type': 'artifact',
-          'artifact_id': result.artifact.id,
-          'depth': depth,
-        });
-      } else {
-        xpPointsSystem.awardBonus(60, 25, desc);
-      }
+    if (!result.isNew) {
+      // A duplicate gets a dull grey puff instead of the golden burst, so
+      // the outcome is legible before the reward feed catches up.
+      vfx.emitAt(VfxKind.artifactDupe, _tileCentre(x), _tileCentre(y));
+      return;
+    }
+
+    vfx.emitAt(VfxKind.artifactNew, _tileCentre(x), _tileCentre(y));
+    achievementSystem.recordArtifactFound();
+    questSystem.onArtifactFound();
+    final desc = 'Found ${result.artifact.icon} ${result.artifact.name}!';
+    if (statsBridge != null) {
+      statsBridge!.awardBonus(60, 25, 'achievement', desc, metadata: {
+        'bonus_type': 'artifact',
+        'artifact_id': result.artifact.id,
+        'depth': depth,
+      });
+    } else {
+      xpPointsSystem.awardBonus(60, 25, desc);
     }
   }
 
