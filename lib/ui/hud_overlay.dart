@@ -24,6 +24,16 @@ class HudOverlay extends StatefulWidget {
 class _HudOverlayState extends State<HudOverlay> {
   late Timer _updateTimer;
 
+  /// 10Hz poll for the readouts that have no notifier to hang off — the
+  /// bars, cargo/cash/depth, and the boost/heat-shield countdowns. Only the
+  /// subtrees that listen to it rebuild; the HUD tree itself does not.
+  final ValueNotifier<int> _tick = ValueNotifier<int>(0);
+
+  /// Structural state sampled on the same tick. A ValueNotifier only fires
+  /// when the value actually differs, so these rebuild almost never.
+  final ValueNotifier<bool> _atSurface = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _hasQuestRewards = ValueNotifier<bool>(false);
+
   /// Bonus rewards currently animating in the feed. Drained from
   /// XPPointsSystem on the regular HUD tick (never during build) and
   /// removed by each notification when its animation finishes.
@@ -32,20 +42,41 @@ class _HudOverlayState extends State<HudOverlay> {
   @override
   void initState() {
     super.initState();
+    // Seed before the first paint so the shop button doesn't flash in.
+    _atSurface.value = widget.game.drill.isAtSurface;
+    _hasQuestRewards.value = widget.game.questSystem.hasUnclaimedRewards;
     _updateTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
       if (!mounted) return;
+      _tick.value++;
+      _atSurface.value = widget.game.drill.isAtSurface;
+      _hasQuestRewards.value = widget.game.questSystem.hasUnclaimedRewards;
+
+      // setState is now reserved for the one thing that changes the tree's
+      // shape. Calling it unconditionally rebuilt the whole HUD — SafeArea,
+      // every Positioned, the four direction buttons and the l10n lookup —
+      // ten times a second on the UI thread.
       final pending =
           widget.game.xpPointsSystem.takePendingAnnouncements();
-      if (pending.isNotEmpty) _rewardFeed.addAll(pending);
-      setState(() {});
+      if (pending.isNotEmpty) {
+        setState(() => _rewardFeed.addAll(pending));
+      }
     });
   }
 
   @override
   void dispose() {
     _updateTimer.cancel();
+    _tick.dispose();
+    _atSurface.dispose();
+    _hasQuestRewards.dispose();
     super.dispose();
   }
+
+  /// Rebuilds [build] on every 10Hz tick. For the live readouts only.
+  Widget _ticking(Widget Function() build) => ValueListenableBuilder<int>(
+        valueListenable: _tick,
+        builder: (context, value, child) => build(),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +90,7 @@ class _HudOverlayState extends State<HudOverlay> {
             top: 0,
             left: 0,
             right: 0,
-            child: _buildTopBar(l10n),
+            child: _ticking(() => _buildTopBar(l10n)),
           ),
           // XP bar
           Positioned(
@@ -78,7 +109,12 @@ class _HudOverlayState extends State<HudOverlay> {
             top: 150,
             left: 0,
             right: 0,
-            child: _buildItemBar(l10n),
+            // Quantities only move on buy/use, and ItemSystem notifies on
+            // both — no need to poll this one.
+            child: AnimatedBuilder(
+              animation: widget.game.itemSystem,
+              builder: (context, _) => _buildItemBar(l10n),
+            ),
           ),
 
           // Reward feed: achievements, artifacts, login streak, titles
@@ -160,19 +196,24 @@ class _HudOverlayState extends State<HudOverlay> {
                         backgroundColor: Colors.indigo.shade700,
                       ),
                     ),
-                    if (widget.game.questSystem.hasUnclaimedRewards)
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          width: 12, height: 12,
-                          decoration: BoxDecoration(
-                            color: Colors.amber,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.black, width: 1),
-                          ),
-                        ),
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: ValueListenableBuilder<bool>(
+                        valueListenable: _hasQuestRewards,
+                        builder: (context, hasRewards, child) => hasRewards
+                            ? Container(
+                                width: 12, height: 12,
+                                decoration: BoxDecoration(
+                                  color: Colors.amber,
+                                  shape: BoxShape.circle,
+                                  border:
+                                      Border.all(color: Colors.black, width: 1),
+                                ),
+                              )
+                            : const SizedBox.shrink(),
                       ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -192,28 +233,32 @@ class _HudOverlayState extends State<HudOverlay> {
                 ),
                 const SizedBox(height: 6),
                 // Live boost status chip (tap → premium store)
-                _buildBoostChip(),
+                _ticking(_buildBoostChip),
               ],
             ),
           ),
 
           // Shop button when at surface
-          if (widget.game.drill.isAtSurface)
-            Positioned(
-              top: 210,
-              right: 16,
-              child: ElevatedButton.icon(
-                onPressed: () => widget.game.openShop(),
-                icon: const Icon(Icons.store),
-                label: Text(l10n.shop),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade700,
-                  foregroundColor: Colors.white,
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-              ),
+          Positioned(
+            top: 210,
+            right: 16,
+            child: ValueListenableBuilder<bool>(
+              valueListenable: _atSurface,
+              builder: (context, atSurface, child) => atSurface
+                  ? ElevatedButton.icon(
+                      onPressed: () => widget.game.openShop(),
+                      icon: const Icon(Icons.store),
+                      label: Text(l10n.shop),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
             ),
+          ),
         ],
       ),
     );

@@ -138,7 +138,11 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
 
   Sprite _gearSprite(GearSlot slot, GearRarity rarity, {required bool down}) {
     final (col, row) = GearSpriteSheet.cell(slot, rarity, down: down);
-    final key = row * 8 + col;
+    // Stride must be the sheet's real column count: a hardcoded stride
+    // silently collides (wrong slot, no crash) the moment a column index
+    // reaches it. GearSpriteSheet.columns is generated alongside the sheet,
+    // so it cannot drift.
+    final key = row * GearSpriteSheet.columns + col;
     return _gearSpriteCache.putIfAbsent(key, () {
       const cell = GearSpriteSheet.cellSize;
       return Sprite(
@@ -414,7 +418,7 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
         gameRef.questSystem.onOreMined();
         gameRef.achievementSystem.recordOreMined();
       } else if (result == TileType.lootCrate) {
-        gameRef.onLootCrateOpened(depth);
+        gameRef.onLootCrateOpened(_digX, _digY, depth);
       } else if (result == TileType.artifact) {
         gameRef.onArtifactFound(_digX, _digY, depth);
       }

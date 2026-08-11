@@ -329,6 +329,8 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   void update(double dt) {
     super.update(dt);
     if (_state != GameState.playing) return;
+    // Re-arm the surface edge as soon as the drill leaves the surface.
+    if (!drill.isAtSurface) _atSurface = false;
     if (_heatShieldRemaining > 0) {
       _heatShieldRemaining = (_heatShieldRemaining - dt).clamp(0.0, 60.0);
     }
@@ -356,7 +358,14 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   GameState get state => _state;
   bool get isPlaying => _state == GameState.playing;
 
+  /// DrillComponent.update() calls onGameOver every frame while the hull is
+  /// destroyed (its children keep ticking because super.update runs before
+  /// this game's `_state` early return), so this MUST be idempotent.
+  /// Without the guard, `recordDeath()` — a plain counter — races to 25 in
+  /// under a second, and `_scheduleSave()`'s 5s debounce is re-cancelled
+  /// every frame so achievement progress never persists.
   void _handleGameOver() {
+    if (_state == GameState.gameOver) return;
     _state = GameState.gameOver;
     achievementSystem.recordDeath();
     fuelSystem.pause();
@@ -366,7 +375,16 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     // joystick.removeFromParent();
   }
 
-  void _handleReachSurface() {}
+  /// True once the drill has arrived at the surface, cleared in [update] the
+  /// moment it leaves. The drill fires `onReachSurface` every frame while
+  /// parked up top, so arrival has to be detected as an edge, not a state.
+  bool _atSurface = false;
+
+  void _handleReachSurface() {
+    if (_atSurface) return;
+    _atSurface = true;
+    // Edge-triggered surface arrival. Effect hook goes here.
+  }
 
   void openShop() {
     if (!drill.isAtSurface) return;
@@ -415,6 +433,7 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
     tileMap.reset();
     drill.reset();
     _state = GameState.playing;
+    _atSurface = false;
     _totalPlaytimeSeconds = 0;
     _playTimeAccumulator = 0;
     fuelSystem.resume();
@@ -867,7 +886,9 @@ class DiggleGame extends FlameGame with HasCollisionDetection {
   // ============================================================
 
   /// Supply crate dug up: cash + points scaled by depth.
-  void onLootCrateOpened(int depth) {
+  /// [x], [y] are the grid coordinates of the crate — the effect layer needs
+  /// a position, and only the dig site knows it.
+  void onLootCrateOpened(int x, int y, int depth) {
     final cash = 150 + depth * 2;
     economySystem.addCash(cash);
     questSystem.onCrateOpened();

@@ -56,6 +56,33 @@ class TileMapComponent extends PositionComponent with HasGameRef {
   final Paint _digOverlayPaint = Paint(); // Color updated dynamically, object reused
   final Paint _digBarPaint = Paint()..color = Colors.yellow.withOpacity(0.8);
 
+  // --- CACHED RENDER SCRATCH (Optimization) ---
+  // Every tile is the same size, and Sprite.render copies out of the vectors
+  // it is handed (into its own statics) before returning, so one shared pair
+  // is safe and removes ~36k Vector2 allocations/sec at ~300 culled tiles.
+  static final Vector2 _tileSizeVector = Vector2.all(tileSize);
+  final Vector2 _tilePosition = Vector2.zero();
+
+  // Procedural tile shapes, built once at the origin and positioned with a
+  // canvas translate. A fresh Path per tile per frame was the hot spot in
+  // crystal biomes.
+  static final Path _crystalPath = Path()
+    ..moveTo(8, tileSize - 4)
+    ..lineTo(12, 6)
+    ..lineTo(16, tileSize - 4)
+    ..close()
+    ..moveTo(17, tileSize - 4)
+    ..lineTo(22, 12)
+    ..lineTo(26, tileSize - 4)
+    ..close();
+
+  static final Path _artifactPath = Path()
+    ..moveTo(tileSize / 2, tileSize / 2 - 9)
+    ..lineTo(tileSize / 2 + 7, tileSize / 2)
+    ..lineTo(tileSize / 2, tileSize / 2 + 9)
+    ..lineTo(tileSize / 2 - 7, tileSize / 2)
+    ..close();
+
   // Per-biome cached paints (empty/cave background + band tint overlay)
   final Map<String, Paint> _caveColorPaints = {};
   final Map<String, Paint> _biomeTintPaints = {};
@@ -117,10 +144,14 @@ class TileMapComponent extends PositionComponent with HasGameRef {
     }
 
     // Cache procedural paints for sprite-less tiles and biome overlays.
+    // strokeWidth is per-TileType and never changes, and these Paints are
+    // keyed per type, so it belongs here rather than in the render loop.
     for (final type in TileType.values) {
       if (type == TileType.empty || _tileSprites.containsKey(type)) continue;
       _baseColorPaints[type] = Paint()..color = type.color;
-      _highlightColorPaints[type] = Paint()..color = type.highlightColor;
+      _highlightColorPaints[type] = Paint()
+        ..color = type.highlightColor
+        ..strokeWidth = type == TileType.lootCrate ? 3.0 : 2.0;
     }
     for (final biome in Biome.strata) {
       _caveColorPaints[biome.name] = Paint()..color = biome.caveColor;
@@ -163,13 +194,13 @@ class TileMapComponent extends PositionComponent with HasGameRef {
 
   /// Render a single tile
   void _renderTile(Canvas canvas, Tile tile) {
-    final position = Vector2(tile.x * tileSize, tile.y * tileSize);
-    final size = Vector2.all(tileSize);
+    final px = tile.x * tileSize;
+    final py = tile.y * tileSize;
 
     // 1. Fog of war
     if (!tile.isRevealed) {
       canvas.drawRect(
-        Rect.fromLTWH(position.x, position.y, tileSize, tileSize),
+        Rect.fromLTWH(px, py, tileSize, tileSize),
         _fogPaint,
       );
       return;
@@ -177,7 +208,7 @@ class TileMapComponent extends PositionComponent with HasGameRef {
 
     final depth = tile.y - config.surfaceRows;
     final biome = Biome.atDepth(depth < 0 ? 0 : depth);
-    final rect = Rect.fromLTWH(position.x, position.y, tileSize, tileSize);
+    final rect = Rect.fromLTWH(px, py, tileSize, tileSize);
 
     // 2. Render Tile Sprite
     if (tile.type == TileType.empty) {
@@ -188,8 +219,8 @@ class TileMapComponent extends PositionComponent with HasGameRef {
       if (sprite != null) {
         sprite.render(
           canvas,
-          position: position,
-          size: size,
+          position: _tilePosition..setValues(px, py),
+          size: _tileSizeVector,
         );
       } else if (_baseColorPaints.containsKey(tile.type)) {
         // Procedural rendering for v2 tiles without sprite art
@@ -207,7 +238,7 @@ class TileMapComponent extends PositionComponent with HasGameRef {
 
     // 3. Render Dig Progress
     if (tile.isBeingDug && tile.digProgress > 0) {
-      _renderDigProgress(canvas, tile, position);
+      _renderDigProgress(canvas, tile, px, py);
     }
   }
 
@@ -221,16 +252,10 @@ class TileMapComponent extends PositionComponent with HasGameRef {
     switch (tile.type) {
       case TileType.crystalOre:
         // Two crystal shards
-        final path = Path()
-          ..moveTo(rect.left + 8, rect.bottom - 4)
-          ..lineTo(rect.left + 12, rect.top + 6)
-          ..lineTo(rect.left + 16, rect.bottom - 4)
-          ..close()
-          ..moveTo(rect.left + 17, rect.bottom - 4)
-          ..lineTo(rect.left + 22, rect.top + 12)
-          ..lineTo(rect.left + 26, rect.bottom - 4)
-          ..close();
-        canvas.drawPath(path, highlight);
+        canvas.save();
+        canvas.translate(rect.left, rect.top);
+        canvas.drawPath(_crystalPath, highlight);
+        canvas.restore();
         break;
       case TileType.lootCrate:
         // Crate: border + diagonal band
@@ -239,32 +264,27 @@ class TileMapComponent extends PositionComponent with HasGameRef {
         canvas.drawLine(
           Offset(rect.left + 4, rect.top + 4),
           Offset(rect.right - 4, rect.bottom - 4),
-          highlight..strokeWidth = 3,
+          highlight,
         );
         break;
       case TileType.artifact:
         // Golden diamond shape on dark base
-        final cx = rect.center.dx;
-        final cy = rect.center.dy;
-        final path = Path()
-          ..moveTo(cx, cy - 9)
-          ..lineTo(cx + 7, cy)
-          ..lineTo(cx, cy + 9)
-          ..lineTo(cx - 7, cy)
-          ..close();
-        canvas.drawPath(path, highlight);
+        canvas.save();
+        canvas.translate(rect.left, rect.top);
+        canvas.drawPath(_artifactPath, highlight);
+        canvas.restore();
         break;
       case TileType.unstableRock:
         // Cracked look: jagged lines
         canvas.drawLine(
           Offset(rect.left + 6, rect.top + 4),
           Offset(rect.left + 14, rect.bottom - 10),
-          highlight..strokeWidth = 2,
+          highlight,
         );
         canvas.drawLine(
           Offset(rect.left + 14, rect.bottom - 10),
           Offset(rect.right - 6, rect.bottom - 4),
-          highlight..strokeWidth = 2,
+          highlight,
         );
         break;
       default:
@@ -281,20 +301,20 @@ class TileMapComponent extends PositionComponent with HasGameRef {
   }
 
   /// Render dig progress overlay
-  void _renderDigProgress(Canvas canvas, Tile tile, Vector2 position) {
+  void _renderDigProgress(Canvas canvas, Tile tile, double px, double py) {
     // Update color opacity without creating new Paint object
     // Note: 0.6 opacity (153 alpha)
     _digOverlayPaint.color = const Color(0xFF000000).withOpacity(tile.digProgress * 0.6);
 
     canvas.drawRect(
-      Rect.fromLTWH(position.x, position.y, tileSize, tileSize),
+      Rect.fromLTWH(px, py, tileSize, tileSize),
       _digOverlayPaint,
     );
 
     final barHeight = 4.0;
     final barRect = Rect.fromLTWH(
-      position.x + 2,
-      position.y + tileSize - barHeight - 2,
+      px + 2,
+      py + tileSize - barHeight - 2,
       (tileSize - 4) * tile.digProgress,
       barHeight,
     );

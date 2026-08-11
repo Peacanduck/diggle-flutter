@@ -12,6 +12,11 @@ class GearSpriteSheet {
   static const String asset = 'DiggleGearSpriteSheet.png';
   static const double cellSize = 32.0;
 
+  /// Sheet dimensions in cells. Callers keying a cache by (col, row) must
+  /// use [columns] as the stride — a hardcoded one collides silently.
+  static const int columns = 5;
+  static const int rows = 10;
+
   /// Painter's order — matches the NFT reveal compositor.
   static const List<GearSlot> drawOrder = [
     GearSlot.hull,
