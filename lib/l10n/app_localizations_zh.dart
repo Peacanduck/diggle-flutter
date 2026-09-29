@@ -1668,4 +1668,58 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get leaderboardWeeklyTab => '本周';
+
+  @override
+  String get introTipMovementTitle => '按住方向即可钻探';
+
+  @override
+  String get introTipMovementBody => '向下钻得更深，向上则会飞行——只要还有燃料。';
+
+  @override
+  String get introTipFirstOreTitle => '这就是矿石';
+
+  @override
+  String get introTipFirstOreBody => '货舱容量有限——注意顶部的进度条。';
+
+  @override
+  String get introTipCargoFullTitle => '货舱快满了';
+
+  @override
+  String get introTipCargoFullBody => '飞回地面出售。这样才能买得起更好的钻头。';
+
+  @override
+  String get introTipLowFuelTitle => '注意燃料';
+
+  @override
+  String get introTipLowFuelBody => '加油要花钱，而且只能在地面进行。被困住这一趟就结束了。';
+
+  @override
+  String get introTipFallDamageTitle => '你摔得太狠了';
+
+  @override
+  String get introTipFallDamageBody => '坠落超过 3 格会损坏船体。往下钻，别直接坠落。';
+
+  @override
+  String get introSkip => '跳过提示';
+
+  @override
+  String get introSkipConfirm => '已隐藏提示。祝你挖矿愉快！';
+
+  @override
+  String get reviewPromptTitle => '喜欢 Diggle 吗？';
+
+  @override
+  String get reviewPromptBody => '评价能帮助其他 Seeker 用户发现这款游戏。只需十秒钟。';
+
+  @override
+  String get reviewPromptRate => '在 dApp Store 评价';
+
+  @override
+  String get reviewPromptLater => '以后再说';
+
+  @override
+  String get reviewPromptThanks => '谢谢。';
+
+  @override
+  String get reviewPromptFailed => '无法打开商店。请稍后再试。';
 }

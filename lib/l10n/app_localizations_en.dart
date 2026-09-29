@@ -1711,4 +1711,64 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get leaderboardWeeklyTab => 'THIS WEEK';
+
+  @override
+  String get introTipMovementTitle => 'Hold a direction to drill';
+
+  @override
+  String get introTipMovementBody =>
+      'Down goes deeper. Up flies — while you have fuel.';
+
+  @override
+  String get introTipFirstOreTitle => 'That\'s ore';
+
+  @override
+  String get introTipFirstOreBody =>
+      'Your cargo bay only holds so much — check the top bar.';
+
+  @override
+  String get introTipCargoFullTitle => 'Cargo\'s nearly full';
+
+  @override
+  String get introTipCargoFullBody =>
+      'Fly back up and sell at the surface. That\'s how you afford a better drill.';
+
+  @override
+  String get introTipLowFuelTitle => 'Watch your fuel';
+
+  @override
+  String get introTipLowFuelBody =>
+      'Refuelling costs cash and only happens at the surface. Getting stranded ends the run.';
+
+  @override
+  String get introTipFallDamageTitle => 'You fell too far';
+
+  @override
+  String get introTipFallDamageBody =>
+      'Drops over 3 tiles damage your hull. Drill down instead of dropping down.';
+
+  @override
+  String get introSkip => 'Skip tips';
+
+  @override
+  String get introSkipConfirm => 'Tips hidden. Happy digging!';
+
+  @override
+  String get reviewPromptTitle => 'Enjoying Diggle?';
+
+  @override
+  String get reviewPromptBody =>
+      'Reviews are how other Seeker owners find the game. Takes ten seconds.';
+
+  @override
+  String get reviewPromptRate => 'Rate on dApp Store';
+
+  @override
+  String get reviewPromptLater => 'Not now';
+
+  @override
+  String get reviewPromptThanks => 'Thank you.';
+
+  @override
+  String get reviewPromptFailed => 'Couldn\'t open the store. Try again later.';
 }

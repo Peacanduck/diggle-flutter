@@ -1725,4 +1725,65 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get leaderboardWeeklyTab => 'ЗА НЕДЕЛЮ';
+
+  @override
+  String get introTipMovementTitle => 'Удерживай направление, чтобы бурить';
+
+  @override
+  String get introTipMovementBody =>
+      'Вниз — чтобы углубляться. Вверх — чтобы лететь, пока есть топливо.';
+
+  @override
+  String get introTipFirstOreTitle => 'Это руда';
+
+  @override
+  String get introTipFirstOreBody =>
+      'Трюм вмещает не всё — следи за верхней панелью.';
+
+  @override
+  String get introTipCargoFullTitle => 'Трюм почти полон';
+
+  @override
+  String get introTipCargoFullBody =>
+      'Поднимись на поверхность и продай. Так накопишь на бур получше.';
+
+  @override
+  String get introTipLowFuelTitle => 'Следи за топливом';
+
+  @override
+  String get introTipLowFuelBody =>
+      'Заправка стоит денег и возможна только на поверхности. Застрять — значит проиграть заход.';
+
+  @override
+  String get introTipFallDamageTitle => 'Слишком долгое падение';
+
+  @override
+  String get introTipFallDamageBody =>
+      'Падение больше чем на 3 клетки повреждает корпус. Бури вниз, а не прыгай.';
+
+  @override
+  String get introSkip => 'Пропустить подсказки';
+
+  @override
+  String get introSkipConfirm => 'Подсказки скрыты. Удачной добычи!';
+
+  @override
+  String get reviewPromptTitle => 'Нравится Diggle?';
+
+  @override
+  String get reviewPromptBody =>
+      'Отзывы помогают другим владельцам Seeker найти игру. Это займёт десять секунд.';
+
+  @override
+  String get reviewPromptRate => 'Оценить в dApp Store';
+
+  @override
+  String get reviewPromptLater => 'Не сейчас';
+
+  @override
+  String get reviewPromptThanks => 'Спасибо.';
+
+  @override
+  String get reviewPromptFailed =>
+      'Не удалось открыть магазин. Попробуйте позже.';
 }

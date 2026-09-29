@@ -1729,4 +1729,65 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get leaderboardWeeklyTab => 'ESTA SEMANA';
+
+  @override
+  String get introTipMovementTitle => 'Mantén una dirección para perforar';
+
+  @override
+  String get introTipMovementBody =>
+      'Hacia abajo bajas más. Hacia arriba vuelas, mientras tengas combustible.';
+
+  @override
+  String get introTipFirstOreTitle => 'Eso es mineral';
+
+  @override
+  String get introTipFirstOreBody =>
+      'Tu bodega tiene un límite: mira la barra superior.';
+
+  @override
+  String get introTipCargoFullTitle => 'Bodega casi llena';
+
+  @override
+  String get introTipCargoFullBody =>
+      'Vuelve a la superficie y vende. Así pagas una perforadora mejor.';
+
+  @override
+  String get introTipLowFuelTitle => 'Vigila tu combustible';
+
+  @override
+  String get introTipLowFuelBody =>
+      'Repostar cuesta dinero y solo se hace en la superficie. Quedarte tirado termina la partida.';
+
+  @override
+  String get introTipFallDamageTitle => 'Caíste demasiado';
+
+  @override
+  String get introTipFallDamageBody =>
+      'Las caídas de más de 3 casillas dañan el casco. Perfora hacia abajo en vez de dejarte caer.';
+
+  @override
+  String get introSkip => 'Omitir consejos';
+
+  @override
+  String get introSkipConfirm => 'Consejos ocultos. ¡Feliz excavación!';
+
+  @override
+  String get reviewPromptTitle => '¿Te gusta Diggle?';
+
+  @override
+  String get reviewPromptBody =>
+      'Las reseñas son la forma en que otros dueños de Seeker descubren el juego. Toma diez segundos.';
+
+  @override
+  String get reviewPromptRate => 'Valorar en dApp Store';
+
+  @override
+  String get reviewPromptLater => 'Ahora no';
+
+  @override
+  String get reviewPromptThanks => 'Gracias.';
+
+  @override
+  String get reviewPromptFailed =>
+      'No se pudo abrir la tienda. Inténtalo más tarde.';
 }

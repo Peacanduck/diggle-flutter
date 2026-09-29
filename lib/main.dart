@@ -48,6 +48,11 @@ import 'solana/wallet_service.dart';
 import 'solana/candy_machine_service.dart';
 import 'services/update_service.dart';
 import 'services/vfx_settings.dart';
+import 'services/intro_service.dart';
+import 'services/review_prompt_policy.dart';
+import 'services/review_prompt_service.dart';
+import 'ui/intro_coach_overlay.dart';
+import 'ui/review_prompt_overlay.dart';
 import 'ui/update_dialog.dart';
 import 'ui/main_menu.dart';
 import 'ui/save_slots_screen.dart';
@@ -133,6 +138,18 @@ void main() async {
   // refresh runs in the background rather than delaying startup.
   unawaited(streakSystem.refreshLadder());
 
+  // ── In-game store-review prompt ──────────────────────────────
+  final reviewPromptService = ReviewPromptService();
+  await reviewPromptService.load(playerId: SupabaseService.instance.playerId);
+  // Seven-day streak is one of the three milestones. The claim happens in
+  // DiggleGame on the shared instance, so hooking here catches it (§5.3):
+  // client-side, after the reward, day 7+.
+  streakSystem.onStreakClaimed = (streak) {
+    if (streak >= 7) {
+      reviewPromptService.recordMilestone(ReviewTrigger.sevenDayStreak);
+    }
+  };
+
   // ── Leaderboards ─────────────────────────────────────────────
   final leaderboardService = LeaderboardService(
     client: SupabaseService.instance.client,
@@ -148,6 +165,7 @@ void main() async {
         ChangeNotifierProvider.value(value: prestigeSystem),
         ChangeNotifierProvider.value(value: gearSystem),
         ChangeNotifierProvider.value(value: streakSystem),
+        ChangeNotifierProvider.value(value: reviewPromptService),
         Provider.value(value: statsService),
         Provider.value(value: worldSaveService),
         Provider.value(value: playerService),
@@ -220,6 +238,10 @@ class _AppNavigatorState extends State<AppNavigator>
   bool _isNewGame = true;
   bool _challengeMode = false;
 
+  /// A brand-new player starting their very first game — no prior saves.
+  /// Gates the first-run intro so veterans never see coach marks (§10).
+  bool _isFirstEverGame = false;
+
   /// Whether saves exist (checked on menu load)
   bool _hasSaves = false;
 
@@ -239,6 +261,7 @@ class _AppNavigatorState extends State<AppNavigator>
         _runBootstrap();
         _checkForSaves();
         _checkForUpdate();
+        _maybeShowReviewPromptOnMenu();
       });
     } else {
       _screen = AppScreen.auth;
@@ -327,6 +350,7 @@ class _AppNavigatorState extends State<AppNavigator>
     _runBootstrap();
     _checkForSaves();
     _checkForUpdate();
+    _maybeShowReviewPromptOnMenu();
   }
 
   void _onNewGame() {
@@ -416,6 +440,9 @@ class _AppNavigatorState extends State<AppNavigator>
       _gameSeed = seed ?? (DateTime.now().millisecondsSinceEpoch & 0x7FFFFFFF);
       _gameSlot = slot;
       _isNewGame = isNewGame;
+      // No prior saves ⇒ this is a first-ever player. `_hasSaves` is checked
+      // on menu load, well before any game starts.
+      _isFirstEverGame = isNewGame && !_hasSaves;
       _challengeMode = false;
       _screen = AppScreen.game;
     });
@@ -429,6 +456,7 @@ class _AppNavigatorState extends State<AppNavigator>
       _gameSeed = weekKey.hashCode & 0x7FFFFFFF;
       _gameSlot = null; // single-run mode — no saves
       _isNewGame = true;
+      _isFirstEverGame = false; // no coach marks in the standardized challenge
       _challengeMode = true;
       _screen = AppScreen.game;
     });
@@ -466,6 +494,37 @@ class _AppNavigatorState extends State<AppNavigator>
       _challengeMode = false;
     });
     _checkForSaves();
+    // The menu is a safe moment — catches the prestige and Rare-gear
+    // milestones, which are banked in contexts that can't prompt inline (§2).
+    _maybeShowReviewPromptOnMenu();
+  }
+
+  /// If a review milestone is banked and the policy agrees, show the sheet as
+  /// a modal on the menu. A no-op otherwise.
+  void _maybeShowReviewPromptOnMenu() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _screen != AppScreen.mainMenu) return;
+      final ReviewPromptService service;
+      try {
+        service = context.read<ReviewPromptService>();
+      } catch (_) {
+        return;
+      }
+      if (!service.checkAtSafeMoment()) return;
+      showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isDismissible: false,
+        enableDrag: false,
+        builder: (sheetCtx) => Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          child: ReviewPromptSheet(
+            service: service,
+            onClose: () => Navigator.of(sheetCtx).pop(),
+          ),
+        ),
+      );
+    });
   }
 
   // ── Build ──────────────────────────────────────────────────────
@@ -494,6 +553,7 @@ class _AppNavigatorState extends State<AppNavigator>
           seed: _gameSeed ?? (DateTime.now().millisecondsSinceEpoch & 0x7FFFFFFF),
           slot: _gameSlot,
           isNewGame: _isNewGame,
+          isFirstEverGame: _isFirstEverGame,
           challengeMode: _challengeMode,
           onReturnToMenu: _returnToMenu,
         );
@@ -509,6 +569,7 @@ class GameScreen extends StatefulWidget {
   final int seed;
   final int? slot;
   final bool isNewGame;
+  final bool isFirstEverGame;
   final bool challengeMode;
   final VoidCallback onReturnToMenu;
 
@@ -517,6 +578,7 @@ class GameScreen extends StatefulWidget {
     required this.seed,
     this.slot,
     this.isNewGame = true,
+    this.isFirstEverGame = false,
     this.challengeMode = false,
     required this.onReturnToMenu,
   });
@@ -535,7 +597,30 @@ class _GameScreenState extends State<GameScreen>
   Timer? _autoSaveTimer;
   late final VfxSettings _vfxSettings;
 
+  /// First-run coach marks. Non-null only for a brand-new player's first
+  /// game; a ChangeNotifier owned here and disposed with the screen.
+  IntroService? _introService;
+
   void _applyVfxQuality() => _game.vfx.level = _vfxSettings.quality;
+
+  /// Stand up the first-run intro: load persisted state (fresh for a new
+  /// player), arm it, and mount the coach card. New games only, never the
+  /// weekly challenge, never a veteran (guarded by the caller).
+  void _setUpIntro() {
+    final intro = IntroService();
+    _introService = intro;
+    _game.introService = intro;
+    intro
+        .load(
+      playerId: SupabaseService.instance.playerId,
+      playerHasHistory: false,
+    )
+        .then((_) {
+      if (!mounted) return;
+      intro.arm();
+      if (intro.isActive) _game.overlays.add('introCoach');
+    });
+  }
 
   @override
   void initState() {
@@ -576,6 +661,16 @@ class _GameScreenState extends State<GameScreen>
     _game.boostManager = _boostManager;
 
     _game.attachServices(context);
+
+    // Shared review-prompt service so in-game safe moments can offer the sheet.
+    try {
+      _game.reviewPromptService = context.read<ReviewPromptService>();
+    } catch (_) {}
+
+    // First-run coach marks — a brand-new player's first normal game only.
+    if (widget.isNewGame && widget.isFirstEverGame && !widget.challengeMode) {
+      _setUpIntro();
+    }
 
     try {
       final statsService = context.read<StatsService>();
@@ -690,6 +785,7 @@ class _GameScreenState extends State<GameScreen>
     } catch (_) {}
 
     _boostManager.dispose();
+    _introService?.dispose();
     super.dispose();
   }
 
@@ -737,6 +833,10 @@ class _GameScreenState extends State<GameScreen>
               _buildGameOverOverlay(context, game as DiggleGame),
           'pause': (context, game) =>
               _buildPauseOverlay(context, game as DiggleGame),
+          'introCoach': (context, game) =>
+              IntroCoachOverlay(game: game as DiggleGame),
+          'reviewPrompt': (context, game) =>
+              ReviewPromptOverlay(game: game as DiggleGame),
         },
         loadingBuilder: (context) => _buildLoadingScreen(context),
         errorBuilder: (context, error) => _buildErrorScreen(context, error),
@@ -883,6 +983,12 @@ class _GameScreenState extends State<GameScreen>
   /// Confirm and execute a prestige ("Corporate Contract") reset.
   Future<void> _confirmPrestige(BuildContext context, DiggleGame game) async {
     final prestige = context.read<PrestigeSystem>();
+    // Captured before the dialog/prestige awaits so we don't touch context
+    // across the async gap below.
+    ReviewPromptService? reviewPrompt;
+    try {
+      reviewPrompt = context.read<ReviewPromptService>();
+    } catch (_) {}
     final l10n = AppLocalizations.of(context)!;
     final nextLevel = prestige.level + 1;
 
@@ -922,6 +1028,11 @@ class _GameScreenState extends State<GameScreen>
     if (confirmed != true) return;
 
     await prestige.prestige();
+    // Bank a review-prompt milestone before the navigation race tears the
+    // game down. Signing a first Corporate Contract needs 400m depth or 500k
+    // lifetime cash — far more of the game than any stale-era reviewer saw.
+    // Awaited so the pending flag is persisted before the menu shows it.
+    await reviewPrompt?.recordMilestone(ReviewTrigger.firstPrestige);
     // Return to menu — the next New Game starts the fresh contract
     // with perks and (level 2+) hardcore seams applied.
     game.resume();

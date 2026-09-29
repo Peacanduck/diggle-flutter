@@ -67,6 +67,22 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
   int _fallStartY = 0;
   int _currentFallY = 0;
 
+  /// Seconds since the last directional input. Drives the first-run movement
+  /// tip; reset to 0 the instant any direction is held.
+  double _secondsSinceInput = 0;
+  double get secondsSinceInput => _secondsSinceInput;
+
+  /// While falling, whether the drop so far already exceeds the *effective*
+  /// safe distance (base + legendary thruster bonus), so the HUD can warn
+  /// before the hull cost lands. Reads the effective distance, never the bare
+  /// constant, so it doesn't lie to a Quantum Glitch holder.
+  bool get isFallingDangerously {
+    if (!_isFalling) return false;
+    final safeDistance =
+        safeFallDistance + gameRef.gearSystem.bonusSafeFallTiles;
+    return (_currentFallY - _fallStartY) > safeDistance;
+  }
+
   // Base speeds (modified by engine system)
   static const double baseNormalSpeed = 120.0;
   static const double baseFlySpeed = 250.0;
@@ -262,6 +278,16 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
       _facing = MoveDirection.down;
     }
 
+    // Intro: track idle time at the surface, and consume the movement tip on
+    // the first directional input (digging counts — the player is holding a
+    // direction into a tile).
+    if (heldDirection != MoveDirection.none) {
+      _secondsSinceInput = 0;
+      gameRef.introService?.onPlayerInput();
+    } else {
+      _secondsSinceInput += dt;
+    }
+
     // If digging, handle that first
     if (_digging) {
       _handleDigging(dt);
@@ -434,6 +460,7 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
       gameRef.vfx.emitAt(VfxKind.hullHit, position.x, position.y,
           intensity: (damage / 60).clamp(0.2, 1.0));
       hullSystem.takeDamage(damage);
+      gameRef.introNotifyFallDamage();
     }
   }
 
@@ -511,6 +538,7 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
         }
         gameRef.questSystem.onOreMined();
         gameRef.achievementSystem.recordOreMined();
+        gameRef.introNotifyFirstOre();
       } else if (result == TileType.lootCrate) {
         gameRef.onLootCrateOpened(_digX, _digY, depth);
       } else if (result == TileType.artifact) {

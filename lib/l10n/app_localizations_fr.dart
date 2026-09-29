@@ -1737,4 +1737,65 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get leaderboardWeeklyTab => 'CETTE SEMAINE';
+
+  @override
+  String get introTipMovementTitle => 'Maintiens une direction pour creuser';
+
+  @override
+  String get introTipMovementBody =>
+      'Vers le bas pour descendre. Vers le haut pour voler — tant qu\'il te reste du carburant.';
+
+  @override
+  String get introTipFirstOreTitle => 'Voilà du minerai';
+
+  @override
+  String get introTipFirstOreBody =>
+      'Ta soute a une capacité limitée — surveille la barre du haut.';
+
+  @override
+  String get introTipCargoFullTitle => 'Soute presque pleine';
+
+  @override
+  String get introTipCargoFullBody =>
+      'Remonte à la surface pour vendre. C\'est ainsi que tu t\'offres une meilleure foreuse.';
+
+  @override
+  String get introTipLowFuelTitle => 'Surveille ton carburant';
+
+  @override
+  String get introTipLowFuelBody =>
+      'Faire le plein coûte de l\'argent et ne se fait qu\'à la surface. Tomber en panne met fin à la partie.';
+
+  @override
+  String get introTipFallDamageTitle => 'Chute trop longue';
+
+  @override
+  String get introTipFallDamageBody =>
+      'Les chutes de plus de 3 cases endommagent ta coque. Creuse vers le bas au lieu de te laisser tomber.';
+
+  @override
+  String get introSkip => 'Passer les astuces';
+
+  @override
+  String get introSkipConfirm => 'Astuces masquées. Bonne excavation !';
+
+  @override
+  String get reviewPromptTitle => 'Diggle te plaît ?';
+
+  @override
+  String get reviewPromptBody =>
+      'Les avis, c\'est comme ça que les autres possesseurs de Seeker découvrent le jeu. Ça prend dix secondes.';
+
+  @override
+  String get reviewPromptRate => 'Noter sur le dApp Store';
+
+  @override
+  String get reviewPromptLater => 'Plus tard';
+
+  @override
+  String get reviewPromptThanks => 'Merci.';
+
+  @override
+  String get reviewPromptFailed =>
+      'Impossible d\'ouvrir la boutique. Réessaie plus tard.';
 }

@@ -1675,4 +1675,59 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get leaderboardWeeklyTab => '今週';
+
+  @override
+  String get introTipMovementTitle => '方向を押し続けて掘ろう';
+
+  @override
+  String get introTipMovementBody => '下で深く潜り、上で飛ぶ——燃料があるうちは。';
+
+  @override
+  String get introTipFirstOreTitle => 'これが鉱石だ';
+
+  @override
+  String get introTipFirstOreBody => 'カーゴに積める量には限りがある——上のバーを確認しよう。';
+
+  @override
+  String get introTipCargoFullTitle => 'カーゴがもうすぐ満杯';
+
+  @override
+  String get introTipCargoFullBody => '地上に戻って売ろう。そうすればもっと良いドリルが買える。';
+
+  @override
+  String get introTipLowFuelTitle => '燃料に注意';
+
+  @override
+  String get introTipLowFuelBody => '給油にはお金がかかり、地上でしかできない。立ち往生すると探索は終わりだ。';
+
+  @override
+  String get introTipFallDamageTitle => '落ちすぎた';
+
+  @override
+  String get introTipFallDamageBody => '3マスを超える落下は船体を傷つける。飛び降りず、掘って下がろう。';
+
+  @override
+  String get introSkip => 'ヒントをスキップ';
+
+  @override
+  String get introSkipConfirm => 'ヒントを非表示にしました。採掘を楽しもう！';
+
+  @override
+  String get reviewPromptTitle => 'Diggleを楽しんでる？';
+
+  @override
+  String get reviewPromptBody =>
+      'レビューは、他のSeekerユーザーがこのゲームを見つける手がかりになる。10秒で終わるよ。';
+
+  @override
+  String get reviewPromptRate => 'dApp Storeで評価する';
+
+  @override
+  String get reviewPromptLater => 'あとで';
+
+  @override
+  String get reviewPromptThanks => 'ありがとう。';
+
+  @override
+  String get reviewPromptFailed => 'ストアを開けませんでした。後でもう一度お試しください。';
 }

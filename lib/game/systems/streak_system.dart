@@ -57,6 +57,11 @@ class StreakSystem extends ChangeNotifier {
   /// Reward callback: (xp, points, description). Wired by DiggleGame.
   void Function(int xp, int points, String description)? onAwardReward;
 
+  /// Fired after a claim is applied and its reward announced, with the
+  /// resulting streak day. Wired by main() to bank a review-prompt milestone
+  /// at day 7+ — the client side, after the reward, never inside the RPC.
+  void Function(int streak)? onStreakClaimed;
+
   /// Server claim delegate. When set (and reachable) the server decides
   /// the streak day; when null or failing, claims stay device-local
   /// exactly as before. Wired by DiggleGame.
@@ -231,6 +236,7 @@ class StreakSystem extends ChangeNotifier {
 
     if (result.claimed) {
       _announce(result.rewardXp, result.rewardPoints);
+      onStreakClaimed?.call(_streak);
     }
 
     notifyListeners();
@@ -255,6 +261,7 @@ class StreakSystem extends ChangeNotifier {
 
     final (xp, points) = rewardForStreak(_streak);
     _announce(xp, points);
+    onStreakClaimed?.call(_streak);
 
     notifyListeners();
     return true;

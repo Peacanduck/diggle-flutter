@@ -43,5 +43,14 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Lets canLaunchUrl/launchUrl see the Solana dApp Store's custom
+             scheme under Android 11+ package visibility. Without this the
+             review-prompt deep link silently fails even when the dApp Store
+             app is installed. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <category android:name="android.intent.category.BROWSABLE"/>
+            <data android:host="details" android:scheme="solanadappstore"/>
+        </intent>
     </queries>
 </manifest>

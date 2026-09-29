@@ -12,6 +12,8 @@ import '../services/supabase_service.dart';
 import '../services/xp_stats_bridge.dart';
 import '../services/game_lifecycle_manager.dart';
 import '../services/quest_sync_service.dart';
+import '../services/intro_service.dart';
+import '../services/review_prompt_service.dart';
 
 import 'world/tile.dart';
 import 'world/tile_map_component.dart';
@@ -85,6 +87,14 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
 
   // BoostManager is initialized in main.dart since it needs WalletService
   BoostManager? boostManager;
+
+  /// First-run coach marks. Created + armed by GameScreen only for a genuine
+  /// first-ever new game; null (and inert) otherwise. See [_pumpIntro].
+  IntroService? introService;
+
+  /// Shared review-prompt service (Provider singleton). Attached by
+  /// GameScreen so in-game safe moments (surfaced, shop) can offer the sheet.
+  ReviewPromptService? reviewPromptService;
 
   GameState _state = GameState.playing;
   final WorldConfig worldConfig;
@@ -372,6 +382,11 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
         xpPointsSystem.checkDepthMilestone(drill.depth);
     questSystem.onDepthReached(drill.depth);
 
+    // First-run coach marks: standing triggers (idle-at-surface, cargo, fuel)
+    // are polled here; momentary ones (first ore, fall damage) are pushed
+    // from the drill. Inert unless an intro is armed.
+    _pumpIntro();
+
     // Track play time (sync every 60s)
     _playTimeAccumulator += dt;
     if (_playTimeAccumulator >= 60.0) {
@@ -380,6 +395,29 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
       _playTimeAccumulator -= 60.0;
     }
   }
+
+  /// Feed the intro live readings. Cheap and safe to call every frame — a
+  /// no-op unless an intro is armed and still running.
+  void _pumpIntro({bool firstOre = false, bool fallDamage = false}) {
+    final intro = introService;
+    if (intro == null || !intro.isActive) return;
+    final maxCargo = economySystem.maxCapacity;
+    final maxFuel = fuelSystem.maxFuel;
+    intro.evaluate(
+      atSurface: drill.isAtSurface,
+      cargoFraction: maxCargo <= 0 ? 0 : economySystem.cargoCount / maxCargo,
+      fuelFraction: maxFuel <= 0 ? 0 : fuelSystem.fuel / maxFuel,
+      secondsSinceInput: drill.secondsSinceInput,
+      justMinedFirstOre: firstOre,
+      justTookFallDamage: fallDamage,
+    );
+  }
+
+  /// The drill mined an ore tile. Idempotent after the first-ore tip shows.
+  void introNotifyFirstOre() => _pumpIntro(firstOre: true);
+
+  /// The drill just took fall damage. Idempotent after the tip shows.
+  void introNotifyFallDamage() => _pumpIntro(fallDamage: true);
 
   @override
   Color backgroundColor() => const Color(0xFF1a1a2e);
@@ -418,6 +456,19 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
     if (_atSurface) return;
     _atSurface = true;
     vfx.emitAt(VfxKind.surfaced, drill.position.x, drill.position.y);
+    // Surfacing is a safe moment — never mid-descent — to offer a review.
+    maybeShowReviewPrompt();
+  }
+
+  /// Offer the review sheet if a milestone is banked and the policy agrees.
+  /// A no-op otherwise. Called at in-game safe moments only.
+  void maybeShowReviewPrompt() {
+    if (_state != GameState.playing && _state != GameState.shopping) return;
+    final rp = reviewPromptService;
+    if (rp == null) return;
+    if (rp.checkAtSafeMoment()) {
+      overlays.add('reviewPrompt');
+    }
   }
 
   /// Grid coordinate to world-space pixel centre.
@@ -429,6 +480,8 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
     _state = GameState.shopping;
     fuelSystem.pause();
     overlays.add('shop');
+    // Opening the shop is a safe moment too (a deliberate pause at surface).
+    maybeShowReviewPrompt();
     // Hide joystick in shop
     // if (joystick.parent != null) joystick.removeFromParent();
   }

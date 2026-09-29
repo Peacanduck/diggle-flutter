@@ -10,11 +10,14 @@
 /// caches per mint via GearSystem.
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import 'content_l10n.dart';
 import '../game/systems/gear_sprites.dart';
 import '../game/systems/gear_system.dart';
+import '../services/review_prompt_policy.dart';
+import '../services/review_prompt_service.dart';
 import '../solana/candy_machine_service.dart';
 import '../solana/wallet_service.dart';
 
@@ -362,7 +365,23 @@ class _HangarScreenState extends State<HangarScreen> {
             if (isEquipped) {
               await widget.gearSystem.unequip();
             } else {
+              // Captured before the await so context isn't used across the
+              // async gap.
+              ReviewPromptService? reviewPrompt;
+              try {
+                reviewPrompt = context.read<ReviewPromptService>();
+              } catch (_) {}
               await widget.gearSystem.equip(traits);
+              // Equipping a first Rare-or-better machine is a real milestone
+              // (Common/Uncommon is 75% of the mint and isn't one). Bank a
+              // review prompt; it shows back on the menu (§5.2).
+              final topRarity = GearSlot.values
+                  .map((s) => traits.traits[s]?.rarity.index ?? -1)
+                  .fold<int>(-1, (a, b) => a > b ? a : b);
+              if (topRarity >= GearRarity.rare.index) {
+                await reviewPrompt
+                    ?.recordMilestone(ReviewTrigger.firstRareGearEquip);
+              }
             }
             if (mounted) setState(() {});
           },

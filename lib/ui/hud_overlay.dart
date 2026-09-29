@@ -341,6 +341,19 @@ class _HudOverlayState extends State<HudOverlay> {
     final economy = widget.game.economySystem;
     final depth = widget.game.drill.depth;
 
+    // Falling telegraph: pulse the hull indicator amber while the current
+    // drop already exceeds the *effective* safe distance, so the causal link
+    // between a long fall and hull damage is visible BEFORE the cost lands.
+    // (This rebuilds on the 10Hz tick, so ~2.5Hz gives a gentle pulse.)
+    final dangerFall = widget.game.drill.isFallingDangerously;
+    final hullColor = dangerFall
+        ? ((_tick.value ~/ 2).isEven ? Colors.amber : Colors.amberAccent)
+        : hull.isCritical
+            ? Colors.red
+            : hull.isLow
+                ? Colors.orange
+                : Colors.green;
+
     return Container(
       margin: const EdgeInsets.only(left: 8, right: 60, top: 8),
       padding: const EdgeInsets.all(10),
@@ -359,11 +372,7 @@ class _HudOverlayState extends State<HudOverlay> {
                   label: l10n.hp,
                   value: hull.hull,
                   max: hull.maxHull,
-                  color: hull.isCritical
-                      ? Colors.red
-                      : hull.isLow
-                      ? Colors.orange
-                      : Colors.green,
+                  color: hullColor,
                 ),
               ),
               const SizedBox(width: 12),

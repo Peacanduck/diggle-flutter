@@ -1675,4 +1675,58 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get leaderboardWeeklyTab => '이번 주';
+
+  @override
+  String get introTipMovementTitle => '방향을 누른 채로 파세요';
+
+  @override
+  String get introTipMovementBody => '아래로는 더 깊이, 위로는 비행—연료가 있는 동안만.';
+
+  @override
+  String get introTipFirstOreTitle => '이게 광석이에요';
+
+  @override
+  String get introTipFirstOreBody => '화물칸 용량은 정해져 있어요—상단 바를 확인하세요.';
+
+  @override
+  String get introTipCargoFullTitle => '화물칸이 거의 찼어요';
+
+  @override
+  String get introTipCargoFullBody => '지상으로 올라가 파세요. 그래야 더 좋은 드릴을 살 수 있어요.';
+
+  @override
+  String get introTipLowFuelTitle => '연료를 조심하세요';
+
+  @override
+  String get introTipLowFuelBody => '재급유는 비용이 들고 지상에서만 가능해요. 발이 묶이면 게임이 끝나요.';
+
+  @override
+  String get introTipFallDamageTitle => '너무 멀리 떨어졌어요';
+
+  @override
+  String get introTipFallDamageBody => '3칸을 넘게 떨어지면 선체가 손상돼요. 떨어지지 말고 아래로 파세요.';
+
+  @override
+  String get introSkip => '팁 건너뛰기';
+
+  @override
+  String get introSkipConfirm => '팁을 숨겼어요. 즐거운 채굴 되세요!';
+
+  @override
+  String get reviewPromptTitle => 'Diggle 재미있나요?';
+
+  @override
+  String get reviewPromptBody => '리뷰는 다른 Seeker 사용자들이 이 게임을 찾는 방법이에요. 10초면 돼요.';
+
+  @override
+  String get reviewPromptRate => 'dApp Store에서 평가하기';
+
+  @override
+  String get reviewPromptLater => '나중에';
+
+  @override
+  String get reviewPromptThanks => '감사합니다.';
+
+  @override
+  String get reviewPromptFailed => '스토어를 열 수 없어요. 나중에 다시 시도해 주세요.';
 }

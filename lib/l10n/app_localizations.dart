@@ -3155,6 +3155,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'THIS WEEK'**
   String get leaderboardWeeklyTab;
+
+  /// No description provided for @introTipMovementTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold a direction to drill'**
+  String get introTipMovementTitle;
+
+  /// No description provided for @introTipMovementBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Down goes deeper. Up flies — while you have fuel.'**
+  String get introTipMovementBody;
+
+  /// No description provided for @introTipFirstOreTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s ore'**
+  String get introTipFirstOreTitle;
+
+  /// No description provided for @introTipFirstOreBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your cargo bay only holds so much — check the top bar.'**
+  String get introTipFirstOreBody;
+
+  /// No description provided for @introTipCargoFullTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cargo\'s nearly full'**
+  String get introTipCargoFullTitle;
+
+  /// No description provided for @introTipCargoFullBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Fly back up and sell at the surface. That\'s how you afford a better drill.'**
+  String get introTipCargoFullBody;
+
+  /// No description provided for @introTipLowFuelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch your fuel'**
+  String get introTipLowFuelTitle;
+
+  /// No description provided for @introTipLowFuelBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Refuelling costs cash and only happens at the surface. Getting stranded ends the run.'**
+  String get introTipLowFuelBody;
+
+  /// No description provided for @introTipFallDamageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You fell too far'**
+  String get introTipFallDamageTitle;
+
+  /// No description provided for @introTipFallDamageBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Drops over 3 tiles damage your hull. Drill down instead of dropping down.'**
+  String get introTipFallDamageBody;
+
+  /// No description provided for @introSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip tips'**
+  String get introSkip;
+
+  /// No description provided for @introSkipConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Tips hidden. Happy digging!'**
+  String get introSkipConfirm;
+
+  /// No description provided for @reviewPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enjoying Diggle?'**
+  String get reviewPromptTitle;
+
+  /// No description provided for @reviewPromptBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviews are how other Seeker owners find the game. Takes ten seconds.'**
+  String get reviewPromptBody;
+
+  /// No description provided for @reviewPromptRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate on dApp Store'**
+  String get reviewPromptRate;
+
+  /// No description provided for @reviewPromptLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get reviewPromptLater;
+
+  /// No description provided for @reviewPromptThanks.
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you.'**
+  String get reviewPromptThanks;
+
+  /// No description provided for @reviewPromptFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the store. Try again later.'**
+  String get reviewPromptFailed;
 }
 
 class _AppLocalizationsDelegate
