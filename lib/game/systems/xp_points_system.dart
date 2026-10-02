@@ -6,12 +6,12 @@
 /// - Reaching new max depths
 /// - Completing mining runs (returning to surface with ore)
 ///
-/// Points are earned alongside XP but at a lower rate.
-/// Points can also be purchased via the premium store.
+/// Points are earned alongside XP but at a lower rate. They are only
+/// earned through play — they cannot be bought.
 ///
-/// Both XP and Points can be boosted by:
-/// - Timed boosters (purchased on-chain)
-/// - NFT permanent multipliers (held in wallet)
+/// Both XP and Points can be boosted by holder multipliers:
+/// - Diggle NFT (held in wallet)
+/// - Seeker Genesis Token (verified Solana Mobile device)
 
 import 'package:flutter/foundation.dart';
 import '../world/tile.dart';
@@ -383,13 +383,14 @@ class XPPointsSystem extends ChangeNotifier {
   // BOOST MANAGEMENT
   // ============================================================
 
-  /// Set XP boost multiplier (from on-chain booster)
+  /// Set timed XP boost multiplier (no source since the Diggle Mart
+  /// closed; kept so a future timed boost can plug in)
   void setXPBoost(double multiplier) {
     _xpBoostMultiplier = multiplier.clamp(1.0, 10.0);
     notifyListeners();
   }
 
-  /// Set points boost multiplier (from on-chain booster)
+  /// Set timed points boost multiplier (see [setXPBoost])
   void setPointsBoost(double multiplier) {
     _pointsBoostMultiplier = multiplier.clamp(1.0, 10.0);
     notifyListeners();

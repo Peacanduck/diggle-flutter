@@ -664,12 +664,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get premiumStore => 'プレミアムストア';
 
   @override
-  String get onChainLoaded => 'オンチェーン価格を読み込みました';
-
-  @override
-  String get usingDefaultPrices => 'デフォルト価格を使用中';
-
-  @override
   String get level => 'レベル';
 
   @override
@@ -679,52 +673,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get points => 'ポイント';
 
   @override
-  String get activeBoosts => 'アクティブブースト';
-
-  @override
-  String get permanent => '永久';
-
-  @override
-  String get pointsTab => 'ポイント';
-
-  @override
-  String get solTab => 'SOL';
-
-  @override
-  String get nftTab => 'NFT';
-
-  @override
   String get walletRequired => 'ウォレットが必要です';
 
   @override
   String get walletRequiredMessage =>
       'プレミアムアイテムにアクセスするにはSolanaウォレットを接続してください。\nすべての購入はオンチェーン取引です。';
-
-  @override
-  String get storePricesUnavailable => 'ストア価格が利用できません';
-
-  @override
-  String get storePricesUnavailableMessage =>
-      'オンチェーン価格を読み込めませんでした。\n接続を確認して再試行してください。';
-
-  @override
-  String get retry => 'リトライ';
-
-  @override
-  String get buy => '購入';
-
-  @override
-  String get notEnoughPoints => 'ポイントが足りません！';
-
-  @override
-  String activated(String item) {
-    return '$itemを有効化しました！';
-  }
-
-  @override
-  String purchasedTx(String item, String tx) {
-    return '$itemを購入しました！TX：$tx...';
-  }
 
   @override
   String get purchaseFailed => '購入失敗';
@@ -1109,9 +1062,31 @@ class AppLocalizationsJa extends AppLocalizations {
   String get questsWeeklyInfo => '大きな挑戦、大きな報酬。毎週月曜日（UTC）にリセットされます。';
 
   @override
-  String questsNotEnoughPoints(int cost) {
-    return 'ポイントが足りません（$cost必要）。ストアでポイントパックを入手しよう！';
+  String get minersPassTitle => 'ウィークリー・マイナーパス';
+
+  @override
+  String get minersPassActiveTitle => 'マイナーパス 有効中';
+
+  @override
+  String get minersPassBlurb => '今週のウィークリークエスト報酬がすべて2倍に。';
+
+  @override
+  String get minersPassActiveBlurb => '今週はウィークリークエストの報酬がすべて2倍！';
+
+  @override
+  String get minersPassUnavailable => '利用不可';
+
+  @override
+  String get minersPassActivated => 'マイナーパス有効：ウィークリー報酬2倍！';
+
+  @override
+  String minersPassNotEnoughSkr(String amount) {
+    return 'SKRが足りません（$amount必要）。';
   }
+
+  @override
+  String get minersPassFailed =>
+      '支払いを確認できませんでした。SKRがウォレットから引き落とされた場合は、クエスト画面を開き直すとパスが復元されます。';
 
   @override
   String get questJoinDiscordServer => 'Discordサーバーに参加';

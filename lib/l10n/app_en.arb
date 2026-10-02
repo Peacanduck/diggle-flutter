@@ -379,42 +379,11 @@
     }
   },
   "premiumStore": "PREMIUM STORE",
-  "onChainLoaded": "On-chain prices loaded",
-  "usingDefaultPrices": "Using default prices",
   "level": "Level",
   "xp": "XP",
   "points": "Points",
-  "activeBoosts": "ACTIVE BOOSTS",
-  "permanent": "Permanent",
-  "pointsTab": "Points",
-  "solTab": "SOL",
-  "nftTab": "NFT",
   "walletRequired": "Wallet Required",
   "walletRequiredMessage": "Connect your Solana wallet to access premium items.\nAll purchases are on-chain transactions.",
-  "storePricesUnavailable": "Store Prices Unavailable",
-  "storePricesUnavailableMessage": "Unable to load on-chain pricing.\nPlease check your connection and try again.",
-  "retry": "RETRY",
-  "buy": "BUY",
-  "notEnoughPoints": "Not enough points!",
-  "activated": "{item} activated!",
-  "@activated": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      }
-    }
-  },
-  "purchasedTx": "{item} purchased! TX: {tx}...",
-  "@purchasedTx": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "tx": {
-        "type": "String"
-      }
-    }
-  },
   "purchaseFailed": "Purchase failed",
   "closeStore": "CLOSE STORE",
   "diggleDrillMachine": "DIGGLE DRILL MACHINE",
@@ -666,14 +635,21 @@
   "airdrop": "Airdrop",
   "questsWeeklyTab": "Weekly",
   "questsWeeklyInfo": "Big challenges, big rewards. Resets every Monday (UTC).",
-  "questsNotEnoughPoints": "Not enough points ({cost} needed). Grab a points pack in the store!",
-  "@questsNotEnoughPoints": {
+  "minersPassTitle": "Weekly Miner's Pass",
+  "minersPassActiveTitle": "Miner's Pass ACTIVE",
+  "minersPassBlurb": "Double all weekly quest rewards this week.",
+  "minersPassActiveBlurb": "2x rewards on all weekly quests this week!",
+  "minersPassUnavailable": "Unavailable",
+  "minersPassActivated": "Miner's Pass active: 2x weekly rewards!",
+  "minersPassNotEnoughSkr": "Not enough SKR ({amount} needed).",
+  "@minersPassNotEnoughSkr": {
     "placeholders": {
-      "cost": {
-        "type": "int"
+      "amount": {
+        "type": "String"
       }
     }
   },
+  "minersPassFailed": "Payment not confirmed. If SKR left your wallet, reopen Quests to restore your pass.",
   "questJoinDiscordServer": "Join Discord Server",
   "questCheckingMembership": "Checking membership...",
   "questVerifyMembership": "Verify Membership",

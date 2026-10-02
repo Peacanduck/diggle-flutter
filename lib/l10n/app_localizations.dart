@@ -1314,18 +1314,6 @@ abstract class AppLocalizations {
   /// **'PREMIUM STORE'**
   String get premiumStore;
 
-  /// No description provided for @onChainLoaded.
-  ///
-  /// In en, this message translates to:
-  /// **'On-chain prices loaded'**
-  String get onChainLoaded;
-
-  /// No description provided for @usingDefaultPrices.
-  ///
-  /// In en, this message translates to:
-  /// **'Using default prices'**
-  String get usingDefaultPrices;
-
   /// No description provided for @level.
   ///
   /// In en, this message translates to:
@@ -1344,36 +1332,6 @@ abstract class AppLocalizations {
   /// **'Points'**
   String get points;
 
-  /// No description provided for @activeBoosts.
-  ///
-  /// In en, this message translates to:
-  /// **'ACTIVE BOOSTS'**
-  String get activeBoosts;
-
-  /// No description provided for @permanent.
-  ///
-  /// In en, this message translates to:
-  /// **'Permanent'**
-  String get permanent;
-
-  /// No description provided for @pointsTab.
-  ///
-  /// In en, this message translates to:
-  /// **'Points'**
-  String get pointsTab;
-
-  /// No description provided for @solTab.
-  ///
-  /// In en, this message translates to:
-  /// **'SOL'**
-  String get solTab;
-
-  /// No description provided for @nftTab.
-  ///
-  /// In en, this message translates to:
-  /// **'NFT'**
-  String get nftTab;
-
   /// No description provided for @walletRequired.
   ///
   /// In en, this message translates to:
@@ -1385,48 +1343,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Connect your Solana wallet to access premium items.\nAll purchases are on-chain transactions.'**
   String get walletRequiredMessage;
-
-  /// No description provided for @storePricesUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Store Prices Unavailable'**
-  String get storePricesUnavailable;
-
-  /// No description provided for @storePricesUnavailableMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Unable to load on-chain pricing.\nPlease check your connection and try again.'**
-  String get storePricesUnavailableMessage;
-
-  /// No description provided for @retry.
-  ///
-  /// In en, this message translates to:
-  /// **'RETRY'**
-  String get retry;
-
-  /// No description provided for @buy.
-  ///
-  /// In en, this message translates to:
-  /// **'BUY'**
-  String get buy;
-
-  /// No description provided for @notEnoughPoints.
-  ///
-  /// In en, this message translates to:
-  /// **'Not enough points!'**
-  String get notEnoughPoints;
-
-  /// No description provided for @activated.
-  ///
-  /// In en, this message translates to:
-  /// **'{item} activated!'**
-  String activated(String item);
-
-  /// No description provided for @purchasedTx.
-  ///
-  /// In en, this message translates to:
-  /// **'{item} purchased! TX: {tx}...'**
-  String purchasedTx(String item, String tx);
 
   /// No description provided for @purchaseFailed.
   ///
@@ -2088,11 +2004,53 @@ abstract class AppLocalizations {
   /// **'Big challenges, big rewards. Resets every Monday (UTC).'**
   String get questsWeeklyInfo;
 
-  /// No description provided for @questsNotEnoughPoints.
+  /// No description provided for @minersPassTitle.
   ///
   /// In en, this message translates to:
-  /// **'Not enough points ({cost} needed). Grab a points pack in the store!'**
-  String questsNotEnoughPoints(int cost);
+  /// **'Weekly Miner\'s Pass'**
+  String get minersPassTitle;
+
+  /// No description provided for @minersPassActiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Miner\'s Pass ACTIVE'**
+  String get minersPassActiveTitle;
+
+  /// No description provided for @minersPassBlurb.
+  ///
+  /// In en, this message translates to:
+  /// **'Double all weekly quest rewards this week.'**
+  String get minersPassBlurb;
+
+  /// No description provided for @minersPassActiveBlurb.
+  ///
+  /// In en, this message translates to:
+  /// **'2x rewards on all weekly quests this week!'**
+  String get minersPassActiveBlurb;
+
+  /// No description provided for @minersPassUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get minersPassUnavailable;
+
+  /// No description provided for @minersPassActivated.
+  ///
+  /// In en, this message translates to:
+  /// **'Miner\'s Pass active: 2x weekly rewards!'**
+  String get minersPassActivated;
+
+  /// No description provided for @minersPassNotEnoughSkr.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough SKR ({amount} needed).'**
+  String minersPassNotEnoughSkr(String amount);
+
+  /// No description provided for @minersPassFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment not confirmed. If SKR left your wallet, reopen Quests to restore your pass.'**
+  String get minersPassFailed;
 
   /// No description provided for @questJoinDiscordServer.
   ///

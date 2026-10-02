@@ -684,12 +684,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get premiumStore => 'BOUTIQUE PREMIUM';
 
   @override
-  String get onChainLoaded => 'Prix on-chain chargés';
-
-  @override
-  String get usingDefaultPrices => 'Utilisation des prix par défaut';
-
-  @override
   String get level => 'Niveau';
 
   @override
@@ -699,52 +693,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get points => 'Points';
 
   @override
-  String get activeBoosts => 'BOOSTS ACTIFS';
-
-  @override
-  String get permanent => 'Permanent';
-
-  @override
-  String get pointsTab => 'Points';
-
-  @override
-  String get solTab => 'SOL';
-
-  @override
-  String get nftTab => 'NFT';
-
-  @override
   String get walletRequired => 'Wallet requis';
 
   @override
   String get walletRequiredMessage =>
       'Connectez votre wallet Solana pour accéder aux objets premium.\nTous les achats sont des transactions on-chain.';
-
-  @override
-  String get storePricesUnavailable => 'Prix indisponibles';
-
-  @override
-  String get storePricesUnavailableMessage =>
-      'Impossible de charger les prix on-chain.\nVeuillez vérifier votre connexion et réessayer.';
-
-  @override
-  String get retry => 'RÉESSAYER';
-
-  @override
-  String get buy => 'ACHETER';
-
-  @override
-  String get notEnoughPoints => 'Pas assez de points !';
-
-  @override
-  String activated(String item) {
-    return '$item activé !';
-  }
-
-  @override
-  String purchasedTx(String item, String tx) {
-    return '$item acheté ! TX : $tx...';
-  }
 
   @override
   String get purchaseFailed => 'Achat échoué';
@@ -1140,9 +1093,34 @@ class AppLocalizationsFr extends AppLocalizations {
       'Grands défis, grandes récompenses. Réinitialisé chaque lundi (UTC).';
 
   @override
-  String questsNotEnoughPoints(int cost) {
-    return 'Points insuffisants ($cost requis). Prenez un pack de points dans la boutique !';
+  String get minersPassTitle => 'Pass Mineur hebdomadaire';
+
+  @override
+  String get minersPassActiveTitle => 'Pass Mineur ACTIF';
+
+  @override
+  String get minersPassBlurb =>
+      'Double toutes les récompenses des quêtes hebdomadaires cette semaine.';
+
+  @override
+  String get minersPassActiveBlurb =>
+      'Récompenses x2 sur toutes les quêtes hebdomadaires cette semaine !';
+
+  @override
+  String get minersPassUnavailable => 'Indisponible';
+
+  @override
+  String get minersPassActivated =>
+      'Pass Mineur actif : récompenses hebdomadaires x2 !';
+
+  @override
+  String minersPassNotEnoughSkr(String amount) {
+    return 'SKR insuffisant ($amount requis).';
   }
+
+  @override
+  String get minersPassFailed =>
+      'Paiement non confirmé. Si des SKR ont quitté votre wallet, rouvrez les Quêtes pour récupérer votre pass.';
 
   @override
   String get questJoinDiscordServer => 'Rejoindre le serveur Discord';

@@ -717,7 +717,17 @@ class QuestSystem extends ChangeNotifier {
   /// Reward multiplier applied to weekly quest claims.
   int get weeklyRewardMultiplier => minersPassActive ? 2 : 1;
 
-  /// Called by DiggleGame AFTER the points were spent.
+  /// Cache a server-confirmed pass locally (the pass is paid in SKR and
+  /// recorded server-side — see MinersPassService). Only a pass for the
+  /// CURRENT ISO week activates: one verified just before the weekly
+  /// reset belongs to a week that has already ended.
+  Future<void> activateMinersPassFor(String weekKey) async {
+    if (weekKey != _weekKey() || _minersPassWeek == weekKey) return;
+    await activateMinersPass();
+  }
+
+  /// Local cache of this week's pass. Prefer [activateMinersPassFor],
+  /// which checks the server's week key.
   Future<void> activateMinersPass() async {
     _minersPassWeek = _weekKey();
     try {

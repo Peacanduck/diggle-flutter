@@ -264,9 +264,9 @@ class _HudOverlayState extends State<HudOverlay> {
     );
   }
 
-  /// Boost visibility: shows the active multiplier with a live
-  /// countdown, the Heat Shield timer, or a subtle "no boost" nudge.
-  /// Every state taps into the premium store.
+  /// Boost visibility: shows the active holder multiplier, the Heat
+  /// Shield timer, or a subtle "no boost" nudge. The multiplier and
+  /// nudge states tap into the premium store (NFT mint).
   Widget _buildBoostChip() {
     final game = widget.game;
     final xp = game.xpPointsSystem;
@@ -284,23 +284,8 @@ class _HudOverlayState extends State<HudOverlay> {
       final mult = xp.effectiveXPMultiplier >= xp.effectivePointsMultiplier
           ? xp.effectiveXPMultiplier
           : xp.effectivePointsMultiplier;
-      final boosters = game.boostManager?.activeBoosters ?? [];
-      String remaining = '';
-      if (boosters.isNotEmpty) {
-        // Shortest remaining timed booster drives the countdown
-        boosters.sort((a, b) => a.timeRemaining.compareTo(b.timeRemaining));
-        final timed =
-            boosters.where((b) => b.timeRemaining > Duration.zero).toList();
-        if (timed.isNotEmpty) {
-          final rem = timed.first.timeRemaining;
-          remaining = rem.inHours > 0
-              ? ' ${rem.inHours}h ${rem.inMinutes % 60}m'
-              : ' ${rem.inMinutes}m ${rem.inSeconds % 60}s';
-        }
-      }
       return _chip(
-        '⚡ ${mult.toStringAsFixed(mult == mult.roundToDouble() ? 0 : 2)}x'
-        '$remaining',
+        '⚡ ${mult.toStringAsFixed(mult == mult.roundToDouble() ? 0 : 2)}x',
         Colors.cyan.shade800,
         onTap: () => game.openPremiumStore(),
       );

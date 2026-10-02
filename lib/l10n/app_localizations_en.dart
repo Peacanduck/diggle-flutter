@@ -674,12 +674,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get premiumStore => 'PREMIUM STORE';
 
   @override
-  String get onChainLoaded => 'On-chain prices loaded';
-
-  @override
-  String get usingDefaultPrices => 'Using default prices';
-
-  @override
   String get level => 'Level';
 
   @override
@@ -689,52 +683,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get points => 'Points';
 
   @override
-  String get activeBoosts => 'ACTIVE BOOSTS';
-
-  @override
-  String get permanent => 'Permanent';
-
-  @override
-  String get pointsTab => 'Points';
-
-  @override
-  String get solTab => 'SOL';
-
-  @override
-  String get nftTab => 'NFT';
-
-  @override
   String get walletRequired => 'Wallet Required';
 
   @override
   String get walletRequiredMessage =>
       'Connect your Solana wallet to access premium items.\nAll purchases are on-chain transactions.';
-
-  @override
-  String get storePricesUnavailable => 'Store Prices Unavailable';
-
-  @override
-  String get storePricesUnavailableMessage =>
-      'Unable to load on-chain pricing.\nPlease check your connection and try again.';
-
-  @override
-  String get retry => 'RETRY';
-
-  @override
-  String get buy => 'BUY';
-
-  @override
-  String get notEnoughPoints => 'Not enough points!';
-
-  @override
-  String activated(String item) {
-    return '$item activated!';
-  }
-
-  @override
-  String purchasedTx(String item, String tx) {
-    return '$item purchased! TX: $tx...';
-  }
 
   @override
   String get purchaseFailed => 'Purchase failed';
@@ -1125,9 +1078,32 @@ class AppLocalizationsEn extends AppLocalizations {
       'Big challenges, big rewards. Resets every Monday (UTC).';
 
   @override
-  String questsNotEnoughPoints(int cost) {
-    return 'Not enough points ($cost needed). Grab a points pack in the store!';
+  String get minersPassTitle => 'Weekly Miner\'s Pass';
+
+  @override
+  String get minersPassActiveTitle => 'Miner\'s Pass ACTIVE';
+
+  @override
+  String get minersPassBlurb => 'Double all weekly quest rewards this week.';
+
+  @override
+  String get minersPassActiveBlurb =>
+      '2x rewards on all weekly quests this week!';
+
+  @override
+  String get minersPassUnavailable => 'Unavailable';
+
+  @override
+  String get minersPassActivated => 'Miner\'s Pass active: 2x weekly rewards!';
+
+  @override
+  String minersPassNotEnoughSkr(String amount) {
+    return 'Not enough SKR ($amount needed).';
   }
+
+  @override
+  String get minersPassFailed =>
+      'Payment not confirmed. If SKR left your wallet, reopen Quests to restore your pass.';
 
   @override
   String get questJoinDiscordServer => 'Join Discord Server';

@@ -327,22 +327,18 @@ class WalletService extends ChangeNotifier {
   // TRANSACTION SIGNING & SENDING
   // ============================================================
 
-  /// Sign and send a serialized transaction via MWA.
+  /// Sign a serialized transaction via MWA, then submit it via RPC.
   ///
-  /// Opens the wallet app for the user to approve the transaction,
-  /// then sends it to the network.
-  ///
-  /// [serializedTransaction] - the compiled, unsigned transaction bytes
-  /// (as produced by DiggleMartClient.build*Tx methods)
-  ///
-  /// Returns the transaction signature (base58) on success, null on failure.
-  /// Sets [errorMessage] on failure.
-  /// Sign a transaction via MWA, then submit it via RPC.
+  /// Opens the wallet app for the user to approve the transaction.
+  /// [serializedTransaction] is the unsigned transaction bytes (for
+  /// example the Miner's Pass SKR transfer built by the miners-pass
+  /// edge function).
   ///
   /// Includes retry logic because Android may temporarily lose network
   /// connectivity when switching back from the wallet app.
   ///
-  /// Returns the transaction signature (base58) on success, or null on failure.
+  /// Returns the transaction signature (base58) on success, null on failure.
+  /// Sets [errorMessage] on failure.
   Future<String?> signAndSendTransaction(
       Uint8List serializedTransaction) async {
     if (!isConnected || _authToken == null) {

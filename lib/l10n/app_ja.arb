@@ -379,42 +379,11 @@
     }
   },
   "premiumStore": "プレミアムストア",
-  "onChainLoaded": "オンチェーン価格を読み込みました",
-  "usingDefaultPrices": "デフォルト価格を使用中",
   "level": "レベル",
   "xp": "XP",
   "points": "ポイント",
-  "activeBoosts": "アクティブブースト",
-  "permanent": "永久",
-  "pointsTab": "ポイント",
-  "solTab": "SOL",
-  "nftTab": "NFT",
   "walletRequired": "ウォレットが必要です",
   "walletRequiredMessage": "プレミアムアイテムにアクセスするにはSolanaウォレットを接続してください。\nすべての購入はオンチェーン取引です。",
-  "storePricesUnavailable": "ストア価格が利用できません",
-  "storePricesUnavailableMessage": "オンチェーン価格を読み込めませんでした。\n接続を確認して再試行してください。",
-  "retry": "リトライ",
-  "buy": "購入",
-  "notEnoughPoints": "ポイントが足りません！",
-  "activated": "{item}を有効化しました！",
-  "@activated": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      }
-    }
-  },
-  "purchasedTx": "{item}を購入しました！TX：{tx}...",
-  "@purchasedTx": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "tx": {
-        "type": "String"
-      }
-    }
-  },
   "purchaseFailed": "購入失敗",
   "closeStore": "ストアを閉じる",
   "diggleDrillMachine": "DIGGLE ドリルマシン",
@@ -633,7 +602,14 @@
   "airdrop": "エアドロップ",
   "questsWeeklyTab": "ウィークリー",
   "questsWeeklyInfo": "大きな挑戦、大きな報酬。毎週月曜日（UTC）にリセットされます。",
-  "questsNotEnoughPoints": "ポイントが足りません（{cost}必要）。ストアでポイントパックを入手しよう！",
+  "minersPassTitle": "ウィークリー・マイナーパス",
+  "minersPassActiveTitle": "マイナーパス 有効中",
+  "minersPassBlurb": "今週のウィークリークエスト報酬がすべて2倍に。",
+  "minersPassActiveBlurb": "今週はウィークリークエストの報酬がすべて2倍！",
+  "minersPassUnavailable": "利用不可",
+  "minersPassActivated": "マイナーパス有効：ウィークリー報酬2倍！",
+  "minersPassNotEnoughSkr": "SKRが足りません（{amount}必要）。",
+  "minersPassFailed": "支払いを確認できませんでした。SKRがウォレットから引き落とされた場合は、クエスト画面を開き直すとパスが復元されます。",
   "questJoinDiscordServer": "Discordサーバーに参加",
   "questCheckingMembership": "メンバーシップを確認中...",
   "questVerifyMembership": "メンバーシップを確認",

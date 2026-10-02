@@ -11,9 +11,7 @@
 ///   final bridge = XPStatsBridge(xpSystem: xpSystem, statsService: statsService);
 ///   bridge.awardMiningReward(tileType, depth);  // Awards + logs
 ///   bridge.spendPoints(100, 'shop_spend');       // Spends + logs
-///   bridge.awardPackPurchase(500, txSig);        // Pack + logs with tx sig
 
-import 'package:flutter/foundation.dart';
 import '../game/systems/xp_points_system.dart';
 import '../game/world/tile.dart';
 import 'stats_service.dart';
@@ -145,41 +143,6 @@ class XPStatsBridge {
     });
 
     return true;
-  }
-
-  // ── On-Chain Purchase Awards ───────────────────────────────────
-
-  /// Award points from an on-chain points pack purchase.
-  void awardPackPurchase(int pointsAmount, int packType, String? txSignature) {
-    xpSystem.addPoints(pointsAmount);
-
-    statsService.addLocalPoints(pointsAmount, 'pack_purchase',
-      metadata: {
-        'pack_type': packType,
-        'points_amount': pointsAmount,
-      },
-      txSignature: txSignature,
-    );
-
-    debugPrint('XPStatsBridge: awarded $pointsAmount pts from pack (tx: $txSignature)');
-  }
-
-  /// Log a booster purchase in the ledger (no points change, just audit trail).
-  void logBoosterPurchase({
-    required int boosterType,
-    required int durationSeconds,
-    required double priceSOL,
-    String? txSignature,
-  }) {
-    // Booster purchases don't change points balance,
-    // but we log them for the audit trail
-    statsService.addLocalPoints(0, 'booster_purchase', metadata: {
-      'booster_type': boosterType,
-      'duration_seconds': durationSeconds,
-      'price_sol': priceSOL,
-    }, txSignature: txSignature);
-
-    debugPrint('XPStatsBridge: logged booster purchase (tx: $txSignature)');
   }
 
   // ── Play Time Tracking ─────────────────────────────────────────

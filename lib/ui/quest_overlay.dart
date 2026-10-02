@@ -3,27 +3,26 @@
 /// All user-facing strings localized via AppLocalizations.
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../l10n/app_localizations.dart';
 import '../game/systems/quest_system.dart';
+import '../solana/miners_pass_service.dart';
+import '../solana/wallet_service.dart';
 
 class QuestOverlay extends StatefulWidget {
   final QuestSystem questSystem;
   final VoidCallback onClose;
 
-  /// Purchase the Weekly Miner's Pass (2x weekly rewards).
-  /// Returns true when the purchase succeeded. Null hides the offer.
-  final bool Function()? onActivateMinersPass;
-
-  /// Cost shown on the Miner's Pass button.
-  final int minersPassCost;
+  /// Sells the Weekly Miner's Pass (2x weekly rewards) for SKR.
+  /// Null hides the offer.
+  final MinersPassService? minersPassService;
 
   const QuestOverlay({
     super.key,
     required this.questSystem,
     required this.onClose,
-    this.onActivateMinersPass,
-    this.minersPassCost = 300,
+    this.minersPassService,
   });
 
   @override
@@ -41,10 +40,26 @@ class _QuestOverlayState extends State<QuestOverlay>
   /// Whether the Discord OAuth flow is in progress.
   bool _discordVerifying = false;
 
+  late final WalletService _wallet;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _wallet = Provider.of<WalletService>(context, listen: false);
+    _restoreMinersPass();
+  }
+
+  /// Load the SKR price, finish any payment interrupted after sending,
+  /// and pick up a pass bought on another device or before a reinstall.
+  Future<void> _restoreMinersPass() async {
+    final service = widget.minersPassService;
+    if (service == null) return;
+    await service.fetchConfig();
+    final weekKey = await service.restore();
+    if (weekKey != null) {
+      await widget.questSystem.activateMinersPassFor(weekKey);
+    }
   }
 
   @override
@@ -288,14 +303,40 @@ class _QuestOverlayState extends State<QuestOverlay>
             ],
           ),
         ),
-        _buildMinersPassBanner(),
+        _buildMinersPassBanner(l10n),
         for (final quest in quests) _buildQuestCard(l10n, quest),
       ],
     );
   }
 
-  Widget _buildMinersPassBanner() {
+  Widget _buildMinersPassBanner(AppLocalizations l10n) {
+    final service = widget.minersPassService;
+    if (service == null) return _minersPassBannerBody(l10n, null);
+
+    // Rebuild on price/purchase progress and on wallet connect.
+    return ListenableBuilder(
+      listenable: Listenable.merge([service, _wallet]),
+      builder: (context, _) => _minersPassBannerBody(l10n, service),
+    );
+  }
+
+  Widget _minersPassBannerBody(
+      AppLocalizations l10n, MinersPassService? service) {
     final active = widget.questSystem.minersPassActive;
+    final busy = service?.isBusy ?? false;
+
+    final String blurb;
+    if (active) {
+      blurb = l10n.minersPassActiveBlurb;
+    } else if (busy) {
+      blurb = switch (service!.status) {
+        PassPurchaseStatus.preparing => l10n.mintStatusPreparing,
+        PassPurchaseStatus.awaitingSignature => l10n.mintStatusApprove,
+        _ => l10n.mintStatusConfirming,
+      };
+    } else {
+      blurb = l10n.minersPassBlurb;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -317,9 +358,7 @@ class _QuestOverlayState extends State<QuestOverlay>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  active
-                      ? "Miner's Pass ACTIVE"
-                      : "Weekly Miner's Pass",
+                  active ? l10n.minersPassActiveTitle : l10n.minersPassTitle,
                   style: TextStyle(
                     color: active ? Colors.amber : Colors.white,
                     fontWeight: FontWeight.bold,
@@ -327,40 +366,91 @@ class _QuestOverlayState extends State<QuestOverlay>
                   ),
                 ),
                 Text(
-                  active
-                      ? '2x rewards on all weekly quests this week!'
-                      : 'Double all weekly quest rewards this week.',
+                  blurb,
                   style:
                       const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
               ],
             ),
           ),
-          if (!active && widget.onActivateMinersPass != null)
-            ElevatedButton(
-              onPressed: () {
-                final ok = widget.onActivateMinersPass!();
-                if (!ok && mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(AppLocalizations.of(context)!
-                          .questsNotEnoughPoints(widget.minersPassCost)),
-                      backgroundColor: Colors.red.shade700,
-                    ),
-                  );
-                }
-                setState(() {});
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber.shade700,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-              ),
-              child: Text('${widget.minersPassCost} pts',
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.bold)),
-            ),
+          if (!active && service != null) _buildMinersPassButton(l10n, service),
         ],
       ),
+    );
+  }
+
+  /// Buy button: connect wallet → price in SKR → progress while buying.
+  Widget _buildMinersPassButton(
+      AppLocalizations l10n, MinersPassService service) {
+    final style = ElevatedButton.styleFrom(
+      backgroundColor: Colors.amber.shade700,
+      disabledBackgroundColor: Colors.grey.shade800,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+    );
+    const labelStyle = TextStyle(fontSize: 12, fontWeight: FontWeight.bold);
+
+    if (service.isBusy) {
+      return ElevatedButton(
+        onPressed: null,
+        style: style,
+        child: const SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+        ),
+      );
+    }
+
+    if (!_wallet.isConnected) {
+      return ElevatedButton(
+        onPressed: () => _wallet.connect(),
+        style: style,
+        child: Text(l10n.connectWallet, style: labelStyle),
+      );
+    }
+
+    final config = service.config;
+    if (!service.isAvailable || config == null) {
+      return ElevatedButton(
+        onPressed: null,
+        style: style,
+        child: Text(l10n.minersPassUnavailable, style: labelStyle),
+      );
+    }
+
+    return ElevatedButton(
+      onPressed: _buyMinersPass,
+      style: style,
+      child: Text('${formatSkr(config.amount)} SKR', style: labelStyle),
+    );
+  }
+
+  Future<void> _buyMinersPass() async {
+    final service = widget.minersPassService;
+    if (service == null) return;
+    final l10n = AppLocalizations.of(context)!;
+
+    final weekKey = await service.purchase();
+    if (weekKey != null) {
+      await widget.questSystem.activateMinersPassFor(weekKey);
+      _showSnack(l10n.minersPassActivated, Colors.green.shade700);
+      return;
+    }
+
+    final message = switch (service.error) {
+      PassPurchaseError.insufficientSkr => l10n.minersPassNotEnoughSkr(
+          formatSkr(service.neededSkr ?? service.config?.amount ?? 0)),
+      PassPurchaseError.unavailable => l10n.minersPassUnavailable,
+      PassPurchaseError.unconfirmed => l10n.minersPassFailed,
+      _ => l10n.purchaseFailed,
+    };
+    _showSnack(message, Colors.red.shade700);
+  }
+
+  void _showSnack(String message, Color color) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: color),
     );
   }
 

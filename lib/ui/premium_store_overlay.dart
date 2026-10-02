@@ -1,19 +1,12 @@
 /// premium_store_overlay.dart
-/// Premium store overlay for points/SOL/NFT purchases.
+/// Premium store overlay: the Diggle Machine NFT mint.
 /// All user-facing strings localized via AppLocalizations.
 ///
+/// The SOL and Points tabs (timed boosters, points packs) were removed
+/// when the Diggle Mart program closed (2026-09-29).
+///
 /// BoostManager API used:
-///   - BoostManager.pointsStoreItems (static)  — points catalog
-///   - BoostManager.premiumStoreItems (static)  — SOL catalog
-///   - boostManager.refreshStoreConfig()        — load on-chain prices
-///   - boostManager.isStoreLoaded               — prices available?
-///   - boostManager.activeBoosters              — active boost list
-///   - boostManager.purchaseWithPoints(item)     — buy with points
-///   - boostManager.purchaseWithSOL(item)        — buy with SOL
-///   - boostManager.getPremiumItemPrice(item)    — on-chain price
-///   - boostManager.getPremiumItemMultiplier(item) — on-chain multiplier
 ///   - boostManager.checkForNFT()               — refresh NFT ownership
-///   - boostManager.hasNFT                      — NFT ownership flag
 ///   - boostManager.nftCollection               — NFTCollectionInfo
 ///
 /// CandyMachineService API used:
@@ -23,11 +16,7 @@
 ///   - candyMachineService.isMinting            — bool
 ///   - candyMachineService.mintStatus           — MintStatus?
 ///   - candyMachineService.mint()               — Future<String?>
-///
-/// Booster model:
-///   .type.displayName, .type.icon, .multiplier, .isFromNFT, .timeRemaining
 
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
@@ -55,53 +44,14 @@ class PremiumStoreOverlay extends StatefulWidget {
   State<PremiumStoreOverlay> createState() => _PremiumStoreOverlayState();
 }
 
-class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _PremiumStoreOverlayState extends State<PremiumStoreOverlay> {
   String? _statusMessage;
-  bool _loadingPrices = true;
-  bool _pricesAvailable = false;
 
   // Multi-mint batch state: each mint is its own transaction + wallet
   // approval, run sequentially with progress on the button.
   int _mintQty = 1;
   int _mintBatchTotal = 0;
   int _mintBatchDone = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _loadPrices();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadPrices() async {
-    setState(() => _loadingPrices = true);
-    try {
-      await widget.boostManager.refreshStoreConfig();
-      setState(() {
-        _pricesAvailable = widget.boostManager.isStoreLoaded;
-        _loadingPrices = false;
-      });
-      if (_pricesAvailable) {
-        _showStatus(AppLocalizations.of(context)!.onChainLoaded);
-      } else {
-        _showStatus(AppLocalizations.of(context)!.usingDefaultPrices);
-      }
-    } catch (e) {
-      setState(() {
-        _pricesAvailable = false;
-        _loadingPrices = false;
-      });
-      _showStatus(AppLocalizations.of(context)!.usingDefaultPrices);
-    }
-  }
 
   void _showStatus(String msg) {
     setState(() => _statusMessage = msg);
@@ -121,21 +71,7 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
           children: [
             _buildHeader(l10n),
             _buildPlayerBar(l10n),
-            _buildActiveBoosts(l10n),
-            _buildTabBar(l10n),
-            Expanded(
-              child: _loadingPrices
-                  ? const Center(
-                  child: CircularProgressIndicator(color: Colors.purple))
-                  : TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildPointsTab(l10n),
-                  _buildSolTab(l10n),
-                  _buildNFTTab(l10n),
-                ],
-              ),
-            ),
+            Expanded(child: _buildNFTSection(l10n)),
             if (_statusMessage != null)
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 12),
@@ -241,278 +177,9 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
     );
   }
 
-  Widget _buildActiveBoosts(AppLocalizations l10n) {
-    return ListenableBuilder(
-      listenable: widget.boostManager,
-      builder: (context, _) {
-        final boosts = widget.boostManager.activeBoosters;
-        if (boosts.isEmpty) return const SizedBox.shrink();
+  // ── NFT Section ─────────────────────────────────────────────────
 
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 8),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.amber.shade900.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.amber.shade700.withOpacity(0.5)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Text('⚡', style: TextStyle(fontSize: 14)),
-                  const SizedBox(width: 6),
-                  Text(l10n.activeBoosts,
-                      style: const TextStyle(
-                          color: Colors.amber,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1)),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: boosts.map((b) {
-                  return Container(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: b.isFromNFT
-                          ? Colors.amber.shade900.withOpacity(0.5)
-                          : Colors.purple.shade900.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(b.type.icon, style: const TextStyle(fontSize: 12)),
-                        const SizedBox(width: 4),
-                        Text(b.type.displayName,
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 11)),
-                        const SizedBox(width: 4),
-                        if (b.isFromNFT)
-                          Text('∞',
-                              style: TextStyle(
-                                  color: Colors.amber.shade300, fontSize: 12))
-                        else
-                          Text(_formatDuration(b.timeRemaining),
-                              style: const TextStyle(
-                                  color: Colors.white54, fontSize: 10)),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildTabBar(AppLocalizations l10n) {
-    return Container(
-      margin: const EdgeInsets.only(top: 8),
-      color: Colors.grey.shade900,
-      child: TabBar(
-        controller: _tabController,
-        indicatorColor: Colors.purple,
-        labelColor: Colors.purple,
-        unselectedLabelColor: Colors.white54,
-        tabs: [
-          Tab(icon: Icon(Icons.diamond, size: 20),
-              text: l10n.pointsTab),
-          Tab(icon: Icon(Icons.currency_exchange, size: 20),
-              text: l10n.solTab),
-          Tab(icon: Icon(Icons.collections, size: 20),
-              text: l10n.nftTab),
-        ],
-      ),
-    );
-  }
-
-  // ── Points Tab ─────────────────────────────────────────────────
-
-  Widget _buildPointsTab(AppLocalizations l10n) {
-    final items = BoostManager.pointsStoreItems;
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: items.length,
-      itemBuilder: (context, i) {
-        final item = items[i];
-        final canBuy = widget.xpSystem.points >= item.priceInPoints;
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade900.withOpacity(0.8),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-                color: canBuy
-                    ? Colors.purple.withOpacity(0.5)
-                    : Colors.grey.shade800),
-          ),
-          child: Row(
-            children: [
-              Text(item.icon, style: const TextStyle(fontSize: 28)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(item.name,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold)),
-                    Text(item.description,
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 12)),
-                  ],
-                ),
-              ),
-              ElevatedButton(
-                onPressed: canBuy ? () => _buyWithPoints(item) : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purple.shade700,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.grey.shade800,
-                ),
-                child: Column(
-                  children: [
-                    Text('💎 ${item.priceInPoints}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 13)),
-                    Text(l10n.buy,
-                        style: const TextStyle(fontSize: 10)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // ── SOL Tab ────────────────────────────────────────────────────
-
-  Widget _buildSolTab(AppLocalizations l10n) {
-    final wallet = context.watch<WalletService>();
-
-    if (!wallet.isConnected) {
-      return _buildWalletRequired(l10n);
-    }
-
-    if (!_pricesAvailable && !widget.boostManager.isStoreLoaded) {
-      return _buildPricesUnavailable(l10n);
-    }
-
-    final items = BoostManager.premiumStoreItems;
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: items.length,
-      itemBuilder: (context, i) {
-        final item = items[i];
-        final price = widget.boostManager.getPremiumItemPrice(item);
-        final multiplier = widget.boostManager.getPremiumItemMultiplier(item);
-        final isPointsPack = item.onChainPackType != null;
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade900.withOpacity(0.8),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.purple.withOpacity(0.5)),
-          ),
-          child: Row(
-            children: [
-              Text(item.icon, style: const TextStyle(fontSize: 28)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(item.name,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold)),
-                    Text(item.description,
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 12)),
-                    if (isPointsPack)
-                      Text(l10n.permanent,
-                          style: const TextStyle(
-                              color: Colors.amber, fontSize: 10)),
-                    // Live multiplier from the on-chain store config —
-                    // the prose description above can't track a remote
-                    // config change, so show what will actually apply.
-                    if (!isPointsPack)
-                      Text('${multiplier}x',
-                          style: TextStyle(
-                              color: Colors.amber.shade300,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-              ElevatedButton(
-                onPressed: widget.boostManager.isLoading
-                    ? null
-                    : () => _buyWithSOL(item),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple.shade700,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.grey.shade800,
-                ),
-                child: widget.boostManager.isLoading
-                    ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white),
-                )
-                    : Column(
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Image.network(
-                          'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
-                          width: 14,
-                          height: 14,
-                          errorBuilder: (_, __, ___) => const Text('◎',
-                              style: TextStyle(fontSize: 14)),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(price.toStringAsFixed(3),
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 13)),
-                      ],
-                    ),
-                    Text(l10n.buy,
-                        style: const TextStyle(fontSize: 10)),
-                  ],
-                ),
-
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // ── NFT Tab ────────────────────────────────────────────────────
-
-  Widget _buildNFTTab(AppLocalizations l10n) {
+  Widget _buildNFTSection(AppLocalizations l10n) {
     final wallet = context.watch<WalletService>();
 
     if (!wallet.isConnected) {
@@ -622,7 +289,6 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
                 else
                   _buildMintButton(l10n),
               ],
-              // ── ADD THIS BLOCK ──
               if (!widget.candyMachineService.hasNFT) ...[
                 const SizedBox(height: 12),
                 SizedBox(
@@ -940,40 +606,6 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
     );
   }
 
-  Widget _buildPricesUnavailable(AppLocalizations l10n) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.cloud_off, color: Colors.orange, size: 48),
-            const SizedBox(height: 16),
-            Text(l10n.storePricesUnavailable,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text(l10n.storePricesUnavailableMessage,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white54, fontSize: 13)),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _loadPrices,
-              icon: const Icon(Icons.refresh),
-              label: Text(l10n.retry),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange.shade700,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildCloseButton(AppLocalizations l10n) {
     return Container(
       width: double.infinity,
@@ -992,36 +624,6 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
   }
 
   // ── Actions ──────────────────────────────────────────────────
-
-  Future<void> _buyWithPoints(StoreItem item) async {
-    final l10n = AppLocalizations.of(context)!;
-    try {
-      final success = widget.boostManager.purchaseWithPoints(item);
-      if (success) {
-        _showStatus(l10n.activated(item.name));
-      } else {
-        _showStatus(l10n.notEnoughPoints);
-      }
-    } catch (e) {
-      _showStatus(l10n.purchaseFailed);
-    }
-  }
-
-  Future<void> _buyWithSOL(StoreItem item) async {
-    final l10n = AppLocalizations.of(context)!;
-    try {
-      final tx = await widget.boostManager.purchaseWithSOL(item);
-      if (tx != null) {
-        _showStatus(l10n.purchasedTx(item.name, tx.substring(0, 8)));
-      } else {
-        // Check if BoostManager set an error message
-        final err = widget.boostManager.error;
-        _showStatus(err ?? l10n.purchaseFailed);
-      }
-    } catch (e) {
-      _showStatus(l10n.purchaseFailed);
-    }
-  }
 
   Future<void> _checkNFTOwnership() async {
     final l10n = AppLocalizations.of(context)!;
@@ -1077,11 +679,5 @@ class _PremiumStoreOverlayState extends State<PremiumStoreOverlay>
         });
       }
     }
-  }
-
-  String _formatDuration(Duration d) {
-    if (d.inHours > 0) return '${d.inHours}h ${d.inMinutes % 60}m';
-    if (d.inMinutes > 0) return '${d.inMinutes}m';
-    return '${d.inSeconds}s';
   }
 }

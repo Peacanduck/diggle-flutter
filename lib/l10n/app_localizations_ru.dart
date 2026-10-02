@@ -676,12 +676,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get premiumStore => 'ПРЕМИУМ-МАГАЗИН';
 
   @override
-  String get onChainLoaded => 'Цены on-chain загружены';
-
-  @override
-  String get usingDefaultPrices => 'Используются стандартные цены';
-
-  @override
   String get level => 'Уровень';
 
   @override
@@ -691,52 +685,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get points => 'Очки';
 
   @override
-  String get activeBoosts => 'АКТИВНЫЕ БУСТЫ';
-
-  @override
-  String get permanent => 'Постоянный';
-
-  @override
-  String get pointsTab => 'Очки';
-
-  @override
-  String get solTab => 'SOL';
-
-  @override
-  String get nftTab => 'NFT';
-
-  @override
   String get walletRequired => 'Требуется кошелёк';
 
   @override
   String get walletRequiredMessage =>
       'Подключите кошелёк Solana для доступа к премиум-предметам.\nВсе покупки — транзакции on-chain.';
-
-  @override
-  String get storePricesUnavailable => 'Цены недоступны';
-
-  @override
-  String get storePricesUnavailableMessage =>
-      'Не удалось загрузить цены on-chain.\nПроверьте подключение и попробуйте снова.';
-
-  @override
-  String get retry => 'ПОВТОРИТЬ';
-
-  @override
-  String get buy => 'КУПИТЬ';
-
-  @override
-  String get notEnoughPoints => 'Недостаточно очков!';
-
-  @override
-  String activated(String item) {
-    return '$item активирован!';
-  }
-
-  @override
-  String purchasedTx(String item, String tx) {
-    return '$item куплен! TX: $tx...';
-  }
 
   @override
   String get purchaseFailed => 'Покупка не удалась';
@@ -1134,9 +1087,34 @@ class AppLocalizationsRu extends AppLocalizations {
       'Большие испытания — большие награды. Сброс каждый понедельник (UTC).';
 
   @override
-  String questsNotEnoughPoints(int cost) {
-    return 'Недостаточно очков (нужно $cost). Купите набор очков в магазине!';
+  String get minersPassTitle => 'Недельный пропуск шахтёра';
+
+  @override
+  String get minersPassActiveTitle => 'Пропуск шахтёра АКТИВЕН';
+
+  @override
+  String get minersPassBlurb =>
+      'Удваивает награды за все недельные задания на этой неделе.';
+
+  @override
+  String get minersPassActiveBlurb =>
+      'Награды x2 за все недельные задания на этой неделе!';
+
+  @override
+  String get minersPassUnavailable => 'Недоступно';
+
+  @override
+  String get minersPassActivated =>
+      'Пропуск шахтёра активен: недельные награды x2!';
+
+  @override
+  String minersPassNotEnoughSkr(String amount) {
+    return 'Недостаточно SKR (нужно $amount).';
   }
+
+  @override
+  String get minersPassFailed =>
+      'Платёж не подтверждён. Если SKR списались с кошелька, снова откройте Задания, чтобы восстановить пропуск.';
 
   @override
   String get questJoinDiscordServer => 'Вступить в Discord-сервер';

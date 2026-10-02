@@ -1,6 +1,6 @@
 # Diggle
 
-A 2D mining game inspired by Motherload, built with Flutter and Flame engine, with Solana blockchain integration for an on-chain premium store.
+A 2D mining game inspired by Motherload, built with Flutter and Flame engine, with Solana integration: a Diggle Machine NFT mint and a weekly Miner's Pass paid in SKR (the Seeker token).
 
 ## Tech Stack
 
@@ -43,10 +43,11 @@ lib/
 │       ├── gear_system.dart          # NFT trait parsing + equip + stat bonuses
 │       ├── gear_sprites.dart         # GENERATED gear sprite-sheet lookup (see below)
 │       ├── xp_points_system.dart     # XP leveling + points currency
-│       └── boost_manager.dart        # On-chain boost purchases, NFT detection
+│       └── boost_manager.dart        # Holder boosts (Diggle NFT × Seeker Genesis Token)
 ├── solana/
 │   ├── wallet_service.dart           # MWA wallet connection, signing, cluster switching
-│   └── diggle_mart_client.dart       # On-chain program client (PDA, tx building, deserialization)
+│   ├── candy_machine_service.dart    # NFT mint (candy-machine edge fn) + ownership scan
+│   └── miners_pass_service.dart      # Miner's Pass paid in SKR (miners-pass edge fn)
 ├── services/
 │   ├── supabase_service.dart         # Supabase client init, auth, core DB operations
 │   ├── player_service.dart           # Player profile CRUD, wallet linking
@@ -59,94 +60,56 @@ lib/
     ├── main_menu.dart                # Title screen with wallet connect
     ├── hud_overlay.dart              # In-game HUD (fuel, cash, depth)
     ├── shop_overlay.dart             # In-game shop (services, upgrades, items)
-    └── premium_store_overlay.dart    # SOL premium store (boosters, points packs, NFTs)
+    └── premium_store_overlay.dart    # Premium store: Diggle Machine NFT mint
 ```
 
-## On-Chain Program: Diggle Mart
+## Diggle Mart (closed 2026-09-29)
 
-**Program ID:** `6CQzNRRyMYox8G3oWLPJ8MwXthznqq6bMREdUwqKDNKA`
-**Framework:** Anchor
-**IDL:** `target/idl/diggle_mart.json` (TypeScript types in `diggle_mart.ts`)
+The Anchor program `CHY3Z9P6icJiB4zDjoemhWWR71yh11Fhz8dhZHaxpsV4` (same ID on
+mainnet and devnet; `6CQz…` in its Anchor.toml is only the localnet ID) sold
+timed XP/Points/Combo boosters and points packs for SOL. It is being closed and
+the app no longer calls it: the premium store's SOL and Points tabs, timed
+boosters and `diggle_mart_client.dart` are gone.
 
-### Instructions
+Source + admin scripts live in WSL: `/root/projects/diggle_store/diggle_mart`
+(program) and `/root/projects/diggle_store/scripts` (`store_admin.js`,
+`devnet_skr_token.sh`, README). Payments went to the treasury PDA
+`6VgbEz6iebS9ptiAp4w8q5NL3W7aS82HhN7MrTwu7Fch`, not a personal wallet.
+Mainnet store authority = program upgrade authority = the CLI keypair
+`6tXw…HUR9`; the devnet store authority is a different wallet (`9MNv…yY9U`).
 
-| Instruction | Args | Description |
-|---|---|---|
-| `initializeStore` | `config: StoreConfig` | Admin: creates Store + Treasury PDAs |
-| `updateStore` | `config: StoreConfig` | Admin: updates pricing/multipliers |
-| `withdrawTreasury` | `amount: u64` | Admin: withdraw SOL from treasury |
-| `purchaseBooster` | `boosterType: u8, durationSeconds: i64` | Buy timed XP/Points/Combo boost |
-| `purchasePointsPack` | `packType: u8` | Buy points (0=small, 1=large) |
+Shutdown order (mainnet — release builds use mainnet; writes simulate unless `--send`):
+1. `node store_admin.js deactivate --cluster mainnet --send` — updateStore with the
+   current config and `isActive = false`; old clients then fail with `storeInactive`
+   (6005), no SOL taken
+2. `node store_admin.js withdraw --cluster mainnet --send` — FULL treasury balance.
+   Only the program can move SOL out of the treasury PDA; after close it is stranded
+3. `solana program close CHY3Z9P6icJiB4zDjoemhWWR71yh11Fhz8dhZHaxpsV4 -u mainnet-beta --bypass-warning`
+   — returns the program-data rent (~1.74 SOL); the ID can never be reused
+4. Apply `supabase/migrations/20260929_retire_store_sources.sql`
 
-
-### Account Types
-
-| Account | Discriminator | Seeds |
-|---|---|---|
-| `Store` | `[130, 48, 247, 244, 182, 191, 30, 26]` | `["store"]` |
-| `Treasury` (PDA, no data) | — | `["treasury"]` |
-| `BoosterAccount` | `[76, 202, 210, 44, 136, 61, 228, 19]` | `["booster", buyer_pubkey, booster_count_u64_le]` |
-
-
-### Instruction Discriminators
-
-| Instruction | Discriminator |
-|---|---|
-| `purchaseBooster` | `[251, 49, 11, 156, 68, 194, 21, 140]` |
-| `purchasePointsPack` | `[125, 42, 47, 199, 26, 93, 227, 99]` |
-
-
-### StoreConfig Fields
-
-All prices in lamports, multipliers in basis points (15000 = 1.5x, 20000 = 2.0x):
-
-```
-xpBoostPricePerHour: u64
-pointsBoostPricePerHour: u64
-comboBoostPricePerHour: u64
-xpBoostMultiplier: u16
-pointsBoostMultiplier: u16
-comboBoostMultiplier: u16
-pointsPackSmallPrice: u64
-pointsPackSmallAmount: u32
-pointsPackLargePrice: u64
-pointsPackLargeAmount: u32
-isActive: bool
-```
-
-### Booster Types
-
-- `0` = XP Boost
-- `1` = Points Boost
-- `2` = Combo Boost (both XP + Points)
-
-### Error Codes
-
-| Code | Name |
-|---|---|
-| 6000 | `unauthorized` |
-| 6001 | `invalidBoosterType` |
-| 6002 | `storeInactive` |
-| 6003 | `insufficientPayment` |
-| 6004 | `invalidPackType` |
-| 6005 | `collectionSoldOut` |
-| 6006 | `mintingInactive` |
-| 6007 | `arithmeticOverflow` |
-| 6008 | `invalidDuration` |
+Historical `pack_purchase` / `booster_purchase` ledger rows remain; `award_points`
+v4 refuses those sources from clients.
 
 ## Solana Integration Architecture
 
-### Transaction Flow (Purchase)
+### Transaction Flow (Miner's Pass, paid in SKR)
+
+No on-chain program: a plain SPL `transferChecked` of SKR, built and verified
+server-side by the `miners-pass` edge function.
 
 ```
-User taps BUY
-  → boost_manager.purchaseWithSOL(item)
-    → diggle_mart_client.buildPurchaseBoosterTx() — builds unsigned tx with Anchor discriminator + Borsh args
+User taps "<price> SKR" (Quests → Weekly)
+  → miners_pass_service.purchase()
+    → edge fn /build-tx — checks price + SKR balance, inserts a pending order, builds a v0 tx:
+        compute budget + transferChecked(buyer ATA → treasury ATA) + memo "diggle:miners_pass:<orderId>"
     → wallet_service.signAndSendTransaction(txBytes)
       → wallet_service.signTransaction(txBytes) — MWA session: reauthorize → signTransactions
-      → rpcClient.sendTransaction(base64EncodedSignedTx) — submit via RPC with retry (network recovery after app switch)
-    → diggle_mart_client.confirmTransaction(signature) — poll getSignatureStatuses for 30s
-    → Apply effects locally (add booster or award points)
+      → rpcClient.sendTransaction(...) — submit via RPC with retry (network recovery after app switch)
+    → persist {orderId, signature} — restore() finishes it if the app dies before verification
+    → poll edge fn /confirm — getParsedTransaction; checks mint, destination, amount, payer, memo;
+        fulfill_miners_pass_order() records the pass for the current ISO week
+    → questSystem.activateMinersPassFor(weekKey)
 ```
 
 ### MWA (Mobile Wallet Adapter) Pattern
@@ -240,27 +203,47 @@ in `assets/images/gear/` are per-part). Reveal set:
 ### XP & Points System (`xp_points_system.dart`)
 
 - XP drives leveling (exponential curve)
-- Points are spendable currency for in-game shop items
-- Both can be boosted by on-chain multipliers
+- Points are spendable currency for in-game shop items and Emergency Recovery;
+  they are only earned through play (points packs were retired with the Diggle Mart)
+- Both are boosted by holder multipliers (Diggle NFT, Seeker Genesis Token)
 - API: `addXP()`, `addPoints()`, `spendPoints()`, `setXPBoost()`, `setPointsBoost()`
 
 ### Boost Manager (`boost_manager.dart`)
 
 - Extends `ChangeNotifier` for UI reactivity
-- Manages both local (points-bought) and on-chain (SOL-bought) boosters
-- Fetches store config on init and wallet connect
-- `_fetchStoreConfig(silent: true)` during purchases to avoid UI flicker
-- Syncs active on-chain boosters via `getProgramAccounts` with memcmp filters
-- 30-second timer checks for expired boosters
-- `refreshStoreConfig()` public method for manual retry
+- Holder boosts only: Diggle NFT (via `CandyMachineService`) × Seeker Genesis Token (1.05x)
+- Keeps `nftCollection` (supply, mint price) in sync with the candy machine
+- Pushes the holder multiplier into `XPPointsSystem.setNFT*Multiplier`
+- Timed boosters were removed with the Diggle Mart; `XPPointsSystem.setXPBoost` /
+  `setPointsBoost` remain but have no caller
 
 ### Premium Store UI (`premium_store_overlay.dart`)
 
-- Green dot = on-chain prices loaded, Orange dot = using defaults
-- Refresh button when showing defaults
-- Cyan highlight for on-chain boosters, green for local
-- Loading spinner during transactions
-- Displays transaction signature on success
+- Level / XP / Points bar, then the Diggle Machine NFT mint section (no tabs)
+- Wallet-required view when no wallet is connected
+- Multi-mint (1–3 per batch, capped by the guard's mint limit) with per-mint progress
+
+### Miner's Pass (SKR) — `miners_pass_service.dart` + `supabase/edge/miners-pass/`
+
+- Weekly pass: 2x weekly quest rewards. Costs SKR (mint
+  `SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3`, classic SPL Token, 6 decimals),
+  paid into the treasury wallet. Bought from the Weekly tab of the quest screen.
+- Price: `skr_prices` row (`network`, `item = 'miners_pass'`, `amount_base`, `active`).
+  Inactive → the button shows "Unavailable". Change it in SQL; no release needed.
+- Records: `miners_pass_orders` (audit trail, unique `tx_signature`) and
+  `miners_passes` (one per player / network / ISO week). Service-role only.
+- Secrets — mainnet: `SOLANA_RPC_URL`, `SKR_TREASURY_WALLET` (its SKR token account
+  must exist), optional `SKR_MINT`. Devnet: `DEVNET_SKR_MINT` (a dummy 6-decimal
+  mint), `DEVNET_SKR_TREASURY_WALLET`, optional `DEVNET_SOLANA_RPC_URL`.
+- `miners-pass` and `miners-pass-devnet` share an identical `index.ts`; only
+  `config.ts` differs. Devnet passes are stored with `network = 'devnet'` and
+  never count on mainnet.
+- The quest screen calls `restore()` on open: it finishes a payment interrupted
+  after sending and picks up a pass bought on another device.
+- Weekly quest reward claims are still client-trusted; the server record gives
+  restore and an audit trail, not enforcement.
+- SQL tests: `supabase/tests/store_fixture.sql` + `store_tests.sql` (see
+  `supabase/tests/README.md`).
 
 ## Development Notes
 
@@ -275,8 +258,9 @@ flutter run  # Android device with wallet app installed
 
 - Default cluster is devnet (`https://api.devnet.solana.com`)
 - Phantom wallet has best devnet MWA support
-- Store must be initialized on-chain via `initializeStore` before purchases work
-- Airdrop devnet SOL to test wallet for purchases
+- The Miner's Pass on devnet needs a dummy SKR mint and the `miners-pass-devnet`
+  function (see the Miner's Pass section)
+- Airdrop devnet SOL to the test wallet for fees
 
 ### Cluster Switching
 
@@ -414,9 +398,9 @@ create policy "ledger_read_own" on points_ledger
 | `mining` | + | Points earned from mining ores |
 | `level_up` | + | Bonus points on level up |
 | `achievement` | + | Achievement/milestone rewards |
-| `pack_purchase` | + | On-chain points pack (SOL → points) |
+| `pack_purchase` | + | RETIRED: on-chain points pack (Diggle Mart). Clients refused since `award_points` v4 |
 | `shop_spend` | − | Spent in in-game shop |
-| `booster_purchase` | − | Spent on local booster |
+| `booster_purchase` | 0 | RETIRED: on-chain booster audit row (Diggle Mart). Clients refused since `award_points` v4 |
 | `spl_redemption` | − | Redeemed for SPL tokens (future) |
 
 ### Auth Strategy
@@ -485,7 +469,8 @@ Each tile needs ~2 bytes (type + mined flag), so a 64×128 map is ~16KB raw, ~2-
 
 ### Supabase Edge Functions (Future)
 
-Located in `supabase/functions/`:
+Deployed functions live in `supabase/edge/` (`candy-machine`, `miners-pass`,
+`wallet-auth`, `validate-social-quest`, …). Planned:
 
 | Function | Purpose |
 |---|---|
@@ -507,7 +492,7 @@ TREASURY_KEYPAIR=<base58-encoded>            # For SPL minting (Edge Functions o
 The `XPStatsBridge` sits between game systems and Supabase:
 
 ```
-Game Code (drill, shop, boost_manager)
+Game Code (drill, shop, quests)
   ↓ calls bridge methods
 XPStatsBridge
   ├→ XPPointsSystem (instant local UI update)
@@ -528,7 +513,7 @@ XPStatsBridge
 5. `PointsLedgerService` — Provider
 6. `GameLifecycleManager` — Provider (orchestrator)
 
-`BoostManager` is NOT in Provider — it's created by the game or the screen that needs it, and receives `XPStatsBridge` via `attachStatsBridge()`.
+`BoostManager` is NOT in Provider — `GameScreen` creates it, and it only handles holder multipliers (it no longer touches `XPStatsBridge`). `CandyMachineService` and `MinersPassService` are ChangeNotifierProviders next to `WalletService`.
 
 ### SPL Token Redemption (Future Roadmap)
 
@@ -545,10 +530,9 @@ The points → SPL token pipeline will work as follows:
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| "Using default prices" in store | Store PDA not found or fetch failed | Check if store is initialized on-chain; check debug logs for PDA address |
 | `SocketException` after wallet signing | Android network drops during app switch | Built-in retry with 1-3s delays handles this |
 | `type 'int' is not a subtype of 'String'` | Calling `base64Decode` on already-decoded bytes | Use `Uint8List.fromList(binaryAccountData.data)` |
 | `ambiguous_import` for `Instruction` | Both `dto.dart` and `encoder.dart` export it | Add `hide Instruction` to `dto.dart` and `solana.dart` imports |
 | `undefined_method 'writableSigner'` | Wrong API name | Use `AccountMeta.writeable(pubKey: ..., isSigner: true)` |
 | Wallet opens but no transaction prompt | Malformed transaction bytes | Verify `SignedTx.toByteArray()` serialization; check byte count in logs |
-| Store prices not updating UI | Missing `notifyListeners()` | `_fetchStoreConfig()` calls `notifyListeners()` after successful load |
+| Miner's Pass button says "Unavailable" | `skr_prices` row inactive, treasury SKR account missing, or no Supabase session | Check `skr_prices`, create the treasury's SKR token account, check the `miners-pass` function logs |

@@ -379,42 +379,11 @@
     }
   },
   "premiumStore": "BOUTIQUE PREMIUM",
-  "onChainLoaded": "Prix on-chain chargés",
-  "usingDefaultPrices": "Utilisation des prix par défaut",
   "level": "Niveau",
   "xp": "XP",
   "points": "Points",
-  "activeBoosts": "BOOSTS ACTIFS",
-  "permanent": "Permanent",
-  "pointsTab": "Points",
-  "solTab": "SOL",
-  "nftTab": "NFT",
   "walletRequired": "Wallet requis",
   "walletRequiredMessage": "Connectez votre wallet Solana pour accéder aux objets premium.\nTous les achats sont des transactions on-chain.",
-  "storePricesUnavailable": "Prix indisponibles",
-  "storePricesUnavailableMessage": "Impossible de charger les prix on-chain.\nVeuillez vérifier votre connexion et réessayer.",
-  "retry": "RÉESSAYER",
-  "buy": "ACHETER",
-  "notEnoughPoints": "Pas assez de points !",
-  "activated": "{item} activé !",
-  "@activated": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      }
-    }
-  },
-  "purchasedTx": "{item} acheté ! TX : {tx}...",
-  "@purchasedTx": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "tx": {
-        "type": "String"
-      }
-    }
-  },
   "purchaseFailed": "Achat échoué",
   "closeStore": "FERMER LA BOUTIQUE",
   "diggleDrillMachine": "FOREUSE DIGGLE",
@@ -633,7 +602,14 @@
   "airdrop": "Airdrop",
   "questsWeeklyTab": "Hebdomadaires",
   "questsWeeklyInfo": "Grands défis, grandes récompenses. Réinitialisé chaque lundi (UTC).",
-  "questsNotEnoughPoints": "Points insuffisants ({cost} requis). Prenez un pack de points dans la boutique !",
+  "minersPassTitle": "Pass Mineur hebdomadaire",
+  "minersPassActiveTitle": "Pass Mineur ACTIF",
+  "minersPassBlurb": "Double toutes les récompenses des quêtes hebdomadaires cette semaine.",
+  "minersPassActiveBlurb": "Récompenses x2 sur toutes les quêtes hebdomadaires cette semaine !",
+  "minersPassUnavailable": "Indisponible",
+  "minersPassActivated": "Pass Mineur actif : récompenses hebdomadaires x2 !",
+  "minersPassNotEnoughSkr": "SKR insuffisant ({amount} requis).",
+  "minersPassFailed": "Paiement non confirmé. Si des SKR ont quitté votre wallet, rouvrez les Quêtes pour récupérer votre pass.",
   "questJoinDiscordServer": "Rejoindre le serveur Discord",
   "questCheckingMembership": "Vérification de l'adhésion...",
   "questVerifyMembership": "Vérifier l'adhésion",

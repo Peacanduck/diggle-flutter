@@ -77,8 +77,7 @@ extension ItemTypeExtension on ItemType {
   }
 
   /// Points price (dual pricing for cash items; the only price for
-  /// points-exclusive items). Points packs in the premium store are
-  /// what make this a real SOL sink.
+  /// points-exclusive items).
   int get pointsPrice {
     switch (this) {
       case ItemType.backupFuel:

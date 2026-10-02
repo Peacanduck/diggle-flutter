@@ -162,9 +162,6 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
       statsService: statsService,
     );
 
-    // Attach bridge to boost manager if it exists
-    boostManager?.attachStatsBridge(statsBridge!);
-
     // Restore server state to local XP system
     final stats = statsService.stats;
     if (stats.xp > 0 || stats.points > 0) {
@@ -958,23 +955,6 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
     fuelSystem.resume();
     overlays.remove('gameOver');
     if (!overlays.isActive('hud')) overlays.add('hud');
-    return true;
-  }
-
-  // ── Miner's Pass (weekly premium quest track) ──────────────────
-
-  static const int minersPassCost = 300;
-
-  /// Activate the Weekly Miner's Pass: 2x weekly quest rewards for the
-  /// current ISO week. The recurring points sink that makes points
-  /// packs worth buying.
-  bool activateMinersPass() {
-    if (questSystem.minersPassActive) return false;
-    final ok = statsBridge?.spendPoints(minersPassCost,
-            itemName: 'miners_pass') ??
-        xpPointsSystem.spendPoints(minersPassCost);
-    if (!ok) return false;
-    questSystem.activateMinersPass();
     return true;
   }
 

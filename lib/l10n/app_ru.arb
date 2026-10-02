@@ -379,42 +379,11 @@
     }
   },
   "premiumStore": "ПРЕМИУМ-МАГАЗИН",
-  "onChainLoaded": "Цены on-chain загружены",
-  "usingDefaultPrices": "Используются стандартные цены",
   "level": "Уровень",
   "xp": "XP",
   "points": "Очки",
-  "activeBoosts": "АКТИВНЫЕ БУСТЫ",
-  "permanent": "Постоянный",
-  "pointsTab": "Очки",
-  "solTab": "SOL",
-  "nftTab": "NFT",
   "walletRequired": "Требуется кошелёк",
   "walletRequiredMessage": "Подключите кошелёк Solana для доступа к премиум-предметам.\nВсе покупки — транзакции on-chain.",
-  "storePricesUnavailable": "Цены недоступны",
-  "storePricesUnavailableMessage": "Не удалось загрузить цены on-chain.\nПроверьте подключение и попробуйте снова.",
-  "retry": "ПОВТОРИТЬ",
-  "buy": "КУПИТЬ",
-  "notEnoughPoints": "Недостаточно очков!",
-  "activated": "{item} активирован!",
-  "@activated": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      }
-    }
-  },
-  "purchasedTx": "{item} куплен! TX: {tx}...",
-  "@purchasedTx": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "tx": {
-        "type": "String"
-      }
-    }
-  },
   "purchaseFailed": "Покупка не удалась",
   "closeStore": "ЗАКРЫТЬ МАГАЗИН",
   "diggleDrillMachine": "БУР DIGGLE",
@@ -633,7 +602,14 @@
   "airdrop": "Аирдроп",
   "questsWeeklyTab": "Недельные",
   "questsWeeklyInfo": "Большие испытания — большие награды. Сброс каждый понедельник (UTC).",
-  "questsNotEnoughPoints": "Недостаточно очков (нужно {cost}). Купите набор очков в магазине!",
+  "minersPassTitle": "Недельный пропуск шахтёра",
+  "minersPassActiveTitle": "Пропуск шахтёра АКТИВЕН",
+  "minersPassBlurb": "Удваивает награды за все недельные задания на этой неделе.",
+  "minersPassActiveBlurb": "Награды x2 за все недельные задания на этой неделе!",
+  "minersPassUnavailable": "Недоступно",
+  "minersPassActivated": "Пропуск шахтёра активен: недельные награды x2!",
+  "minersPassNotEnoughSkr": "Недостаточно SKR (нужно {amount}).",
+  "minersPassFailed": "Платёж не подтверждён. Если SKR списались с кошелька, снова откройте Задания, чтобы восстановить пропуск.",
   "questJoinDiscordServer": "Вступить в Discord-сервер",
   "questCheckingMembership": "Проверяем участие...",
   "questVerifyMembership": "Проверить участие",

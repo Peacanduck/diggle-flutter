@@ -46,6 +46,7 @@ import 'services/supabase_service.dart';
 import 'services/world_save_service.dart';
 import 'solana/wallet_service.dart';
 import 'solana/candy_machine_service.dart';
+import 'solana/miners_pass_service.dart';
 import 'services/update_service.dart';
 import 'services/vfx_settings.dart';
 import 'services/intro_service.dart';
@@ -100,6 +101,9 @@ void main() async {
       defaultValue: 'sb_publishable_3Lt47dggCSWufo6kLq6fzg_B7yvx0Lm',
     ),
   );
+
+  // Weekly Miner's Pass, paid in SKR via the miners-pass edge function
+  final minersPassService = MinersPassService(wallet: walletService);
 
   // ── Create Backend Services ──────────────────────────────────
   final statsService = StatsService();
@@ -160,6 +164,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider.value(value: walletService),
         ChangeNotifierProvider.value(value: candyMachineService),
+        ChangeNotifierProvider.value(value: minersPassService),
         ChangeNotifierProvider.value(value: localeProvider),
         ChangeNotifierProvider.value(value: vfxSettings),
         ChangeNotifierProvider.value(value: prestigeSystem),
@@ -800,9 +805,7 @@ class _GameScreenState extends State<GameScreen>
           'quests': (context, game) => QuestOverlay(
             questSystem: (game as DiggleGame).questSystem,
             onClose: () => (game as DiggleGame).closeQuests(),
-            onActivateMinersPass: () =>
-                (game as DiggleGame).activateMinersPass(),
-            minersPassCost: DiggleGame.minersPassCost,
+            minersPassService: context.read<MinersPassService>(),
           ),
           'collection': (context, game) {
             final g = game as DiggleGame;

@@ -664,12 +664,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get premiumStore => '프리미엄 상점';
 
   @override
-  String get onChainLoaded => '온체인 가격 로드됨';
-
-  @override
-  String get usingDefaultPrices => '기본 가격 사용 중';
-
-  @override
   String get level => '레벨';
 
   @override
@@ -679,52 +673,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get points => '포인트';
 
   @override
-  String get activeBoosts => '활성 부스트';
-
-  @override
-  String get permanent => '영구';
-
-  @override
-  String get pointsTab => '포인트';
-
-  @override
-  String get solTab => 'SOL';
-
-  @override
-  String get nftTab => 'NFT';
-
-  @override
   String get walletRequired => '지갑 필요';
 
   @override
   String get walletRequiredMessage =>
       '프리미엄 아이템에 접근하려면 Solana 지갑을 연결하세요.\n모든 구매는 온체인 거래입니다.';
-
-  @override
-  String get storePricesUnavailable => '상점 가격 불가';
-
-  @override
-  String get storePricesUnavailableMessage =>
-      '온체인 가격을 불러올 수 없습니다.\n연결을 확인하고 다시 시도하세요.';
-
-  @override
-  String get retry => '재시도';
-
-  @override
-  String get buy => '구매';
-
-  @override
-  String get notEnoughPoints => '포인트가 부족합니다!';
-
-  @override
-  String activated(String item) {
-    return '$item 활성화!';
-  }
-
-  @override
-  String purchasedTx(String item, String tx) {
-    return '$item 구매 완료! TX: $tx...';
-  }
 
   @override
   String get purchaseFailed => '구매 실패';
@@ -1109,9 +1062,31 @@ class AppLocalizationsKo extends AppLocalizations {
   String get questsWeeklyInfo => '큰 도전, 큰 보상. 매주 월요일(UTC)에 초기화됩니다.';
 
   @override
-  String questsNotEnoughPoints(int cost) {
-    return '포인트가 부족합니다($cost 필요). 상점에서 포인트 팩을 구매하세요!';
+  String get minersPassTitle => '주간 광부 패스';
+
+  @override
+  String get minersPassActiveTitle => '광부 패스 활성화됨';
+
+  @override
+  String get minersPassBlurb => '이번 주 주간 퀘스트 보상을 모두 2배로.';
+
+  @override
+  String get minersPassActiveBlurb => '이번 주 모든 주간 퀘스트 보상 2배!';
+
+  @override
+  String get minersPassUnavailable => '이용 불가';
+
+  @override
+  String get minersPassActivated => '광부 패스 활성화: 주간 보상 2배!';
+
+  @override
+  String minersPassNotEnoughSkr(String amount) {
+    return 'SKR이 부족합니다($amount 필요).';
   }
+
+  @override
+  String get minersPassFailed =>
+      '결제가 확인되지 않았습니다. 지갑에서 SKR이 빠져나갔다면 퀘스트 화면을 다시 열어 패스를 복원하세요.';
 
   @override
   String get questJoinDiscordServer => 'Discord 서버 참여';

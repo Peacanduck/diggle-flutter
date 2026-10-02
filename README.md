@@ -4,7 +4,7 @@
 
 Diggle is a procedural 2D mining game built with [Flutter](https://flutter.dev/) and the [Flame Engine](https://flame-engine.org/). Players pilot a drill unit deep into the earth, managing fuel, hull integrity, and cargo space while collecting valuable ores ranging from Coal to Diamond.
 
-The game features **Solana Blockchain integration** via the Mobile Wallet Adapter (MWA), enabling on-chain purchases of boosters and utility from NFT cosmetics.
+The game features **Solana Blockchain integration** via the Mobile Wallet Adapter (MWA), powering the Diggle Machine NFT mint (gear with real in-game stat bonuses) and a weekly Miner's Pass paid in SKR, the Seeker token.
 
 ## 🎮 Game Features
 
@@ -33,7 +33,8 @@ Diggle integrates with the Solana blockchain using `solana_mobile_client`.
 
 * **Wallet Connection:** Supports connection via MWA-compatible apps like Phantom and Solflare.
 * **Network Switching:** Built-in toggle between **Mainnet-Beta** and **Devnet**.
-* **Premium Store:** UI implemented for purchasing XP and Point boosters using SOL.
+* **Premium Store:** Mint Diggle Machine NFTs from the candy machine via MWA.
+* **Miner's Pass:** A weekly pass (2x weekly quest rewards) paid in SKR — a plain SPL token transfer, built and verified by the `miners-pass` Supabase edge function (no custom on-chain program).
 * **NFT Gear:** Diggle Machine NFTs (10k collection, 5 gear slots × 5 rarities) equip in the Hangar for real stat bonuses — and the drill **visually renders the equipped parts in-game** as layered pixel sprites (`assets/images/DiggleGearSpriteSheet.png`), with per-part preview art on the trait cards. Unrevealed NFTs ("sealed crates") keep a flat XP/Points boost.
 
 ## 🛠️ Tech Stack
@@ -55,7 +56,7 @@ lib/
 │   └── diggle_game.dart # Main FlameGame loop
 ├── solana/
 │   ├── candy_machine_service.dart # Nft minting
-│   ├── diggle_mart_client.dart # Client for the Solana store 
+│   ├── miners_pass_service.dart # Miner's Pass paid in SKR
 │   └── wallet_service.dart # Wallet connection and MWA logic
 ├── ui/                 # Flutter overlays (HUD, Shop, Main Menu)
 └── main.dart           # Entry point and app wiring

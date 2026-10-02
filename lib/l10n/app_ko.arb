@@ -379,42 +379,11 @@
     }
   },
   "premiumStore": "프리미엄 상점",
-  "onChainLoaded": "온체인 가격 로드됨",
-  "usingDefaultPrices": "기본 가격 사용 중",
   "level": "레벨",
   "xp": "XP",
   "points": "포인트",
-  "activeBoosts": "활성 부스트",
-  "permanent": "영구",
-  "pointsTab": "포인트",
-  "solTab": "SOL",
-  "nftTab": "NFT",
   "walletRequired": "지갑 필요",
   "walletRequiredMessage": "프리미엄 아이템에 접근하려면 Solana 지갑을 연결하세요.\n모든 구매는 온체인 거래입니다.",
-  "storePricesUnavailable": "상점 가격 불가",
-  "storePricesUnavailableMessage": "온체인 가격을 불러올 수 없습니다.\n연결을 확인하고 다시 시도하세요.",
-  "retry": "재시도",
-  "buy": "구매",
-  "notEnoughPoints": "포인트가 부족합니다!",
-  "activated": "{item} 활성화!",
-  "@activated": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      }
-    }
-  },
-  "purchasedTx": "{item} 구매 완료! TX: {tx}...",
-  "@purchasedTx": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      },
-      "tx": {
-        "type": "String"
-      }
-    }
-  },
   "purchaseFailed": "구매 실패",
   "closeStore": "상점 닫기",
   "diggleDrillMachine": "DIGGLE 드릴 머신",
@@ -633,7 +602,14 @@
   "airdrop": "에어드롭",
   "questsWeeklyTab": "주간",
   "questsWeeklyInfo": "큰 도전, 큰 보상. 매주 월요일(UTC)에 초기화됩니다.",
-  "questsNotEnoughPoints": "포인트가 부족합니다({cost} 필요). 상점에서 포인트 팩을 구매하세요!",
+  "minersPassTitle": "주간 광부 패스",
+  "minersPassActiveTitle": "광부 패스 활성화됨",
+  "minersPassBlurb": "이번 주 주간 퀘스트 보상을 모두 2배로.",
+  "minersPassActiveBlurb": "이번 주 모든 주간 퀘스트 보상 2배!",
+  "minersPassUnavailable": "이용 불가",
+  "minersPassActivated": "광부 패스 활성화: 주간 보상 2배!",
+  "minersPassNotEnoughSkr": "SKR이 부족합니다({amount} 필요).",
+  "minersPassFailed": "결제가 확인되지 않았습니다. 지갑에서 SKR이 빠져나갔다면 퀘스트 화면을 다시 열어 패스를 복원하세요.",
   "questJoinDiscordServer": "Discord 서버 참여",
   "questCheckingMembership": "멤버십 확인 중...",
   "questVerifyMembership": "멤버십 인증",

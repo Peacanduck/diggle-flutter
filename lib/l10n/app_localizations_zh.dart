@@ -662,12 +662,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get premiumStore => '高级商店';
 
   @override
-  String get onChainLoaded => '链上价格已加载';
-
-  @override
-  String get usingDefaultPrices => '使用默认价格';
-
-  @override
   String get level => '等级';
 
   @override
@@ -677,50 +671,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get points => '积分';
 
   @override
-  String get activeBoosts => '当前加成';
-
-  @override
-  String get permanent => '永久';
-
-  @override
-  String get pointsTab => '积分';
-
-  @override
-  String get solTab => 'SOL';
-
-  @override
-  String get nftTab => 'NFT';
-
-  @override
   String get walletRequired => '需要钱包';
 
   @override
   String get walletRequiredMessage => '连接您的 Solana 钱包以访问高级物品。\n所有购买均为链上交易。';
-
-  @override
-  String get storePricesUnavailable => '商店价格不可用';
-
-  @override
-  String get storePricesUnavailableMessage => '无法加载链上价格。\n请检查连接后重试。';
-
-  @override
-  String get retry => '重试';
-
-  @override
-  String get buy => '购买';
-
-  @override
-  String get notEnoughPoints => '积分不足！';
-
-  @override
-  String activated(String item) {
-    return '$item 已激活！';
-  }
-
-  @override
-  String purchasedTx(String item, String tx) {
-    return '$item 已购买！TX：$tx...';
-  }
 
   @override
   String get purchaseFailed => '购买失败';
@@ -1103,9 +1057,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get questsWeeklyInfo => '大挑战，大奖励。每周一（UTC）重置。';
 
   @override
-  String questsNotEnoughPoints(int cost) {
-    return '积分不足（需要 $cost）。到商店购买积分包吧！';
+  String get minersPassTitle => '每周矿工通行证';
+
+  @override
+  String get minersPassActiveTitle => '矿工通行证 已激活';
+
+  @override
+  String get minersPassBlurb => '本周所有每周任务奖励翻倍。';
+
+  @override
+  String get minersPassActiveBlurb => '本周所有每周任务奖励 x2！';
+
+  @override
+  String get minersPassUnavailable => '暂不可用';
+
+  @override
+  String get minersPassActivated => '矿工通行证已激活：每周奖励 x2！';
+
+  @override
+  String minersPassNotEnoughSkr(String amount) {
+    return 'SKR 不足（需要 $amount）。';
   }
+
+  @override
+  String get minersPassFailed => '付款未确认。如果 SKR 已从钱包扣除，请重新打开任务界面以恢复通行证。';
 
   @override
   String get questJoinDiscordServer => '加入 Discord 服务器';
