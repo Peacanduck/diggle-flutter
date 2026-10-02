@@ -20,6 +20,7 @@ import '../services/review_prompt_policy.dart';
 import '../services/review_prompt_service.dart';
 import '../solana/candy_machine_service.dart';
 import '../solana/wallet_service.dart';
+import 'mint_screen.dart';
 
 class HangarScreen extends StatefulWidget {
   final GearSystem gearSystem;
@@ -176,11 +177,24 @@ class _HangarScreenState extends State<HangarScreen> {
           if (widget.candyMachineService.hasGenesisToken)
             _buildGenesisBadge(),
           SizedBox(
-            height: 400,
+            height: 320,
             child: _buildMessage(
               '🪐',
               'No Diggle Machine found in this wallet.\n'
-              'Mint one in the Premium Store to unlock gear bonuses!',
+              'Mint one to unlock gear bonuses!',
+            ),
+          ),
+          Center(
+            child: ElevatedButton.icon(
+              onPressed: _openMint,
+              icon: const Icon(Icons.diamond),
+              label: Text(AppLocalizations.of(context)!.menuMint),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber.shade700,
+                foregroundColor: Colors.black,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              ),
             ),
           ),
         ],
@@ -252,6 +266,17 @@ class _HangarScreenState extends State<HangarScreen> {
         ],
       ),
     );
+  }
+
+  /// Mint without leaving for a run, then rescan so a new machine shows up.
+  Future<void> _openMint() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            MintScreen(candyMachineService: widget.candyMachineService),
+      ),
+    );
+    if (mounted) _load(force: true);
   }
 
   Widget _buildMessage(String emoji, String text) {

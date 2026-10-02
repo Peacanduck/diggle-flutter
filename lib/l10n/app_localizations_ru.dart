@@ -1035,6 +1035,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get menuHangar => 'Ангар';
 
   @override
+  String get menuMint => 'Минтить машину';
+
+  @override
+  String get backpackEmpty => 'Пусто — купи предметы в магазине';
+
+  @override
   String get museumTitle => 'МУЗЕЙ';
 
   @override
@@ -1723,21 +1729,21 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get introTipCargoFullBody =>
-      'Поднимись на поверхность и продай. Так накопишь на бур получше.';
+      'Поднимись на поверхность и заезжай в магазин, чтобы продать. Так накопишь на бур получше.';
 
   @override
   String get introTipLowFuelTitle => 'Следи за топливом';
 
   @override
   String get introTipLowFuelBody =>
-      'Заправка стоит денег и возможна только на поверхности. Застрять — значит проиграть заход.';
+      'Заправка стоит денег и возможна только в магазине на поверхности. Застрять — значит проиграть заход.';
 
   @override
   String get introTipFallDamageTitle => 'Слишком долгое падение';
 
   @override
   String get introTipFallDamageBody =>
-      'Падение больше чем на 3 клетки повреждает корпус. Бури вниз, а не прыгай.';
+      'Падение больше чем на 3 клетки повреждает корпус. Перед приземлением жми вверх, чтобы погасить падение двигателями.';
 
   @override
   String get introSkip => 'Пропустить подсказки';

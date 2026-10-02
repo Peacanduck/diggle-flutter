@@ -1027,6 +1027,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get menuHangar => 'Hangar';
 
   @override
+  String get menuMint => 'Mint a Machine';
+
+  @override
+  String get backpackEmpty => 'Empty — buy items at the Shop';
+
+  @override
   String get museumTitle => 'MUSEUM';
 
   @override
@@ -1707,21 +1713,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get introTipCargoFullBody =>
-      'Fly back up and sell at the surface. That\'s how you afford a better drill.';
+      'Fly back up and drive into the Shop to sell. That\'s how you afford a better drill.';
 
   @override
   String get introTipLowFuelTitle => 'Watch your fuel';
 
   @override
   String get introTipLowFuelBody =>
-      'Refuelling costs cash and only happens at the surface. Getting stranded ends the run.';
+      'Refuelling costs cash and only happens at the Shop on the surface. Getting stranded ends the run.';
 
   @override
   String get introTipFallDamageTitle => 'You fell too far';
 
   @override
   String get introTipFallDamageBody =>
-      'Drops over 3 tiles damage your hull. Drill down instead of dropping down.';
+      'Drops over 3 tiles damage your hull. Drill up before landing to break your fall with thrusters.';
 
   @override
   String get introSkip => 'Skip tips';

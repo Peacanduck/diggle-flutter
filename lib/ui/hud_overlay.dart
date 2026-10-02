@@ -1,5 +1,6 @@
 /// hud_overlay.dart
-/// In-game HUD with HP bar, fuel, cargo, item bar, and controls.
+/// In-game HUD with HP bar, fuel, cargo, the backpack, the surface
+/// compass, and controls.
 /// All user-facing strings localized via AppLocalizations.
 
 import 'dart:async';
@@ -8,6 +9,8 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../game/diggle_game.dart';
 import '../game/player/drill_component.dart';
+import '../game/world/surface_layout.dart';
+import '../game/world/tile_map_component.dart';
 import '../game/systems/item_system.dart';
 import '../game/systems/xp_points_system.dart';
 import 'quest_overlay.dart';
@@ -31,8 +34,10 @@ class _HudOverlayState extends State<HudOverlay> {
 
   /// Structural state sampled on the same tick. A ValueNotifier only fires
   /// when the value actually differs, so these rebuild almost never.
-  final ValueNotifier<bool> _atSurface = ValueNotifier<bool>(false);
   final ValueNotifier<bool> _hasQuestRewards = ValueNotifier<bool>(false);
+
+  /// Backpack drawer open/closed. Closed at the start of every run.
+  final ValueNotifier<bool> _backpackOpen = ValueNotifier<bool>(false);
 
   /// Bonus rewards currently animating in the feed. Drained from
   /// XPPointsSystem on the regular HUD tick (never during build) and
@@ -42,13 +47,11 @@ class _HudOverlayState extends State<HudOverlay> {
   @override
   void initState() {
     super.initState();
-    // Seed before the first paint so the shop button doesn't flash in.
-    _atSurface.value = widget.game.drill.isAtSurface;
+    // Seed before the first paint so the reward dot doesn't flash in.
     _hasQuestRewards.value = widget.game.questSystem.hasUnclaimedRewards;
     _updateTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
       if (!mounted) return;
       _tick.value++;
-      _atSurface.value = widget.game.drill.isAtSurface;
       _hasQuestRewards.value = widget.game.questSystem.hasUnclaimedRewards;
 
       // setState is now reserved for the one thing that changes the tree's
@@ -67,7 +70,7 @@ class _HudOverlayState extends State<HudOverlay> {
   void dispose() {
     _updateTimer.cancel();
     _tick.dispose();
-    _atSurface.dispose();
+    _backpackOpen.dispose();
     _hasQuestRewards.dispose();
     super.dispose();
   }
@@ -104,19 +107,6 @@ class _HudOverlayState extends State<HudOverlay> {
             ),
           ),
 
-          // Item bar
-          Positioned(
-            top: 150,
-            left: 0,
-            right: 0,
-            // Quantities only move on buy/use, and ItemSystem notifies on
-            // both — no need to poll this one.
-            child: AnimatedBuilder(
-              animation: widget.game.itemSystem,
-              builder: (context, _) => _buildItemBar(l10n),
-            ),
-          ),
-
           // Reward feed: achievements, artifacts, login streak, titles
           if (_rewardFeed.isNotEmpty)
             Positioned(
@@ -144,20 +134,54 @@ class _HudOverlayState extends State<HudOverlay> {
               ),
             ),
 
-          // Pause button
+          // Pause button. The quest-reward dot lives here now that Quests is
+          // a building — the pause menu is how you reach it underground.
           Positioned(
             top: 8,
             right: 8,
-            child: IconButton(
-              onPressed: () => widget.game.pause(),
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(8),
+            child: Stack(
+              children: [
+                IconButton(
+                  onPressed: () => widget.game.pause(),
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child:
+                        const Icon(Icons.pause, color: Colors.white, size: 24),
+                  ),
                 ),
-                child: const Icon(Icons.pause, color: Colors.white, size: 24),
-              ),
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: IgnorePointer(
+                    child: ValueListenableBuilder<bool>(
+                      valueListenable: _hasQuestRewards,
+                      builder: (context, hasRewards, child) => hasRewards
+                          ? Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: Colors.amber,
+                                shape: BoxShape.circle,
+                                border:
+                                    Border.all(color: Colors.black, width: 1),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Surface compass: edge pills pointing at off-screen buildings.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: _ticking(() => _buildCompass(l10n)),
             ),
           ),
 
@@ -168,99 +192,211 @@ class _HudOverlayState extends State<HudOverlay> {
             right: 0,
             child: _buildControls(),
           ),
-          // Left-side action column: store / quests / museum / boost.
-          // A single Column (instead of absolute Positioned tops) so the
-          // buttons can never overlap regardless of their heights.
+          // Left column: backpack, then the boost chip. Store, Quests,
+          // Museum and Shop are buildings on the surface now.
           Positioned(
-            top: 210,
-            left: 16,
+            top: 150,
+            left: 8,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ElevatedButton.icon(
-                  onPressed: () => widget.game.openPremiumStore(),
-                  icon: const Text('💎', style: TextStyle(fontSize: 16)),
-                  label: Text(l10n.store),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purple.shade700,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Stack(
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () => widget.game.openQuests(),
-                      icon: const Text('📋', style: TextStyle(fontSize: 16)),
-                      label: Text(l10n.quests),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.indigo.shade700,
-                      ),
-                    ),
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      child: ValueListenableBuilder<bool>(
-                        valueListenable: _hasQuestRewards,
-                        builder: (context, hasRewards, child) => hasRewards
-                            ? Container(
-                                width: 12, height: 12,
-                                decoration: BoxDecoration(
-                                  color: Colors.amber,
-                                  shape: BoxShape.circle,
-                                  border:
-                                      Border.all(color: Colors.black, width: 1),
-                                ),
-                              )
-                            : const SizedBox.shrink(),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                ElevatedButton.icon(
-                  onPressed: () => widget.game.openCollection(),
-                  icon: const Text('🏛️', style: TextStyle(fontSize: 16)),
-                  label: AnimatedBuilder(
-                    animation: widget.game.collectionSystem,
-                    builder: (context, _) => Text(
-                      '${widget.game.collectionSystem.foundCount}'
-                      '/${widget.game.collectionSystem.totalCount}',
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.brown.shade700,
-                  ),
-                ),
+                _buildBackpack(l10n),
                 const SizedBox(height: 6),
                 // Live boost status chip (tap → premium store)
                 _ticking(_buildBoostChip),
               ],
             ),
           ),
-
-          // Shop button when at surface
-          Positioned(
-            top: 210,
-            right: 16,
-            child: ValueListenableBuilder<bool>(
-              valueListenable: _atSurface,
-              builder: (context, atSurface, child) => atSurface
-                  ? ElevatedButton.icon(
-                      onPressed: () => widget.game.openShop(),
-                      icon: const Icon(Icons.store),
-                      label: Text(l10n.shop),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.shade700,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                      ),
-                    )
-                  : const SizedBox.shrink(),
-            ),
-          ),
         ],
       ),
+    );
+  }
+
+  /// 🎒 button that opens into a drawer of items and collapses back.
+  /// Quantities only move on buy/use, and ItemSystem notifies on both — no
+  /// need to poll; open/closed is a ValueNotifier, so neither rebuilds the
+  /// HUD.
+  Widget _buildBackpack(AppLocalizations l10n) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: _backpackOpen,
+      builder: (context, open, _) => AnimatedBuilder(
+        animation: widget.game.itemSystem,
+        builder: (context, _) {
+          final items = widget.game.itemSystem;
+          final slots = items.itemSlots;
+          final total = slots.fold<int>(0, (n, t) => n + items.getQuantity(t));
+          return ConstrainedBox(
+            constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width - 16),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              alignment: Alignment.centerLeft,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: open ? 0.7 : 0.5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildBackpackButton(total, open),
+                    if (open) ...[
+                      Flexible(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: slots.isEmpty
+                              ? Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10),
+                                  child: Text(l10n.backpackEmpty,
+                                      style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 12)),
+                                )
+                              : Row(
+                                  children: [
+                                    for (final type in slots)
+                                      _buildItemSlot(
+                                          type, items.getQuantity(type)),
+                                  ],
+                                ),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => _backpackOpen.value = false,
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 4),
+                          child: Icon(Icons.chevron_left,
+                              color: Colors.white70, size: 28),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildBackpackButton(int total, bool open) {
+    return GestureDetector(
+      onTap: () => _backpackOpen.value = !open,
+      child: SizedBox(
+        width: 44,
+        height: 44,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Center(
+              child: Opacity(
+                opacity: total == 0 ? 0.5 : 1,
+                child: const Text('🎒', style: TextStyle(fontSize: 26)),
+              ),
+            ),
+            if (total > 0 && !open)
+              Positioned(
+                right: -2,
+                top: -2,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade700,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text('$total',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold)),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static const Map<BuildingType, String> _buildingIcon = {
+    BuildingType.shop: '🛠️',
+    BuildingType.store: '💎',
+    BuildingType.quests: '📋',
+    BuildingType.museum: '🏛️',
+  };
+
+  String _buildingName(AppLocalizations l10n, BuildingType type) =>
+      switch (type) {
+        BuildingType.shop => l10n.shop,
+        BuildingType.store => l10n.store,
+        BuildingType.quests => l10n.quests,
+        BuildingType.museum => l10n.museumTitle,
+      };
+
+  /// At the surface, pills on the screen edges for every building out of
+  /// view, nearest first. The viewport is only ~8 tiles wide on a phone,
+  /// so most buildings are off-screen most of the time.
+  Widget _buildCompass(AppLocalizations l10n) {
+    final game = widget.game;
+    if (!game.isLoaded || !game.drill.isAtSurface) {
+      return const SizedBox.shrink();
+    }
+    final view = game.camera.visibleWorldRect;
+    const tile = TileMapComponent.tileSize;
+    final left = <BuildingSite>[];
+    final right = <BuildingSite>[];
+    for (final site in SurfaceLayout.sites(game.worldConfig.width)) {
+      if ((site.right + 1) * tile <= view.left) {
+        left.add(site);
+      } else if (site.left * tile >= view.right) {
+        right.add(site);
+      }
+    }
+    if (left.isEmpty && right.isEmpty) return const SizedBox.shrink();
+    left.sort((a, b) => b.left.compareTo(a.left));
+    right.sort((a, b) => a.left.compareTo(b.left));
+
+    Widget pill(BuildingSite site, bool toLeft) {
+      final label =
+          '${_buildingIcon[site.type]} ${_buildingName(l10n, site.type)}';
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(toLeft ? '‹ $label' : '$label ›',
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.bold)),
+      );
+    }
+
+    return Stack(
+      children: [
+        Align(
+          alignment: const Alignment(-1, 0.15),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [for (final site in left) pill(site, true)],
+          ),
+        ),
+        Align(
+          alignment: const Alignment(1, 0.15),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [for (final site in right) pill(site, false)],
+          ),
+        ),
+      ],
     );
   }
 
@@ -478,34 +614,6 @@ class _HudOverlayState extends State<HudOverlay> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildItemBar(AppLocalizations l10n) {
-    final items = widget.game.itemSystem;
-    final slots = items.itemSlots;
-
-    if (slots.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(l10n.items,
-              style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold)),
-          ...slots.map(
-                  (type) => _buildItemSlot(type, items.getQuantity(type))),
-        ],
-      ),
     );
   }
 

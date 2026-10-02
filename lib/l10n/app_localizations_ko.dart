@@ -1013,6 +1013,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get menuHangar => '격납고';
 
   @override
+  String get menuMint => '머신 민팅';
+
+  @override
+  String get backpackEmpty => '비어 있음 — 상점에서 아이템을 구매하세요';
+
+  @override
   String get museumTitle => '박물관';
 
   @override
@@ -1667,19 +1673,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String get introTipCargoFullTitle => '화물칸이 거의 찼어요';
 
   @override
-  String get introTipCargoFullBody => '지상으로 올라가 파세요. 그래야 더 좋은 드릴을 살 수 있어요.';
+  String get introTipCargoFullBody =>
+      '지상으로 올라가 상점에 들어가서 파세요. 그래야 더 좋은 드릴을 살 수 있어요.';
 
   @override
   String get introTipLowFuelTitle => '연료를 조심하세요';
 
   @override
-  String get introTipLowFuelBody => '재급유는 비용이 들고 지상에서만 가능해요. 발이 묶이면 게임이 끝나요.';
+  String get introTipLowFuelBody =>
+      '재급유는 비용이 들고 지상의 상점에서만 가능해요. 발이 묶이면 게임이 끝나요.';
 
   @override
   String get introTipFallDamageTitle => '너무 멀리 떨어졌어요';
 
   @override
-  String get introTipFallDamageBody => '3칸을 넘게 떨어지면 선체가 손상돼요. 떨어지지 말고 아래로 파세요.';
+  String get introTipFallDamageBody =>
+      '3칸을 넘게 떨어지면 선체가 손상돼요. 착지하기 전에 위로 올라가 추진기로 낙하 속도를 줄이세요.';
 
   @override
   String get introSkip => '팁 건너뛰기';

@@ -1036,6 +1036,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get menuHangar => 'Hangar';
 
   @override
+  String get menuMint => 'Acuñar una máquina';
+
+  @override
+  String get backpackEmpty => 'Vacía — compra objetos en la Tienda';
+
+  @override
   String get museumTitle => 'MUSEO';
 
   @override
@@ -1727,21 +1733,21 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get introTipCargoFullBody =>
-      'Vuelve a la superficie y vende. Así pagas una perforadora mejor.';
+      'Vuelve a la superficie y entra en la Tienda para vender. Así pagas una perforadora mejor.';
 
   @override
   String get introTipLowFuelTitle => 'Vigila tu combustible';
 
   @override
   String get introTipLowFuelBody =>
-      'Repostar cuesta dinero y solo se hace en la superficie. Quedarte tirado termina la partida.';
+      'Repostar cuesta dinero y solo se hace en la Tienda de la superficie. Quedarte tirado termina la partida.';
 
   @override
   String get introTipFallDamageTitle => 'Caíste demasiado';
 
   @override
   String get introTipFallDamageBody =>
-      'Las caídas de más de 3 casillas dañan el casco. Perfora hacia abajo en vez de dejarte caer.';
+      'Las caídas de más de 3 casillas dañan el casco. Impúlsate hacia arriba antes de aterrizar para frenar la caída con los propulsores.';
 
   @override
   String get introSkip => 'Omitir consejos';

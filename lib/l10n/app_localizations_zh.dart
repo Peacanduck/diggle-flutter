@@ -1009,6 +1009,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get menuHangar => '机库';
 
   @override
+  String get menuMint => '铸造钻机';
+
+  @override
+  String get backpackEmpty => '空的 — 去商店购买物品';
+
+  @override
   String get museumTitle => '博物馆';
 
   @override
@@ -1660,19 +1666,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get introTipCargoFullTitle => '货舱快满了';
 
   @override
-  String get introTipCargoFullBody => '飞回地面出售。这样才能买得起更好的钻头。';
+  String get introTipCargoFullBody => '飞回地面，开进商店出售。这样才能买得起更好的钻头。';
 
   @override
   String get introTipLowFuelTitle => '注意燃料';
 
   @override
-  String get introTipLowFuelBody => '加油要花钱，而且只能在地面进行。被困住这一趟就结束了。';
+  String get introTipLowFuelBody => '加油要花钱，而且只能在地面的商店进行。被困住这一趟就结束了。';
 
   @override
   String get introTipFallDamageTitle => '你摔得太狠了';
 
   @override
-  String get introTipFallDamageBody => '坠落超过 3 格会损坏船体。往下钻，别直接坠落。';
+  String get introTipFallDamageBody => '坠落超过 3 格会损坏船体。落地前向上推进，用推进器缓冲坠落。';
 
   @override
   String get introSkip => '跳过提示';

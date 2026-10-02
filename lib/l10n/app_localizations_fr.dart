@@ -1041,6 +1041,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get menuHangar => 'Hangar';
 
   @override
+  String get menuMint => 'Minter une machine';
+
+  @override
+  String get backpackEmpty => 'Vide — achète des objets à la Boutique';
+
+  @override
   String get museumTitle => 'MUSÉE';
 
   @override
@@ -1735,21 +1741,21 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get introTipCargoFullBody =>
-      'Remonte à la surface pour vendre. C\'est ainsi que tu t\'offres une meilleure foreuse.';
+      'Remonte à la surface et entre dans la Boutique pour vendre. C\'est ainsi que tu t\'offres une meilleure foreuse.';
 
   @override
   String get introTipLowFuelTitle => 'Surveille ton carburant';
 
   @override
   String get introTipLowFuelBody =>
-      'Faire le plein coûte de l\'argent et ne se fait qu\'à la surface. Tomber en panne met fin à la partie.';
+      'Faire le plein coûte de l\'argent et ne se fait qu\'à la Boutique, à la surface. Tomber en panne met fin à la partie.';
 
   @override
   String get introTipFallDamageTitle => 'Chute trop longue';
 
   @override
   String get introTipFallDamageBody =>
-      'Les chutes de plus de 3 cases endommagent ta coque. Creuse vers le bas au lieu de te laisser tomber.';
+      'Les chutes de plus de 3 cases endommagent ta coque. Remonte avant d\'atterrir pour amortir ta chute avec les propulseurs.';
 
   @override
   String get introSkip => 'Passer les astuces';

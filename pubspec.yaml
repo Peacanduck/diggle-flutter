@@ -108,6 +108,7 @@ flutter:
     - assets/images/DiggleGearSpriteSheet.png
     - assets/images/collection.png
     - assets/images/gear/
+    - assets/images/buildings/
     - assets/animations/
   #   - images/a_dot_ham.jpeg
 

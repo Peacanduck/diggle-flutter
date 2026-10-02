@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../services/supabase_service.dart';
 import '../solana/wallet_service.dart';
+import 'drill_sprite.dart';
 
 enum AuthMode { landing, emailSignIn, emailSignUp }
 
@@ -228,7 +229,7 @@ class _AuthScreenState extends State<AuthScreen>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text('⛏', style: TextStyle(fontSize: 56)),
+        const DrillSprite(size: 72),
         const SizedBox(height: 12),
         Text(
           l10n.appTitle.toUpperCase(),

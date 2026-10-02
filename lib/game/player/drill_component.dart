@@ -226,7 +226,14 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
       onGameOver?.call();
       return;
     }
-    if (fuelSystem.isEmpty && !isAtSurface) {
+    // Stranded only once the move under way would also end underground —
+    // reaching the top of the shaft on the last drop of fuel is safe.
+    if (fuelStrandsDrill(
+      tankEmpty: fuelSystem.isEmpty,
+      row: gridY,
+      targetRow: (_target.y / TileMapComponent.tileSize).floor(),
+      surfaceRows: tileMap.config.surfaceRows,
+    )) {
       onGameOver?.call();
       return;
     }
@@ -337,9 +344,12 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     final gx = gridX;
     final gy = gridY;
 
-    // Check tile below for falling logic
+    // Check tile below for falling logic. On an empty tank the drill never
+    // drops below the ground row from the surface — it would be stranded.
     final below = tileMap.getTileAt(gx, gy + 1);
-    final canFall = below != null && below.type == TileType.empty;
+    final canFall = below != null &&
+        below.type == TileType.empty &&
+        !_descentBlocked(gy + 1);
 
     // If holding a direction, try to go that way
     if (heldDirection != MoveDirection.none) {
@@ -392,7 +402,8 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
           if (canFall) _continueFalling(gx, gy);
         }
       } else if (heldDirection == MoveDirection.down) {
-        // Downward
+        // Downward. Not off the surface on an empty tank: no dig, no drop.
+        if (_descentBlocked(ny)) return;
         if (tile.type == TileType.empty) {
           if (!_isFalling) _startFalling(gy);
           _target = _tileCenter(nx, ny);
@@ -412,6 +423,14 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
       }
     }
   }
+
+  /// Whether moving into [toRow] would take an empty tank off the surface.
+  bool _descentBlocked(int toRow) => fuelBlocksDescent(
+        tankEmpty: fuelSystem.isEmpty,
+        row: gridY,
+        toRow: toRow,
+        surfaceRows: tileMap.config.surfaceRows,
+      );
 
   bool _canMineTile(Tile tile) {
     if (tile.type == TileType.bedrock) return false;
@@ -579,7 +598,12 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
       }
 
       tileMap.revealAround(_digX, _digY);
-      _target = _tileCenter(_digX, _digY);
+      // The dig may have used the last of the fuel. If so, a tile dug below
+      // the ground row from the surface stays empty — the drill does not
+      // follow it down to be stranded.
+      if (!_descentBlocked(_digY)) {
+        _target = _tileCenter(_digX, _digY);
+      }
       _digging = false;
     }
   }
@@ -688,6 +712,17 @@ class DrillComponent extends PositionComponent with HasGameRef<DiggleGame> {
     _isFalling = false;
     _fallStartY = 0;
     _currentFallY = 0;
+    // A save from before the surface buildings can put the drill where a
+    // bedrock floor now is. Never resume inside solid ground.
+    final tile = tileMap.getTileAt(gridX, gridY);
+    if (tile != null && tile.type != TileType.empty) {
+      teleportToSurface();
+      return;
+    }
     tileMap.revealAround(gridX, gridY, radius: gameRef.lightSystem.revealRadius);
+    gameRef.primeBuildingDoor();
   }
+
+  /// True while dropping (no ground under the drill and no thrust).
+  bool get isFalling => _isFalling;
 }

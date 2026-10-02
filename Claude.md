@@ -28,7 +28,9 @@ lib/
 │   ├── world/
 │   │   ├── tile.dart                 # Tile types with hardness
 │   │   ├── tile_map_component.dart   # Tile map rendering
-│   │   └── world_generator.dart      # Seeded procedural generation
+│   │   ├── world_generator.dart      # Seeded procedural generation
+│   │   ├── surface_layout.dart       # Building sites, doorways, bedrock floors
+│   │   └── surface_buildings.dart    # Renders the buildings + quest "!" marker
 │   ├── player/
 │   │   └── drill_component.dart      # Player movement, digging, fuel/hull,
 │   │                                 #   layered NFT gear rendering (_renderGear)
@@ -57,10 +59,13 @@ lib/
 │   ├── xp_stats_bridge.dart          # Bridge: XPPointsSystem ↔ StatsService
 │   └── game_lifecycle_manager.dart   # Coordinates auth, wallet linking, sync, saves
 └── ui/
-    ├── main_menu.dart                # Title screen with wallet connect
-    ├── hud_overlay.dart              # In-game HUD (fuel, cash, depth)
+    ├── main_menu.dart                # Title screen (Mint, Hangar, …)
+    ├── drill_sprite.dart             # Animated base drill widget (login/menu logo)
+    ├── hud_overlay.dart              # In-game HUD (bars, backpack, surface compass)
     ├── shop_overlay.dart             # In-game shop (services, upgrades, items)
-    └── premium_store_overlay.dart    # Premium store: Diggle Machine NFT mint
+    ├── nft_mint_panel.dart           # Shared Diggle Machine mint UI
+    ├── mint_screen.dart              # Mint outside a run (main menu, Hangar)
+    └── premium_store_overlay.dart    # Store building: stats bar + mint panel
 ```
 
 ## Diggle Mart (closed 2026-09-29)
@@ -185,8 +190,11 @@ instead of the tinted base sprite. Art matches the reveal collection
 
 **Art workflow**: edit part art in `DiggleAssets/svgart/sprites.py` →
 `python sprites.py` → copy `sprites_out/DiggleGearSpriteSheet.png` to
-`assets/images/` and `sprites_out/gear_sprites.dart` to
-`lib/game/systems/`.
+`assets/images/`, `sprites_out/DiggleBuildingsSheet.png` to
+`assets/images/buildings/`, and `sprites_out/gear_sprites.dart` to
+`lib/game/systems/`. The same generated file also holds `BaseDrillSheet`
+(the free starter drill) and `BuildingSheet` (surface buildings); review
+`sprites_out/preview_buildings.png` before copying building art.
 
 **Collection facts** (locked 2026-07-10): 10k tokens, rarity curve per slot
 Common 50% / Uncommon 25% / Rare 15% / Epic 8% / Legendary 2%
@@ -217,9 +225,33 @@ in `assets/images/gear/` are per-part). Reveal set:
 - Timed boosters were removed with the Diggle Mart; `XPPointsSystem.setXPBoost` /
   `setPointsBoost` remain but have no caller
 
-### Premium Store UI (`premium_store_overlay.dart`)
+### Surface buildings (`surface_layout.dart`, `surface_buildings.dart`)
 
-- Level / XP / Points bar, then the Diggle Machine NFT mint section (no tabs)
+- Shop, Store, Quests and Museum are buildings on the surface, not HUD
+  buttons. Each is 4×4 tiles; for the 64-wide world they stand at columns
+  18 (Museum), 24 (Quests), 35 (Shop, nearest spawn) and 41 (Store), with
+  28–34 left open around the spawn column (32).
+- Each stands on a bedrock floor: the ground row under its footprint plus a
+  1-tile apron, so holding down in a doorway can't dig. `SurfaceLayout.applyPads`
+  runs after `WorldGenerator` (never inside it — keeps world-gen tests and
+  blast goldens untouched) and again on save import, so old saves get floors.
+- Driving into a doorway (the two middle columns, standing on the ground
+  row) opens that building's screen once, via `DiggleGame._checkBuildingDoor`
+  edge detection — closing it never re-opens until you drive out and back.
+  `enterBuilding` pauses like the shop and clears the held direction;
+  `closePremiumStore` / `closeQuests` / `closeCollection` resume only if a
+  building opened them.
+- Quests and Museum are also in the pause menu (open over it, close back to
+  it). The quest-reward dot moved to the pause button, plus a bobbing "!"
+  over the Quests building.
+- At the surface the HUD shows edge pills pointing at off-screen buildings.
+- Items live in a 🎒 backpack (left column) that opens into a drawer.
+
+### Premium Store UI (`premium_store_overlay.dart`, `nft_mint_panel.dart`)
+
+- The Store building: Level / XP / Points bar over `NftMintPanel` (no tabs)
+- `NftMintPanel` is shared with `MintScreen` (main menu "Mint a Machine",
+  Hangar empty state), so the NFT can be bought outside a run
 - Wallet-required view when no wallet is connected
 - Multi-mint (1–3 per batch, capped by the guard's mint limit) with per-mint progress
 

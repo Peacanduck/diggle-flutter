@@ -1914,6 +1914,18 @@ abstract class AppLocalizations {
   /// **'Hangar'**
   String get menuHangar;
 
+  /// No description provided for @menuMint.
+  ///
+  /// In en, this message translates to:
+  /// **'Mint a Machine'**
+  String get menuMint;
+
+  /// No description provided for @backpackEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty — buy items at the Shop'**
+  String get backpackEmpty;
+
   /// No description provided for @museumTitle.
   ///
   /// In en, this message translates to:
@@ -3147,7 +3159,7 @@ abstract class AppLocalizations {
   /// No description provided for @introTipCargoFullBody.
   ///
   /// In en, this message translates to:
-  /// **'Fly back up and sell at the surface. That\'s how you afford a better drill.'**
+  /// **'Fly back up and drive into the Shop to sell. That\'s how you afford a better drill.'**
   String get introTipCargoFullBody;
 
   /// No description provided for @introTipLowFuelTitle.
@@ -3159,7 +3171,7 @@ abstract class AppLocalizations {
   /// No description provided for @introTipLowFuelBody.
   ///
   /// In en, this message translates to:
-  /// **'Refuelling costs cash and only happens at the surface. Getting stranded ends the run.'**
+  /// **'Refuelling costs cash and only happens at the Shop on the surface. Getting stranded ends the run.'**
   String get introTipLowFuelBody;
 
   /// No description provided for @introTipFallDamageTitle.
@@ -3171,7 +3183,7 @@ abstract class AppLocalizations {
   /// No description provided for @introTipFallDamageBody.
   ///
   /// In en, this message translates to:
-  /// **'Drops over 3 tiles damage your hull. Drill down instead of dropping down.'**
+  /// **'Drops over 3 tiles damage your hull. Drill up before landing to break your fall with thrusters.'**
   String get introTipFallDamageBody;
 
   /// No description provided for @introSkip.

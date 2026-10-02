@@ -15,6 +15,8 @@ import '../services/quest_sync_service.dart';
 import '../services/intro_service.dart';
 import '../services/review_prompt_service.dart';
 
+import 'world/surface_buildings.dart';
+import 'world/surface_layout.dart';
 import 'world/tile.dart';
 import 'world/tile_map_component.dart';
 import 'world/world_generator.dart';
@@ -329,13 +331,16 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
     drill.add(HeatShieldAura());
 
     // Explicit priorities — both were 0, which left the paint order between
-    // the world and the drill up to insertion order.
+    // the world and the drill up to insertion order. The surface buildings
+    // (priority 1) sit between them, so the drill drives in front of a
+    // doorway.
     tileMap.priority = 0;
-    drill.priority = 1;
+    drill.priority = 2;
     vfxLayer = VfxLayer();
 
     // Add to world
     world.add(tileMap);
+    world.add(SurfaceBuildings());
     world.add(drill);
     world.add(vfxLayer);
 
@@ -368,6 +373,7 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
     if (_state != GameState.playing) return;
     // Re-arm the surface edge as soon as the drill leaves the surface.
     if (!drill.isAtSurface) _atSurface = false;
+    _checkBuildingDoor();
     if (_heatShieldRemaining > 0) {
       _heatShieldRemaining = (_heatShieldRemaining - dt).clamp(0.0, 60.0);
     }
@@ -468,6 +474,71 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
     }
   }
 
+  // ── Surface buildings ─────────────────────────────────────────
+
+  /// The doorway the drill was parked in last frame. A building opens on
+  /// the edge into its doorway only, so closing its screen while still
+  /// parked there never re-opens it — drive out and back to re-enter.
+  BuildingType? _lastDoor;
+
+  /// True while a building's screen is open (fuel paused, drill parked).
+  /// Quests and Museum can also be opened from the pause menu, where
+  /// closing them must NOT resume the game.
+  bool _inBuilding = false;
+
+  /// Enter a building when the drill parks in its doorway: standing on the
+  /// ground row (not falling or flying) in one of its two door columns.
+  void _checkBuildingDoor() {
+    final door = drill.gridY == worldConfig.surfaceRows - 1 &&
+            !drill.isFalling
+        ? SurfaceLayout.doorAt(worldConfig.width, drill.gridX)
+        : null;
+    if (door == _lastDoor) return;
+    _lastDoor = door;
+    if (door != null) enterBuilding(door);
+  }
+
+  /// Treat wherever the drill now stands as already entered. For a restored
+  /// save: loading with the drill parked in a doorway must not pop that
+  /// building open — only driving in does.
+  void primeBuildingDoor() {
+    _lastDoor = drill.gridY == worldConfig.surfaceRows - 1
+        ? SurfaceLayout.doorAt(worldConfig.width, drill.gridX)
+        : null;
+  }
+
+  /// Open [type]'s screen and park the game behind it, like the shop.
+  void enterBuilding(BuildingType type) {
+    if (_state != GameState.playing) return;
+    // A direction button held while driving in would otherwise keep the
+    // drill rolling under the overlay (the drill ticks in every state).
+    drill.heldDirection = MoveDirection.none;
+    if (type == BuildingType.shop) {
+      openShop();
+      return;
+    }
+    _state = GameState.shopping;
+    fuelSystem.pause();
+    _inBuilding = true;
+    overlays.add(switch (type) {
+      BuildingType.store => 'premiumStore',
+      BuildingType.quests => 'quests',
+      BuildingType.museum => 'collection',
+      BuildingType.shop => 'shop',
+    });
+    // Walking into a building is a deliberate pause — a safe moment.
+    maybeShowReviewPrompt();
+  }
+
+  /// Resume after a building's screen closes. A no-op when the screen was
+  /// opened some other way (pause menu, boost chip).
+  void _leaveBuilding() {
+    if (!_inBuilding) return;
+    _inBuilding = false;
+    _state = GameState.playing;
+    fuelSystem.resume();
+  }
+
   /// Grid coordinate to world-space pixel centre.
   static double _tileCentre(int n) =>
       n * TileMapComponent.tileSize + TileMapComponent.tileSize / 2;
@@ -489,6 +560,11 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
     //if (joystick.parent != null) joystick.removeFromParent();
   }
 
+  void closePremiumStore() {
+    overlays.remove('premiumStore');
+    _leaveBuilding();
+  }
+
   void closeShop() {
     _state = GameState.playing;
     fuelSystem.resume();
@@ -503,6 +579,7 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
 
   void closeQuests() {
     overlays.remove('quests');
+    _leaveBuilding();
   }
 
   void restart() {
@@ -529,12 +606,17 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
     drill.reset();
     _state = GameState.playing;
     _atSurface = false;
+    _lastDoor = null;
+    _inBuilding = false;
     _totalPlaytimeSeconds = 0;
     _playTimeAccumulator = 0;
     fuelSystem.resume();
     // Clear all overlays and restore HUD
     overlays.remove('gameOver');
     overlays.remove('shop');
+    overlays.remove('premiumStore');
+    overlays.remove('quests');
+    overlays.remove('collection');
     overlays.remove('pause');
     overlays.remove('settings');
     if (!overlays.isActive('hud')) {
@@ -1103,5 +1185,6 @@ class DiggleGame extends FlameGame<ShakeWorld> with HasCollisionDetection {
 
   void closeCollection() {
     overlays.remove('collection');
+    _leaveBuilding();
   }
 }

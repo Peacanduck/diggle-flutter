@@ -7,6 +7,7 @@
 /// Side cells face RIGHT (mirror for left); down cells rotate 180 for up.
 library;
 
+import '../world/surface_layout.dart' show BuildingType;
 import 'gear_system.dart' show GearSlot, GearRarity;
 
 class GearSpriteSheet {
@@ -126,4 +127,33 @@ class BaseDrillSheet {
   /// row 1 = down view (rotate 180 for flying up).
   static (int, int) cell({bool down = false, int frame = 0}) =>
       (frame, down ? 1 : 0);
+}
+
+/// Surface buildings: one 128px cell (4x4 tiles) each, in a
+/// single row. The bottom pixel row is the ground line — the building's
+/// bedrock floor is the tile row below it. Every doorway spans the cell's
+/// middle 64px (tile columns 1-2, the door columns) from
+/// y=80 down to the ground.
+class BuildingSheet {
+  /// Lives in assets/images/buildings/ (declared in pubspec as a directory).
+  static const String asset = 'buildings/DiggleBuildingsSheet.png';
+  static const double cellSize = 128.0;
+
+  /// Building footprint in game tiles.
+  static const int tilesWide = 4;
+  static const int tilesHigh = 4;
+
+  static const int columns = 4;
+  static const double sheetWidth = 512.0;
+  static const double sheetHeight = 128.0;
+
+  static const Map<BuildingType, int> _column = {
+    BuildingType.shop: 0,
+    BuildingType.store: 1,
+    BuildingType.quests: 2,
+    BuildingType.museum: 3,
+  };
+
+  /// Sheet column of [type]'s cell (there is one row).
+  static int column(BuildingType type) => _column[type]!;
 }

@@ -14,6 +14,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/foundation.dart'; // Required for compute
 import 'package:flutter/material.dart' show Colors, Paint;
 import 'biome.dart';
+import 'surface_layout.dart';
 import 'tile.dart';
 import 'world_generator.dart';
 
@@ -21,7 +22,11 @@ import 'world_generator.dart';
 /// Must be outside the class to be run in an isolate.
 List<List<Tile>> _generateWorldInBackground(WorldConfig config) {
   final generator = WorldGenerator(config: config);
-  return generator.generate();
+  final grid = generator.generate();
+  // Building floors go on after generation, not inside it — see
+  // surface_layout.dart.
+  SurfaceLayout.applyPads(grid, config);
+  return grid;
 }
 
 /// What a blast destroyed, and where.
@@ -629,6 +634,9 @@ class TileMapComponent extends PositionComponent with HasGameRef {
     }
 
     decodeTileGrid(bytes, _grid, config);
+    // Saves from before the surface buildings have no floors; one that
+    // does is unchanged.
+    SurfaceLayout.applyPads(_grid, config);
     revealAround(config.width ~/ 2, config.surfaceRows, radius: 2);
   }
 }

@@ -1013,6 +1013,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get menuHangar => 'ハンガー';
 
   @override
+  String get menuMint => 'マシンをミント';
+
+  @override
+  String get backpackEmpty => '空っぽ — ショップでアイテムを買おう';
+
+  @override
   String get museumTitle => '博物館';
 
   @override
@@ -1667,19 +1673,20 @@ class AppLocalizationsJa extends AppLocalizations {
   String get introTipCargoFullTitle => 'カーゴがもうすぐ満杯';
 
   @override
-  String get introTipCargoFullBody => '地上に戻って売ろう。そうすればもっと良いドリルが買える。';
+  String get introTipCargoFullBody => '地上に戻ってショップに入り、売ろう。そうすればもっと良いドリルが買える。';
 
   @override
   String get introTipLowFuelTitle => '燃料に注意';
 
   @override
-  String get introTipLowFuelBody => '給油にはお金がかかり、地上でしかできない。立ち往生すると探索は終わりだ。';
+  String get introTipLowFuelBody => '給油にはお金がかかり、地上のショップでしかできない。立ち往生すると探索は終わりだ。';
 
   @override
   String get introTipFallDamageTitle => '落ちすぎた';
 
   @override
-  String get introTipFallDamageBody => '3マスを超える落下は船体を傷つける。飛び降りず、掘って下がろう。';
+  String get introTipFallDamageBody =>
+      '3マスを超える落下は船体を傷つける。着地の前に上へ噴射して、スラスターで落下の勢いを殺そう。';
 
   @override
   String get introSkip => 'ヒントをスキップ';

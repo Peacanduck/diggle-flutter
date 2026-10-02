@@ -41,6 +41,17 @@ class NFTCollectionInfo {
 
   int get remainingSupply => maxSupply - currentSupply;
   bool get isSoldOut => currentSupply >= maxSupply;
+
+  /// The collection as known before the candy machine reports in: the
+  /// fixed holder multipliers plus fallback supply and price.
+  static const NFTCollectionInfo defaults = NFTCollectionInfo(
+    name: 'Diggle Diamond Drill',
+    xpMultiplier: 1.25,
+    pointsMultiplier: 1.25,
+    maxSupply: 10000,
+    mintPriceSOL: 0.1,
+    imageUrl: 'https://gateway.irys.xyz/nrUUILfhG4NHoDG1e2c-Xky4veoRJEY2KgP24Cp_AAU?ext=png',
+  );
 }
 
 /// Manages holder boosts (NFT + Seeker Genesis Token)
@@ -50,14 +61,7 @@ class BoostManager extends ChangeNotifier {
   final CandyMachineService candyMachineService;
 
   /// NFT collection info - defaults, updated from candy machine service
-  NFTCollectionInfo _nftCollection = const NFTCollectionInfo(
-    name: 'Diggle Diamond Drill',
-    xpMultiplier: 1.25,
-    pointsMultiplier: 1.25,
-    maxSupply: 10000,
-    mintPriceSOL: 0.1,
-    imageUrl: 'https://gateway.irys.xyz/nrUUILfhG4NHoDG1e2c-Xky4veoRJEY2KgP24Cp_AAU?ext=png',
-  );
+  NFTCollectionInfo _nftCollection = NFTCollectionInfo.defaults;
 
   NFTCollectionInfo get nftCollection => _nftCollection;
 

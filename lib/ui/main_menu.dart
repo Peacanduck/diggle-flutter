@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
+import 'drill_sprite.dart';
 
 
 class MainMenu extends StatefulWidget {
@@ -16,6 +17,9 @@ class MainMenu extends StatefulWidget {
   final VoidCallback? onLeaderboard;
   final VoidCallback? onWeeklyChallenge;
   final VoidCallback? onHangar;
+
+  /// Buy a Diggle Machine NFT outside a run.
+  final VoidCallback? onMint;
 
   /// Whether a recent save exists (enables Continue button)
   final bool hasSaves;
@@ -31,6 +35,7 @@ class MainMenu extends StatefulWidget {
     this.onLeaderboard,
     this.onWeeklyChallenge,
     this.onHangar,
+    this.onMint,
     this.hasSaves = false,
   });
 
@@ -146,9 +151,11 @@ class _MainMenuState extends State<MainMenu>
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 12),
-                                    child: Icon(Icons.construction,
-                                        color: Colors.white.withOpacity(0.15),
-                                        size: 16),
+                                    child: const Opacity(
+                                      opacity: 0.25,
+                                      child: DrillSprite(
+                                          size: 20, animate: false),
+                                    ),
                                   ),
                                   Expanded(
                                     child: Container(
@@ -194,6 +201,18 @@ class _MainMenuState extends State<MainMenu>
                                     label: l10n.menuHangar,
                                     color: Colors.teal,
                                     onPressed: widget.onHangar!,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                              if (widget.onMint != null) ...[
+                                _buildAnimatedButton(
+                                  index: widget.hasSaves ? 3 : 2,
+                                  child: _SecondaryMenuButton(
+                                    icon: Icons.diamond,
+                                    label: l10n.menuMint,
+                                    color: Colors.amber,
+                                    onPressed: widget.onMint!,
                                   ),
                                 ),
                                 const SizedBox(height: 12),
@@ -269,11 +288,7 @@ class _MainMenuState extends State<MainMenu>
       },
       child: Column(
         children: [
-          Icon(
-            Icons.construction,
-            color: Colors.amber.shade400,
-            size: 48,
-          ),
+          const DrillSprite(size: 64),
           const SizedBox(height: 8),
           ShaderMask(
             shaderCallback: (bounds) => LinearGradient(

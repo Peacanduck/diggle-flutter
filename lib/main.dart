@@ -36,6 +36,7 @@ import 'game/systems/quest_system.dart' show QuestSystem;
 import 'services/leaderboard_service.dart';
 import 'ui/leaderboard_screen.dart';
 import 'ui/hangar_screen.dart';
+import 'ui/mint_screen.dart';
 import 'l10n/app_localizations.dart';
 import 'services/game_lifecycle_manager.dart';
 import 'services/locale_provider.dart';
@@ -490,6 +491,16 @@ class _AppNavigatorState extends State<AppNavigator>
     );
   }
 
+  void _onMint() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MintScreen(
+          candyMachineService: context.read<CandyMachineService>(),
+        ),
+      ),
+    );
+  }
+
   void _returnToMenu() {
     setState(() {
       _screen = AppScreen.mainMenu;
@@ -550,6 +561,7 @@ class _AppNavigatorState extends State<AppNavigator>
           onLeaderboard: _onLeaderboard,
           onWeeklyChallenge: _onWeeklyChallenge,
           onHangar: _onHangar,
+          onMint: _onMint,
           hasSaves: _hasSaves,
         );
 
@@ -884,6 +896,40 @@ class _GameScreenState extends State<GameScreen>
                   backgroundColor: Colors.green.shade700,
                   minimumSize: const Size(200, 50),
                 ),
+              ),
+              const SizedBox(height: 16),
+
+              // Quests and Museum are surface buildings; the pause menu is
+              // how you check them mid-run. They open over this screen and
+              // close back to it, still paused.
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Badge(
+                    isLabelVisible: game.questSystem.hasUnclaimedRewards,
+                    backgroundColor: Colors.amber,
+                    smallSize: 12,
+                    child: ElevatedButton.icon(
+                      onPressed: () => game.openQuests(),
+                      icon: const Text('📋', style: TextStyle(fontSize: 16)),
+                      label: Text(l10n.quests),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.indigo.shade700,
+                        minimumSize: const Size(96, 50),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () => game.openCollection(),
+                    icon: const Text('🏛️', style: TextStyle(fontSize: 16)),
+                    label: Text(l10n.museumTitle),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.brown.shade700,
+                      minimumSize: const Size(96, 50),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 

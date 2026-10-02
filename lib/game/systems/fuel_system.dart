@@ -219,3 +219,34 @@ class FuelSystem extends ChangeNotifier {
     return 'FuelSystem(${_fuel.toStringAsFixed(1)}/${maxFuel} - ${_tankLevel.name})';
   }
 }
+
+// ============================================================
+// SURFACE SAFETY RULES
+// ============================================================
+// Pure functions so DrillComponent's fuel rules can be unit-tested without
+// Flame. Rows are tile rows; anything deeper than [surfaceRows] (the ground
+// row) is underground.
+
+/// Running dry underground strands the drill and ends the run — but the
+/// move already under way finishes first. Arriving at the surface on the
+/// last drop of fuel is a safe landing, not a death one tile short of the
+/// top.
+bool fuelStrandsDrill({
+  required bool tankEmpty,
+  required int row,
+  required int targetRow,
+  required int surfaceRows,
+}) =>
+    tankEmpty && row > surfaceRows && targetRow > surfaceRows;
+
+/// On an empty tank the drill never leaves the surface downward — no
+/// digging, dropping or falling below the ground row — since that would
+/// strand it one tile down. A player can never die on the surface from
+/// running out of fuel.
+bool fuelBlocksDescent({
+  required bool tankEmpty,
+  required int row,
+  required int toRow,
+  required int surfaceRows,
+}) =>
+    tankEmpty && row <= surfaceRows && toRow > surfaceRows;
