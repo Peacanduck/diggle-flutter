@@ -30,6 +30,24 @@ void main() {
     test('missing fields fail closed', () {
       expect(MinersPassConfig.fromJson({}).active, isFalse);
     });
+
+    test('carries the recipient and fee shown before signing', () {
+      final config = MinersPassConfig.fromJson({
+        'active': true,
+        'amount': 100,
+        'treasury': '6tXwopHLEUr5DEiert4ASgmEQnfV3CQ2dkVWCTVvHUR9',
+        'feeLamports': 7000,
+      });
+      expect(config.treasury, '6tXwopHLEUr5DEiert4ASgmEQnfV3CQ2dkVWCTVvHUR9');
+      expect(config.feeLamports, 7000);
+    });
+
+    test('older servers without recipient or fee still parse', () {
+      final config = MinersPassConfig.fromJson({'active': true, 'amount': 100});
+      expect(config.active, isTrue);
+      expect(config.treasury, isNull);
+      expect(config.feeLamports, isNull);
+    });
   });
 
   group('formatSkr', () {

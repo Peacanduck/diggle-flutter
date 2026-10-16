@@ -1703,4 +1703,56 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get reviewPromptFailed => '无法打开商店。请稍后再试。';
+
+  @override
+  String get txReviewTitle => '签名前请确认';
+
+  @override
+  String get txReviewYouReceive => '你将获得';
+
+  @override
+  String get txReviewPrice => '价格';
+
+  @override
+  String txReviewPaidTo(String address) {
+    return '收款方 $address';
+  }
+
+  @override
+  String get txReviewRent => 'NFT 账户租金';
+
+  @override
+  String get txReviewRentDetail => '保存在新 NFT 的账户中';
+
+  @override
+  String get txReviewNetworkFee => '网络手续费';
+
+  @override
+  String get txReviewTotal => '合计';
+
+  @override
+  String get txReviewApprove => '在钱包中确认';
+
+  @override
+  String mintReviewMachines(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个封存的 Diggle Machine NFT',
+      one: '1 个封存的 Diggle Machine NFT',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mintReviewSimulated => '刚刚已模拟：本次铸造会成功，且不会触发机器人税。你的钱包应显示相同的金额。';
+
+  @override
+  String get mintReviewEachApproval => '每台机器都需要在钱包中单独确认。';
+
+  @override
+  String get minersPassReviewNote => '打开钱包前已检查：会失败的付款会被提前拦下。你的钱包应显示相同的金额。';
+
+  @override
+  String get minersPassNotEnoughSol => 'SOL 不足以支付网络手续费。钱包未要求你签署任何内容。';
 }

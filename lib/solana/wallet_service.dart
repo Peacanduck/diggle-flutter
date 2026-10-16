@@ -50,6 +50,18 @@ enum SolanaCluster {
 
 /// High-level wallet service with state management
 class WalletService extends ChangeNotifier {
+  // Mobile Wallet Adapter identity, sent on every authorize/reauthorize.
+  // Phantom verifies the app against the Digital Asset Links file on this
+  // domain (/.well-known/assetlinks.json lists com.example.diggle and its
+  // release signing key) and shows "identity could not be verified"
+  // otherwise. It's the www host because the apex redirects, and
+  // asset-link checks don't follow redirects. The icon resolves relative
+  // to the URI; the site serves it at /diggle-icon.png and
+  // /diggle/diggle-icon.png so either reading finds it.
+  static final Uri _identityUri = Uri.parse('https://www.pydigital.xyz/diggle');
+  static final Uri _iconUri = Uri.parse('diggle-icon.png');
+  static const String _identityName = 'Diggle';
+
   /// Current connection state
   WalletConnectionState _state = WalletConnectionState.disconnected;
 
@@ -218,9 +230,9 @@ class WalletService extends ChangeNotifier {
       debugPrint('Client obtained, authorizing on ${_cluster.displayName}...');
 
       final result = await client.authorize(
-        identityUri: Uri.parse('https://diggle.app'),
-        iconUri: Uri.parse('favicon.ico'),
-        identityName: 'Diggle',
+        identityUri: _identityUri,
+        iconUri: _iconUri,
+        identityName: _identityName,
         cluster: _cluster.value,
       );
 
@@ -327,15 +339,22 @@ class WalletService extends ChangeNotifier {
   // TRANSACTION SIGNING & SENDING
   // ============================================================
 
-  /// Sign a serialized transaction via MWA, then submit it via RPC.
+  /// Have the wallet sign AND submit a single-signer transaction (MWA
+  /// `sign_and_send_transactions`), for example the Miner's Pass SKR
+  /// transfer built by the miners-pass edge function.
   ///
-  /// Opens the wallet app for the user to approve the transaction.
-  /// [serializedTransaction] is the unsigned transaction bytes (for
-  /// example the Miner's Pass SKR transfer built by the miners-pass
-  /// edge function).
+  /// Letting the wallet send is what Phantom expects: it simulates the
+  /// transaction, may add its own guard instructions (Lighthouse) before
+  /// submitting, and the app-switch network drop no longer matters. So the
+  /// transaction that lands can differ from [serializedTransaction] —
+  /// verify payments by their instructions, never by byte equality.
   ///
-  /// Includes retry logic because Android may temporarily lose network
-  /// connectivity when switching back from the wallet app.
+  /// Not for transactions that need another signer after the wallet (the
+  /// wallet would submit before that signature exists): use
+  /// [signTransaction] for those.
+  ///
+  /// Wallets that can only sign get the old path: sign via MWA, then
+  /// submit via RPC with retries.
   ///
   /// Returns the transaction signature (base58) on success, null on failure.
   /// Sets [errorMessage] on failure.
@@ -347,14 +366,75 @@ class WalletService extends ChangeNotifier {
       return null;
     }
 
-    // Step 1: Sign via MWA
-    final signedTxBytes = await signTransaction(serializedTransaction);
-    if (signedTxBytes == null) {
+    LocalAssociationScenario? session;
+    Uint8List? signedForRpc;
+
+    try {
+      debugPrint('Opening MWA session for sign-and-send...');
+      session = await LocalAssociationScenario.create();
+
+      // ignore: unawaited_futures
+      session.startActivityForResult(null);
+      final client = await session.start();
+
+      if (!await _reauthorize(client)) return null;
+
+      GetCapabilitiesResult? capabilities;
+      try {
+        capabilities = await client.getCapabilities();
+      } catch (e) {
+        debugPrint('get_capabilities failed ($e); assuming sign-and-send');
+      }
+
+      if (capabilities?.supportsSignAndSendTransactions ?? true) {
+        debugPrint('Wallet sign-and-send (${serializedTransaction.length} bytes)...');
+        final result = await client.signAndSendTransactions(
+          transactions: [serializedTransaction],
+        );
+        if (result.signatures.isNotEmpty) {
+          final signature = _bytesToBase58(result.signatures.first);
+          debugPrint('Wallet submitted transaction: $signature');
+          return signature;
+        }
+        _errorMessage = 'Transaction was cancelled or could not be sent';
+        notifyListeners();
+        return null;
+      }
+
+      debugPrint('Wallet cannot sign-and-send; signing for RPC submission...');
+      final result = await client.signTransactions(
+        transactions: [serializedTransaction],
+      );
+      if (result.signedPayloads.isEmpty) {
+        _errorMessage = 'Transaction signing was cancelled';
+        notifyListeners();
+        return null;
+      }
+      signedForRpc = Uint8List.fromList(result.signedPayloads.first);
+    } catch (e, stackTrace) {
+      debugPrint('Sign-and-send error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      _errorMessage = _getTransactionError(e);
+      notifyListeners();
       return null;
+    } finally {
+      if (session != null) {
+        try {
+          await session.close();
+        } catch (e) {
+          debugPrint('Error closing MWA session: $e');
+        }
+      }
     }
 
-    // Step 2: Submit via RPC with retries
-    // After MWA app switch, Android may need a moment to restore network
+    return _submitViaRpc(signedForRpc);
+  }
+
+  /// Submit a fully signed transaction via RPC.
+  ///
+  /// Includes retry logic because Android may temporarily lose network
+  /// connectivity when switching back from the wallet app.
+  Future<String?> _submitViaRpc(Uint8List signedTxBytes) async {
     final encodedTx = base64Encode(signedTxBytes);
     const maxRetries = 3;
 
@@ -392,7 +472,14 @@ class WalletService extends ChangeNotifier {
     return null;
   }
 
-  /// Sign a transaction without sending (for multi-signer flows like NFT minting).
+  /// Sign a transaction without sending, for multi-signer flows like NFT
+  /// minting.
+  ///
+  /// Pass the transaction with NO signatures yet and add the others to the
+  /// result: Phantom has to sign first to simulate a multi-signer
+  /// transaction and add its guard instructions, and otherwise warns that
+  /// the app "could be malicious". The wallet may change the message, so
+  /// later signers must sign the message in the returned bytes.
   ///
   /// Returns the signed transaction bytes, or null on failure.
   Future<Uint8List?> signTransaction(Uint8List serializedTransaction) async {
@@ -412,32 +499,7 @@ class WalletService extends ChangeNotifier {
       session.startActivityForResult(null);
       final client = await session.start();
 
-      // Reauthorize
-      debugPrint('Reauthorizing...');
-      final reauth = await client.reauthorize(
-        identityUri: Uri.parse('https://diggle.app'),
-        iconUri: Uri.parse('favicon.ico'),
-        identityName: 'Diggle',
-        authToken: _authToken!,
-      );
-
-      if (reauth == null) {
-        final freshAuth = await client.authorize(
-          identityUri: Uri.parse('https://diggle.app'),
-          iconUri: Uri.parse('favicon.ico'),
-          identityName: 'Diggle',
-          cluster: _cluster.value,
-        );
-        if (freshAuth == null) {
-          _errorMessage = 'Authorization failed';
-          notifyListeners();
-          return null;
-        }
-        _publicKeyBytes = freshAuth.publicKey;
-        _authToken = freshAuth.authToken;
-      } else {
-        _authToken = reauth.authToken;
-      }
+      if (!await _reauthorize(client)) return null;
 
       // Sign only (don't send)
       debugPrint('Signing transaction (${serializedTransaction.length} bytes)...');
@@ -446,12 +508,9 @@ class WalletService extends ChangeNotifier {
         transactions: [serializedTransaction],
       );
 
-      if (result != null && result.signedPayloads.isNotEmpty) {
-        final signedTx = result.signedPayloads.first;
-        if (signedTx != null) {
-          debugPrint('Transaction signed successfully');
-          return Uint8List.fromList(signedTx);
-        }
+      if (result.signedPayloads.isNotEmpty) {
+        debugPrint('Transaction signed successfully');
+        return Uint8List.fromList(result.signedPayloads.first);
       }
 
       _errorMessage = 'Transaction signing was cancelled';
@@ -472,6 +531,39 @@ class WalletService extends ChangeNotifier {
         }
       }
     }
+  }
+
+  /// Reauthorize this session with the stored auth token, falling back to
+  /// a fresh authorize. Returns false (with [errorMessage] set) if the
+  /// wallet refused both.
+  Future<bool> _reauthorize(MobileWalletAdapterClient client) async {
+    debugPrint('Reauthorizing...');
+    final reauth = await client.reauthorize(
+      identityUri: _identityUri,
+      iconUri: _iconUri,
+      identityName: _identityName,
+      authToken: _authToken!,
+    );
+
+    if (reauth != null) {
+      _authToken = reauth.authToken;
+      return true;
+    }
+
+    final freshAuth = await client.authorize(
+      identityUri: _identityUri,
+      iconUri: _iconUri,
+      identityName: _identityName,
+      cluster: _cluster.value,
+    );
+    if (freshAuth == null) {
+      _errorMessage = 'Authorization failed';
+      notifyListeners();
+      return false;
+    }
+    _publicKeyBytes = freshAuth.publicKey;
+    _authToken = freshAuth.authToken;
+    return true;
   }
 
   // ============================================================
@@ -503,32 +595,7 @@ class WalletService extends ChangeNotifier {
       session.startActivityForResult(null);
       final client = await session.start();
 
-      // Reauthorize
-      debugPrint('Reauthorizing...');
-      final reauth = await client.reauthorize(
-        identityUri: Uri.parse('https://diggle.app'),
-        iconUri: Uri.parse('favicon.ico'),
-        identityName: 'Diggle',
-        authToken: _authToken!,
-      );
-
-      if (reauth == null) {
-        final freshAuth = await client.authorize(
-          identityUri: Uri.parse('https://diggle.app'),
-          iconUri: Uri.parse('favicon.ico'),
-          identityName: 'Diggle',
-          cluster: _cluster.value,
-        );
-        if (freshAuth == null) {
-          _errorMessage = 'Authorization failed';
-          notifyListeners();
-          return null;
-        }
-        _publicKeyBytes = freshAuth.publicKey;
-        _authToken = freshAuth.authToken;
-      } else {
-        _authToken = reauth.authToken;
-      }
+      if (!await _reauthorize(client)) return null;
 
       // Sign the message
       debugPrint('Signing message (${messageBytes.length} bytes)...');

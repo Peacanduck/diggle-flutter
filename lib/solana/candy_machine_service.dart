@@ -2,9 +2,12 @@
 /// Service for interacting with the Diggle NFT Candy Machine.
 ///
 /// Architecture:
-///   1. Calls the mint API to get an unsigned transaction
-///   2. Signs via MWA (Mobile Wallet Adapter)
-///   3. Sends to the Solana network
+///   1. Generates the NFT mint keypair on device and asks the candy-machine
+///      edge function for an UNSIGNED, simulated mint transaction + its cost
+///   2. The player reviews the cost; the wallet signs first via MWA
+///   3. The mint keypair co-signs what the wallet returned (Phantom needs
+///      the wallet to sign a multi-signer transaction first) and the app
+///      sends it to the Solana network
 ///   4. Detects NFT ownership via RPC (getTokenAccountsByOwner + metadata)
 ///
 /// The mint API (Node.js) handles the complex Metaplex instruction building
@@ -16,6 +19,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:solana/dto.dart';
 import 'package:solana/solana.dart';
+import 'tx_cosign.dart';
 import 'wallet_service.dart';
 
 /// Mint status for tracking the minting flow
@@ -137,6 +141,67 @@ class OwnedDiggleNFT {
       metadataUri: json['meta'] as String?,
     );
   }
+}
+
+/// What one mint costs, from the edge function's simulation of the exact
+/// transaction the wallet will be asked to sign. Amounts in lamports.
+class MintQuote {
+  /// The guard's SOL payment, paid to [destination].
+  final int priceLamports;
+
+  /// Rent held in the new NFT's accounts (mint, token account, metadata,
+  /// edition).
+  final int rentLamports;
+
+  /// Network and priority fees.
+  final int feeLamports;
+  final int totalLamports;
+
+  /// Wallet that receives the price.
+  final String destination;
+
+  const MintQuote({
+    required this.priceLamports,
+    required this.rentLamports,
+    required this.feeLamports,
+    required this.totalLamports,
+    required this.destination,
+  });
+
+  factory MintQuote.fromJson(Map<String, dynamic> json) {
+    int lamports(String key) => (json[key] as num?)?.toInt() ?? 0;
+    final price = lamports('priceLamports');
+    final rent = lamports('rentLamports');
+    final fee = lamports('feeLamports');
+    return MintQuote(
+      priceLamports: price,
+      rentLamports: rent,
+      feeLamports: fee,
+      totalLamports: json['totalLamports'] == null
+          ? price + rent + fee
+          : lamports('totalLamports'),
+      destination: json['destination'] as String? ?? '',
+    );
+  }
+}
+
+/// A mint built and simulated by the edge function, waiting for the
+/// player to approve its [quote].
+class PreparedMint {
+  /// Unsigned: the wallet signs first, then [mintKey].
+  final Uint8List transaction;
+
+  /// The new NFT's mint keypair, generated on this device.
+  final Ed25519HDKeyPair mintKey;
+  final MintQuote quote;
+  final DateTime builtAt;
+
+  const PreparedMint({
+    required this.transaction,
+    required this.mintKey,
+    required this.quote,
+    required this.builtAt,
+  });
 }
 
 /// Service for Candy Machine minting and NFT detection
@@ -390,12 +455,21 @@ class CandyMachineService extends ChangeNotifier {
   // MINT NFT
   // ============================================================
 
-  /// Full mint flow:
-  /// 1. Call API to build unsigned transaction
-  /// 2. Sign via MWA
-  /// 3. Send to network
-  /// 4. Return signature
-  Future<String?> mint() async {
+  /// A built transaction older than this is rebuilt before signing, so a
+  /// review left open never hands the wallet an expired blockhash.
+  static const Duration _quoteMaxAge = Duration(seconds: 30);
+
+  /// Step 1 of a mint: build and simulate it, and price it.
+  ///
+  /// The app generates the NFT mint keypair, so the edge function returns
+  /// the transaction with no signatures: the wallet signs first and the
+  /// mint key after ([confirmMint]), the order Phantom needs. The function
+  /// simulates before answering, so a mint the guard would refuse (limit,
+  /// sold out, not enough SOL, bot tax) comes back as [error] here and the
+  /// wallet never opens.
+  ///
+  /// Returns null with [error] set on failure.
+  Future<PreparedMint?> prepareMint() async {
     if (!_wallet.isConnected) {
       _error = 'Wallet not connected';
       notifyListeners();
@@ -421,48 +495,142 @@ class CandyMachineService extends ChangeNotifier {
         await fetchMintInfo();
       }
 
-      // Step 1: Get unsigned transaction from API
-      debugPrint('CandyMachine: Requesting unsigned mint tx...');
-      final buildResponse = await http
-          .post(
-        Uri.parse('$_functionUrl/build-mint-tx'),
-        headers: _headers,
-        body: jsonEncode({'minter': minterPubkey}),
-      )
-          .timeout(const Duration(seconds: 15));
-
-      if (buildResponse.statusCode != 200) {
-        final errorBody = jsonDecode(buildResponse.body);
-        _error = errorBody['error'] ?? 'Failed to build transaction';
+      final mintKey = await Ed25519HDKeyPair.random();
+      final prepared = await _buildMint(minterPubkey, mintKey);
+      if (prepared == null) {
         _mintStatus = MintStatus.error;
         notifyListeners();
         return null;
       }
 
-      final buildData = jsonDecode(buildResponse.body) as Map<String, dynamic>;
-      final base64Tx = buildData['transaction'] as String;
-      final mintAddress = buildData['mint'] as String;
+      _mintStatus = MintStatus.idle;
+      notifyListeners();
+      return prepared;
+    } catch (e, stack) {
+      debugPrint('CandyMachine prepareMint error: $e');
+      debugPrint('Stack: $stack');
+      _error = 'Mint failed: ${e.toString().length > 100 ? '${e.toString().substring(0, 100)}...' : e}';
+      _mintStatus = MintStatus.error;
+      notifyListeners();
+      return null;
+    }
+  }
 
-      debugPrint('CandyMachine: Got unsigned tx, NFT mint: $mintAddress');
+  /// Ask the edge function for an unsigned, simulated mint transaction
+  /// for [mintKey]. Null with [_error] set when it refuses.
+  Future<PreparedMint?> _buildMint(
+      String minterPubkey, Ed25519HDKeyPair mintKey) async {
+    debugPrint('CandyMachine: Requesting unsigned mint tx...');
+    final buildResponse = await http
+        .post(
+      Uri.parse('$_functionUrl/build-mint-tx'),
+      headers: _headers,
+      body: jsonEncode({'minter': minterPubkey, 'nftMint': mintKey.address}),
+    )
+        .timeout(const Duration(seconds: 20));
 
-      // Step 2: Decode the transaction
-      final txBytes = base64Decode(base64Tx);
+    final body = jsonDecode(buildResponse.body);
+    if (buildResponse.statusCode != 200) {
+      final map = body is Map<String, dynamic> ? body : const <String, dynamic>{};
+      _error = map['error'] == 'simulation_failed'
+          ? _simulationFailureMessage(map['reason'] as String?)
+          : (map['error'] as String? ?? 'Failed to build transaction');
+      debugPrint('CandyMachine: build refused: ${buildResponse.body}');
+      return null;
+    }
 
-      // Step 3: Sign via MWA
+    final data = body as Map<String, dynamic>;
+    final mintAddress = data['mint'] as String;
+    if (mintAddress != mintKey.address) {
+      _error = 'Mint server returned a different NFT address';
+      return null;
+    }
+    final quote = data['quote'];
+    if (quote is! Map<String, dynamic>) {
+      // An old edge function that doesn't simulate: never sign blind.
+      _error = 'Mint server is out of date. Please try again later.';
+      return null;
+    }
+
+    debugPrint('CandyMachine: Got unsigned tx, NFT mint: $mintAddress');
+    return PreparedMint(
+      transaction: base64Decode(data['transaction'] as String),
+      mintKey: mintKey,
+      quote: MintQuote.fromJson(quote),
+      builtAt: DateTime.now(),
+    );
+  }
+
+  /// Why the edge function's simulation refused the mint. The wallet was
+  /// never opened, so nothing was charged.
+  static String _simulationFailureMessage(String? reason) {
+    const nothingSigned = 'Your wallet wasn\'t asked to sign anything.';
+    return switch (reason) {
+      'insufficient_sol' =>
+        'Not enough SOL for the price, rent and network fee. $nothingSigned',
+      'mint_limit' => 'This wallet has reached its mint limit. $nothingSigned',
+      'sold_out' => 'Sold out — every machine has been claimed. $nothingSigned',
+      'not_started' => 'Minting is not open right now. $nothingSigned',
+      'bot_tax' =>
+        'The candy machine would reject this mint and charge its bot tax, '
+            'so it was stopped before signing. $nothingSigned',
+      _ => 'This mint would fail on-chain. $nothingSigned',
+    };
+  }
+
+  /// Step 2 of a mint, after the player approved the quote:
+  /// 1. Rebuild if the quote is stale (blockhash)
+  /// 2. The wallet signs first (MWA sign-only)
+  /// 3. The app adds the NFT mint key's signature to what the wallet returned
+  /// 4. Send to the network and confirm
+  ///
+  /// Returns the signature, or null with [error] set.
+  Future<String?> confirmMint(PreparedMint prepared) async {
+    final minterPubkey = _wallet.publicKey;
+    if (!_wallet.isConnected || minterPubkey == null) {
+      _error = 'Wallet not connected';
+      _mintStatus = MintStatus.error;
+      notifyListeners();
+      return null;
+    }
+
+    _error = null;
+    _lastMintSignature = null;
+    _lastMintedNFT = null;
+
+    try {
+      var current = prepared;
+      if (DateTime.now().difference(prepared.builtAt) > _quoteMaxAge) {
+        _mintStatus = MintStatus.fetchingTransaction;
+        notifyListeners();
+        final rebuilt = await _buildMint(minterPubkey, prepared.mintKey);
+        if (rebuilt == null) {
+          _mintStatus = MintStatus.error;
+          notifyListeners();
+          return null;
+        }
+        current = rebuilt;
+      }
+      final mintAddress = current.mintKey.address;
+
+      // Sign via MWA — the wallet signs first.
       _mintStatus = MintStatus.awaitingSignature;
       notifyListeners();
 
       debugPrint('CandyMachine: Requesting MWA signature...');
-      final signedBytes = await _wallet.signTransaction(Uint8List.fromList(txBytes));
+      final walletSigned = await _wallet.signTransaction(current.transaction);
 
-      if (signedBytes == null) {
+      if (walletSigned == null) {
         _error = _wallet.errorMessage ?? 'Transaction signing was cancelled';
         _mintStatus = MintStatus.error;
         notifyListeners();
         return null;
       }
 
-      // Step 4: Send the signed transaction
+      // Now the NFT mint key signs the message the wallet returned.
+      final signedBytes = await cosignTransaction(walletSigned, current.mintKey);
+
+      // Send the signed transaction
       // After MWA app switch, Android may need a moment to restore network
       _mintStatus = MintStatus.sending;
       notifyListeners();
@@ -503,7 +671,7 @@ class CandyMachineService extends ChangeNotifier {
 
       debugPrint('CandyMachine: Transaction sent! Sig: $signature');
 
-      // Step 5: Confirm
+      // Confirm
       _mintStatus = MintStatus.confirming;
       notifyListeners();
 
@@ -557,6 +725,15 @@ class CandyMachineService extends ChangeNotifier {
       notifyListeners();
       return null;
     }
+  }
+
+  /// Prepare and confirm in one go, for the later mints of a batch whose
+  /// first quote the player already reviewed (every mint costs the same,
+  /// and each one is still simulated before its wallet prompt).
+  Future<String?> mint() async {
+    final prepared = await prepareMint();
+    if (prepared == null) return null;
+    return confirmMint(prepared);
   }
 
   /// Reset mint status back to idle

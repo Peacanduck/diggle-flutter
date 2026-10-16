@@ -21,7 +21,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get pyroLabs => 'PyroLabs';
 
   @override
-  String get version => 'v0.1.0-alpha';
+  String get version => 'v2.1.1-beta';
 
   @override
   String get newGame => 'ニューゲーム';
@@ -1712,4 +1712,59 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get reviewPromptFailed => 'ストアを開けませんでした。後でもう一度お試しください。';
+
+  @override
+  String get txReviewTitle => '署名する前に確認';
+
+  @override
+  String get txReviewYouReceive => '受け取るもの';
+
+  @override
+  String get txReviewPrice => '価格';
+
+  @override
+  String txReviewPaidTo(String address) {
+    return '支払先 $address';
+  }
+
+  @override
+  String get txReviewRent => 'NFTアカウントのレント';
+
+  @override
+  String get txReviewRentDetail => '新しいNFTのアカウントに保持されます';
+
+  @override
+  String get txReviewNetworkFee => 'ネットワーク手数料';
+
+  @override
+  String get txReviewTotal => '合計';
+
+  @override
+  String get txReviewApprove => 'ウォレットで承認';
+
+  @override
+  String mintReviewMachines(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '封印されたDiggle Machine NFT $count個',
+      one: '封印されたDiggle Machine NFT 1個',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mintReviewSimulated =>
+      'たった今シミュレーション済み：このミントは成功し、ボット税は発生しません。ウォレットにも同じ金額が表示されるはずです。';
+
+  @override
+  String get mintReviewEachApproval => 'マシンごとにウォレットでの承認が必要です。';
+
+  @override
+  String get minersPassReviewNote =>
+      'ウォレットを開く前に確認済み：失敗する支払いは事前に止まります。ウォレットにも同じ金額が表示されるはずです。';
+
+  @override
+  String get minersPassNotEnoughSol =>
+      'ネットワーク手数料のSOLが足りません。ウォレットでの署名は求められていません。';
 }

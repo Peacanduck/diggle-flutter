@@ -2,15 +2,17 @@
 /// The weekly Miner's Pass, paid in SKR (the Seeker token).
 ///
 /// There is NO on-chain program. The miners-pass edge function builds a
-/// plain SPL transferChecked of SKR into the treasury wallet; the player
-/// signs and sends it via MWA; the function then verifies the transfer
-/// on-chain and records the pass against the player. See
+/// plain SPL transferChecked of SKR into the treasury wallet and simulates
+/// it; the player's wallet signs and submits it (MWA sign-and-send); the
+/// function then verifies the transfer on-chain and records the pass
+/// against the player. See
 /// supabase/edge/miners-pass/index.ts and
 /// supabase/migrations/20260929_skr_miners_pass.sql.
 ///
 /// Flow:
-///   1. /build-tx → unsigned transaction + order id
-///   2. WalletService.signAndSendTransaction → signature
+///   1. /build-tx → unsigned, simulated transaction + order id
+///   2. WalletService.signAndSendTransaction → the wallet signs and
+///      submits it → signature
 ///   3. persist {order, signature} — SKR has now left the wallet
 ///   4. poll /confirm until the server has verified it
 ///
@@ -43,6 +45,10 @@ enum PassPurchaseError {
   /// The wallet holds less SKR than the price ([MinersPassService.neededSkr]).
   insufficientSkr,
 
+  /// The wallet has the SKR but not the SOL for the network fee. Caught by
+  /// the server's simulation, before the wallet opens.
+  insufficientSol,
+
   /// Could not build, or the wallet rejected/failed to send — no SKR moved.
   failed,
 
@@ -58,7 +64,18 @@ class MinersPassConfig {
   /// Price in SKR (UI units, not base units).
   final double amount;
 
-  const MinersPassConfig({required this.active, this.amount = 0});
+  /// Wallet that receives the SKR, shown before signing.
+  final String? treasury;
+
+  /// Network fee for the payment, in lamports, shown before signing.
+  final int? feeLamports;
+
+  const MinersPassConfig({
+    required this.active,
+    this.amount = 0,
+    this.treasury,
+    this.feeLamports,
+  });
 
   factory MinersPassConfig.fromJson(Map<String, dynamic> json) {
     final amount = (json['amount'] as num?)?.toDouble() ?? 0;
@@ -66,6 +83,8 @@ class MinersPassConfig {
       // A zero price is a misconfiguration, never a free pass.
       active: json['active'] == true && amount > 0,
       amount: amount,
+      treasury: json['treasury'] as String?,
+      feeLamports: (json['feeLamports'] as num?)?.toInt(),
     );
   }
 
@@ -242,6 +261,15 @@ class MinersPassService extends ChangeNotifier {
         case 'unavailable':
           _config = MinersPassConfig.inactive;
           return _fail(PassPurchaseError.unavailable);
+        case 'simulation_failed':
+          // The server simulated the transfer and it would fail; the
+          // wallet was never opened.
+          debugPrint('MinersPass: refused before signing: ${e.details}');
+          return switch ((e.details as Map)['reason']) {
+            'insufficient_sol' => _fail(PassPurchaseError.insufficientSol),
+            'insufficient_skr' => _fail(PassPurchaseError.insufficientSkr),
+            _ => _fail(PassPurchaseError.failed),
+          };
         default:
           debugPrint('MinersPass: build failed (${e.status}): ${e.details}');
           return _fail(PassPurchaseError.failed);
@@ -251,7 +279,7 @@ class MinersPassService extends ChangeNotifier {
       return _fail(PassPurchaseError.failed);
     }
 
-    // 2. Sign + send via MWA (retries across the app-switch network drop).
+    // 2. The wallet signs and submits it (MWA sign-and-send).
     _setStatus(PassPurchaseStatus.awaitingSignature);
     final signature = await _wallet.signAndSendTransaction(txBytes);
     if (signature == null) {

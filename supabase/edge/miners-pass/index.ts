@@ -11,9 +11,12 @@
  *
  * All routes are POST (supabase-js functions.invoke's default):
  *
- *   /config    — { active, amountBase, amount, decimals, mint, network }
+ *   /config    — { active, amountBase, amount, decimals, mint, network,
+ *                  treasury, feeLamports }
  *   /status    — { active, weekKey } for the caller, current ISO week
  *   /build-tx  — { buyer } → { transaction (base64, unsigned), orderId }
+ *                (simulated first: a transfer that would fail is refused
+ *                with simulation_failed instead of reaching the wallet)
  *   /confirm   — { orderId, signature } → { status: pending|paid|failed }
  *
  * /status, /build-tx and /confirm need the player's session JWT; the
@@ -257,6 +260,13 @@ function toUiAmount(amountBase: bigint, decimals: number): number {
   return Number(amountBase) / 10 ** decimals;
 }
 
+/** Network fee for the pass transfer: one signature at the base fee plus
+ *  the priority fee on the requested compute units. Shown before signing. */
+function estimatedFeeLamports(): number {
+  const config = getConfig();
+  return 5000 + Math.ceil((config.computeUnits * config.computeUnitPrice) / 1_000_000);
+}
+
 // =============================================================
 // POST /config
 // =============================================================
@@ -284,6 +294,10 @@ async function handleConfig(): Promise<Response> {
     decimals: accounts.decimals,
     amountBase: price.toString(),
     amount: toUiAmount(price, accounts.decimals),
+    // The wallet that receives the SKR (owner of the treasury token
+    // account), so the app can name the recipient before signing.
+    treasury: config.treasuryWallet,
+    feeLamports: estimatedFeeLamports(),
   });
 }
 
@@ -414,7 +428,34 @@ async function handleBuildTx(
     recentBlockhash: latestBlockhash.blockhash,
     instructions,
   }).compileToV0Message();
-  const serialized = new VersionedTransaction(message).serialize();
+  const transaction = new VersionedTransaction(message);
+
+  // Simulate before the wallet sees it, so the player is never asked to
+  // sign a transfer that would fail (most often: SKR but no SOL for the fee).
+  const sim = await connection.simulateTransaction(transaction, {
+    sigVerify: false,
+    replaceRecentBlockhash: true,
+    commitment: 'confirmed',
+  });
+  if (sim.value.err) {
+    const detail = JSON.stringify(sim.value.err);
+    const text = [detail, ...(sim.value.logs ?? [])].join('\n');
+    const reason =
+      /AccountNotFound|InsufficientFundsForFee|insufficient lamports/i.test(text)
+        ? 'insufficient_sol'
+        : /insufficient funds/i.test(text)
+        ? 'insufficient_skr'
+        : 'unknown';
+    console.warn(`Miner's Pass order ${orderId} refused before signing: ${reason} (${detail})`);
+    await admin
+      .from('miners_pass_orders')
+      .update({ status: 'failed' })
+      .eq('id', orderId)
+      .eq('status', 'pending');
+    return jsonResponse({ error: 'simulation_failed', reason, detail }, 400);
+  }
+
+  const serialized = transaction.serialize();
 
   console.log(
     `Built Miner's Pass tx: order ${orderId}, ` +
@@ -426,6 +467,7 @@ async function handleBuildTx(
     orderId,
     amount: toUiAmount(price, accounts.decimals),
     lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+    feeLamports: estimatedFeeLamports(),
   });
 }
 

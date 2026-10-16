@@ -805,5 +805,19 @@
   "reviewPromptRate": "dApp Store에서 평가하기",
   "reviewPromptLater": "나중에",
   "reviewPromptThanks": "감사합니다.",
-  "reviewPromptFailed": "스토어를 열 수 없어요. 나중에 다시 시도해 주세요."
+  "reviewPromptFailed": "스토어를 열 수 없어요. 나중에 다시 시도해 주세요.",
+  "txReviewTitle": "서명 전에 확인하세요",
+  "txReviewYouReceive": "받는 것",
+  "txReviewPrice": "가격",
+  "txReviewPaidTo": "받는 주소 {address}",
+  "txReviewRent": "NFT 계정 렌트",
+  "txReviewRentDetail": "새 NFT의 계정에 보관됩니다",
+  "txReviewNetworkFee": "네트워크 수수료",
+  "txReviewTotal": "합계",
+  "txReviewApprove": "지갑에서 승인",
+  "mintReviewMachines": "{count, plural, =1{봉인된 Diggle Machine NFT 1개} other{봉인된 Diggle Machine NFT {count}개}}",
+  "mintReviewSimulated": "방금 시뮬레이션 완료: 이 민팅은 성공하며 봇 세금이 부과되지 않습니다. 지갑에도 같은 금액이 표시되어야 합니다.",
+  "mintReviewEachApproval": "머신마다 지갑에서 따로 승인합니다.",
+  "minersPassReviewNote": "지갑을 열기 전에 확인합니다: 실패할 결제는 미리 중단됩니다. 지갑에도 같은 금액이 표시되어야 합니다.",
+  "minersPassNotEnoughSol": "네트워크 수수료로 낼 SOL이 부족합니다. 지갑에서 서명을 요청하지 않았습니다."
 }

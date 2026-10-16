@@ -22,7 +22,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get pyroLabs => 'PyroLabs';
 
   @override
-  String get version => 'v0.1.0-alpha';
+  String get version => 'v2.1.1-beta';
 
   @override
   String get newGame => 'NOUVELLE PARTIE';
@@ -1782,4 +1782,60 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get reviewPromptFailed =>
       'Impossible d\'ouvrir la boutique. Réessaie plus tard.';
+
+  @override
+  String get txReviewTitle => 'Vérifiez avant de signer';
+
+  @override
+  String get txReviewYouReceive => 'Vous recevez';
+
+  @override
+  String get txReviewPrice => 'Prix';
+
+  @override
+  String txReviewPaidTo(String address) {
+    return 'à $address';
+  }
+
+  @override
+  String get txReviewRent => 'Loyer des comptes du NFT';
+
+  @override
+  String get txReviewRentDetail => 'Conservé dans les comptes du nouveau NFT';
+
+  @override
+  String get txReviewNetworkFee => 'Frais de réseau';
+
+  @override
+  String get txReviewTotal => 'Total';
+
+  @override
+  String get txReviewApprove => 'Approuver dans le wallet';
+
+  @override
+  String mintReviewMachines(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Diggle Machine NFT scellées',
+      one: '1 Diggle Machine NFT scellée',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mintReviewSimulated =>
+      'Simulé à l\'instant : ce mint réussit et ne déclenchera pas la taxe anti-bot. Votre wallet devrait afficher les mêmes montants.';
+
+  @override
+  String get mintReviewEachApproval =>
+      'Chaque machine demande sa propre approbation dans le wallet.';
+
+  @override
+  String get minersPassReviewNote =>
+      'Vérifié avant l\'ouverture du wallet : un paiement qui échouerait est arrêté avant. Votre wallet devrait afficher le même montant.';
+
+  @override
+  String get minersPassNotEnoughSol =>
+      'Pas assez de SOL pour les frais de réseau. Rien ne vous a été demandé à signer.';
 }

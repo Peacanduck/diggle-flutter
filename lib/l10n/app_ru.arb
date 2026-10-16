@@ -805,5 +805,19 @@
   "reviewPromptRate": "Оценить в dApp Store",
   "reviewPromptLater": "Не сейчас",
   "reviewPromptThanks": "Спасибо.",
-  "reviewPromptFailed": "Не удалось открыть магазин. Попробуйте позже."
+  "reviewPromptFailed": "Не удалось открыть магазин. Попробуйте позже.",
+  "txReviewTitle": "Проверьте перед подписью",
+  "txReviewYouReceive": "Вы получите",
+  "txReviewPrice": "Цена",
+  "txReviewPaidTo": "получатель {address}",
+  "txReviewRent": "Рента аккаунтов NFT",
+  "txReviewRentDetail": "Хранится в аккаунтах нового NFT",
+  "txReviewNetworkFee": "Комиссия сети",
+  "txReviewTotal": "Итого",
+  "txReviewApprove": "Подтвердить в кошельке",
+  "mintReviewMachines": "{count, plural, =1{1 запечатанный Diggle Machine NFT} few{{count} запечатанных Diggle Machine NFT} many{{count} запечатанных Diggle Machine NFT} other{{count} запечатанных Diggle Machine NFT}}",
+  "mintReviewSimulated": "Только что проверено симуляцией: минт пройдёт и не вызовет бот-налог. Кошелёк должен показать те же суммы.",
+  "mintReviewEachApproval": "Каждую машину нужно подтвердить в кошельке отдельно.",
+  "minersPassReviewNote": "Проверяется до открытия кошелька: платёж, который не пройдёт, останавливается заранее. Кошелёк должен показать ту же сумму.",
+  "minersPassNotEnoughSol": "Недостаточно SOL для комиссии сети. Кошелёк ничего не просил подписать."
 }

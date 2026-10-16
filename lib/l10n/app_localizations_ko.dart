@@ -21,7 +21,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get pyroLabs => 'PyroLabs';
 
   @override
-  String get version => 'v0.1.0-alpha';
+  String get version => 'v2.1.1-beta';
 
   @override
   String get newGame => '새 게임';
@@ -1713,4 +1713,59 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reviewPromptFailed => '스토어를 열 수 없어요. 나중에 다시 시도해 주세요.';
+
+  @override
+  String get txReviewTitle => '서명 전에 확인하세요';
+
+  @override
+  String get txReviewYouReceive => '받는 것';
+
+  @override
+  String get txReviewPrice => '가격';
+
+  @override
+  String txReviewPaidTo(String address) {
+    return '받는 주소 $address';
+  }
+
+  @override
+  String get txReviewRent => 'NFT 계정 렌트';
+
+  @override
+  String get txReviewRentDetail => '새 NFT의 계정에 보관됩니다';
+
+  @override
+  String get txReviewNetworkFee => '네트워크 수수료';
+
+  @override
+  String get txReviewTotal => '합계';
+
+  @override
+  String get txReviewApprove => '지갑에서 승인';
+
+  @override
+  String mintReviewMachines(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '봉인된 Diggle Machine NFT $count개',
+      one: '봉인된 Diggle Machine NFT 1개',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mintReviewSimulated =>
+      '방금 시뮬레이션 완료: 이 민팅은 성공하며 봇 세금이 부과되지 않습니다. 지갑에도 같은 금액이 표시되어야 합니다.';
+
+  @override
+  String get mintReviewEachApproval => '머신마다 지갑에서 따로 승인합니다.';
+
+  @override
+  String get minersPassReviewNote =>
+      '지갑을 열기 전에 확인합니다: 실패할 결제는 미리 중단됩니다. 지갑에도 같은 금액이 표시되어야 합니다.';
+
+  @override
+  String get minersPassNotEnoughSol =>
+      '네트워크 수수료로 낼 SOL이 부족합니다. 지갑에서 서명을 요청하지 않았습니다.';
 }

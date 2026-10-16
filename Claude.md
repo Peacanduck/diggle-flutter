@@ -104,13 +104,14 @@ No on-chain program: a plain SPL `transferChecked` of SKR, built and verified
 server-side by the `miners-pass` edge function.
 
 ```
-User taps "<price> SKR" (Quests → Weekly)
+User taps "<price> SKR" (Quests → Weekly) → review sheet (price, recipient, fee) → Approve
   → miners_pass_service.purchase()
     → edge fn /build-tx — checks price + SKR balance, inserts a pending order, builds a v0 tx:
         compute budget + transferChecked(buyer ATA → treasury ATA) + memo "diggle:miners_pass:<orderId>"
-    → wallet_service.signAndSendTransaction(txBytes)
-      → wallet_service.signTransaction(txBytes) — MWA session: reauthorize → signTransactions
-      → rpcClient.sendTransaction(...) — submit via RPC with retry (network recovery after app switch)
+        then SIMULATES it; a failing transfer (e.g. no SOL for the fee) → simulation_failed, order failed
+    → wallet_service.signAndSendTransaction(txBytes) — MWA sign_and_send_transactions:
+        the WALLET submits (Phantom may add Lighthouse instructions, so verify by instruction, not bytes).
+        Wallets without sign-and-send fall back to signTransactions + RPC send with retries.
     → persist {orderId, signature} — restore() finishes it if the app dies before verification
     → poll edge fn /confirm — getParsedTransaction; checks mint, destination, amount, payer, memo;
         fulfill_miners_pass_order() records the pass for the current ISO week
@@ -125,10 +126,34 @@ The wallet uses `LocalAssociationScenario` from `solana_mobile_client`:
 2. `session.startActivityForResult(null)` — launch wallet app (unawaited)
 3. `session.start()` — get MWA client
 4. `client.reauthorize(...)` or `client.authorize(...)` — authenticate
-5. `client.signTransactions(transactions: [...])` — sign
+5. `client.signAndSendTransactions(...)` — single-signer txs (the wallet submits), or
+   `client.signTransactions(...)` — multi-signer txs, signed by the wallet FIRST
 6. `session.close()` — cleanup
 
-**Important:** After MWA app switch, Android may temporarily lose network connectivity. The `signAndSendTransaction` method retries RPC submission up to 3 times with increasing delays for `SocketException`/host lookup failures.
+**Important:** After MWA app switch, Android may temporarily lose network connectivity. Paths that submit via RPC themselves (the mint, and the sign-only fallback of `signAndSendTransaction`) retry up to 3–4 times with increasing delays for `SocketException`/host lookup failures.
+
+### Phantom trust (no "could be malicious" / "identity could not be verified")
+
+Phantom's review rejected a version that broke these rules
+(docs.phantom.com/developer-powertools/domain-and-transaction-warnings). Keep them:
+
+- **Identity:** `WalletService._identityUri` = `https://www.pydigital.xyz/diggle`, icon
+  `diggle-icon.png`. The legal-hub site serves `/.well-known/assetlinks.json` (and a copy
+  under `/diggle/`) listing `com.example.diggle` + the release signing cert SHA-256
+  (`F4:79:F3:…:B6:AF`, from `apksigner verify --print-certs app-release.apk`). Use the
+  `www` host: the apex 308-redirects and asset-link checks don't follow redirects. A new
+  signing key or package name must be added to that file.
+- **Wallet signs first.** The mint needs a second signer (the new NFT mint key). The app
+  generates that keypair, `candy-machine /build-mint-tx` (with `nftMint`) returns the tx
+  with NO signatures, the wallet signs via `signTransaction`, then `tx_cosign.dart` adds
+  the mint key's signature to the bytes the wallet returned. Never pre-sign server-side
+  (the no-`nftMint` legacy path exists only for app versions already installed).
+- **Simulate before the wallet opens.** Both edge functions simulate (`sigVerify: false`,
+  `replaceRecentBlockhash: true`) and refuse with `simulation_failed` + a reason. The candy
+  guard has bot tax, so a rejected mint "succeeds" in simulation: the check reads the new
+  mint account back and treats "not created" as a failure.
+- **Show every cost first.** `tx_review_sheet.dart` (price → recipient, NFT rent, network
+  fee, total) for the mint and the pass; the website's MintConsole has the same review.
 
 ### Account Data Deserialization
 
@@ -567,4 +592,6 @@ The points → SPL token pipeline will work as follows:
 | `ambiguous_import` for `Instruction` | Both `dto.dart` and `encoder.dart` export it | Add `hide Instruction` to `dto.dart` and `solana.dart` imports |
 | `undefined_method 'writableSigner'` | Wrong API name | Use `AccountMeta.writeable(pubKey: ..., isSigner: true)` |
 | Wallet opens but no transaction prompt | Malformed transaction bytes | Verify `SignedTx.toByteArray()` serialization; check byte count in logs |
+| Phantom: "This dApp could be malicious" | Tx pre-signed by another signer, or it fails simulation | Wallet must sign first (see Phantom trust); check the edge fn's `simulation_failed` reason |
+| Phantom: "app's identity could not be verified" | assetlinks.json missing/redirected, or cert/package mismatch | `curl -sS --fail https://www.pydigital.xyz/.well-known/assetlinks.json`; compare the SHA-256 with the APK's signing cert |
 | Miner's Pass button says "Unavailable" | `skr_prices` row inactive, treasury SKR account missing, or no Supabase session | Check `skr_prices`, create the treasury's SKR token account, check the `miners-pass` function logs |

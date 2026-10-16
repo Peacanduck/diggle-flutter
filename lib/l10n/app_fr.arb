@@ -805,5 +805,19 @@
   "reviewPromptRate": "Noter sur le dApp Store",
   "reviewPromptLater": "Plus tard",
   "reviewPromptThanks": "Merci.",
-  "reviewPromptFailed": "Impossible d'ouvrir la boutique. Réessaie plus tard."
+  "reviewPromptFailed": "Impossible d'ouvrir la boutique. Réessaie plus tard.",
+  "txReviewTitle": "Vérifiez avant de signer",
+  "txReviewYouReceive": "Vous recevez",
+  "txReviewPrice": "Prix",
+  "txReviewPaidTo": "à {address}",
+  "txReviewRent": "Loyer des comptes du NFT",
+  "txReviewRentDetail": "Conservé dans les comptes du nouveau NFT",
+  "txReviewNetworkFee": "Frais de réseau",
+  "txReviewTotal": "Total",
+  "txReviewApprove": "Approuver dans le wallet",
+  "mintReviewMachines": "{count, plural, =1{1 Diggle Machine NFT scellée} other{{count} Diggle Machine NFT scellées}}",
+  "mintReviewSimulated": "Simulé à l'instant : ce mint réussit et ne déclenchera pas la taxe anti-bot. Votre wallet devrait afficher les mêmes montants.",
+  "mintReviewEachApproval": "Chaque machine demande sa propre approbation dans le wallet.",
+  "minersPassReviewNote": "Vérifié avant l'ouverture du wallet : un paiement qui échouerait est arrêté avant. Votre wallet devrait afficher le même montant.",
+  "minersPassNotEnoughSol": "Pas assez de SOL pour les frais de réseau. Rien ne vous a été demandé à signer."
 }

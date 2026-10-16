@@ -805,5 +805,19 @@
   "reviewPromptRate": "在 dApp Store 评价",
   "reviewPromptLater": "以后再说",
   "reviewPromptThanks": "谢谢。",
-  "reviewPromptFailed": "无法打开商店。请稍后再试。"
+  "reviewPromptFailed": "无法打开商店。请稍后再试。",
+  "txReviewTitle": "签名前请确认",
+  "txReviewYouReceive": "你将获得",
+  "txReviewPrice": "价格",
+  "txReviewPaidTo": "收款方 {address}",
+  "txReviewRent": "NFT 账户租金",
+  "txReviewRentDetail": "保存在新 NFT 的账户中",
+  "txReviewNetworkFee": "网络手续费",
+  "txReviewTotal": "合计",
+  "txReviewApprove": "在钱包中确认",
+  "mintReviewMachines": "{count, plural, =1{1 个封存的 Diggle Machine NFT} other{{count} 个封存的 Diggle Machine NFT}}",
+  "mintReviewSimulated": "刚刚已模拟：本次铸造会成功，且不会触发机器人税。你的钱包应显示相同的金额。",
+  "mintReviewEachApproval": "每台机器都需要在钱包中单独确认。",
+  "minersPassReviewNote": "打开钱包前已检查：会失败的付款会被提前拦下。你的钱包应显示相同的金额。",
+  "minersPassNotEnoughSol": "SOL 不足以支付网络手续费。钱包未要求你签署任何内容。"
 }

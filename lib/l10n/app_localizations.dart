@@ -135,7 +135,7 @@ abstract class AppLocalizations {
   /// No description provided for @version.
   ///
   /// In en, this message translates to:
-  /// **'v0.1.0-alpha'**
+  /// **'v2.1.1-beta'**
   String get version;
 
   /// No description provided for @newGame.
@@ -3233,6 +3233,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t open the store. Try again later.'**
   String get reviewPromptFailed;
+
+  /// No description provided for @txReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review before you sign'**
+  String get txReviewTitle;
+
+  /// No description provided for @txReviewYouReceive.
+  ///
+  /// In en, this message translates to:
+  /// **'You receive'**
+  String get txReviewYouReceive;
+
+  /// No description provided for @txReviewPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get txReviewPrice;
+
+  /// No description provided for @txReviewPaidTo.
+  ///
+  /// In en, this message translates to:
+  /// **'to {address}'**
+  String txReviewPaidTo(String address);
+
+  /// No description provided for @txReviewRent.
+  ///
+  /// In en, this message translates to:
+  /// **'NFT account rent'**
+  String get txReviewRent;
+
+  /// No description provided for @txReviewRentDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Held in the new NFT\'s accounts'**
+  String get txReviewRentDetail;
+
+  /// No description provided for @txReviewNetworkFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Network fee'**
+  String get txReviewNetworkFee;
+
+  /// No description provided for @txReviewTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get txReviewTotal;
+
+  /// No description provided for @txReviewApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve in wallet'**
+  String get txReviewApprove;
+
+  /// No description provided for @mintReviewMachines.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 sealed Diggle Machine NFT} other{{count} sealed Diggle Machine NFTs}}'**
+  String mintReviewMachines(int count);
+
+  /// No description provided for @mintReviewSimulated.
+  ///
+  /// In en, this message translates to:
+  /// **'Simulated just now: this mint succeeds and won\'t trigger the bot tax. Your wallet should show the same amounts.'**
+  String get mintReviewSimulated;
+
+  /// No description provided for @mintReviewEachApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Each machine is its own wallet approval.'**
+  String get mintReviewEachApproval;
+
+  /// No description provided for @minersPassReviewNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Checked before your wallet opens: a payment that would fail is stopped first. Your wallet should show the same amount.'**
+  String get minersPassReviewNote;
+
+  /// No description provided for @minersPassNotEnoughSol.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough SOL for the network fee. Your wallet wasn\'t asked to sign anything.'**
+  String get minersPassNotEnoughSol;
 }
 
 class _AppLocalizationsDelegate

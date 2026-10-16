@@ -9,6 +9,7 @@ import '../l10n/app_localizations.dart';
 import '../game/systems/quest_system.dart';
 import '../solana/miners_pass_service.dart';
 import '../solana/wallet_service.dart';
+import 'tx_review_sheet.dart';
 
 class QuestOverlay extends StatefulWidget {
   final QuestSystem questSystem;
@@ -427,8 +428,30 @@ class _QuestOverlayState extends State<QuestOverlay>
 
   Future<void> _buyMinersPass() async {
     final service = widget.minersPassService;
-    if (service == null) return;
+    final config = service?.config;
+    if (service == null || config == null) return;
     final l10n = AppLocalizations.of(context)!;
+
+    // What the wallet is about to ask for, before it opens.
+    final treasury = config.treasury;
+    final fee = config.feeLamports;
+    final approved = await showTxReviewSheet(
+      context,
+      rows: [
+        TxReviewRow(l10n.txReviewYouReceive, l10n.minersPassBlurb),
+        TxReviewRow(
+          l10n.txReviewPrice,
+          '${formatSkr(config.amount)} SKR',
+          detail: treasury == null
+              ? null
+              : l10n.txReviewPaidTo(shortAddress(treasury)),
+        ),
+        if (fee != null)
+          TxReviewRow(l10n.txReviewNetworkFee, formatLamportsAsSol(fee)),
+      ],
+      note: l10n.minersPassReviewNote,
+    );
+    if (!approved || !mounted) return;
 
     final weekKey = await service.purchase();
     if (weekKey != null) {
@@ -440,6 +463,7 @@ class _QuestOverlayState extends State<QuestOverlay>
     final message = switch (service.error) {
       PassPurchaseError.insufficientSkr => l10n.minersPassNotEnoughSkr(
           formatSkr(service.neededSkr ?? service.config?.amount ?? 0)),
+      PassPurchaseError.insufficientSol => l10n.minersPassNotEnoughSol,
       PassPurchaseError.unavailable => l10n.minersPassUnavailable,
       PassPurchaseError.unconfirmed => l10n.minersPassFailed,
       _ => l10n.purchaseFailed,

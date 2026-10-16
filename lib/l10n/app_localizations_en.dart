@@ -21,7 +21,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pyroLabs => 'PyroLabs';
 
   @override
-  String get version => 'v0.1.0-alpha';
+  String get version => 'v2.1.1-beta';
 
   @override
   String get newGame => 'NEW GAME';
@@ -1753,4 +1753,60 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reviewPromptFailed => 'Couldn\'t open the store. Try again later.';
+
+  @override
+  String get txReviewTitle => 'Review before you sign';
+
+  @override
+  String get txReviewYouReceive => 'You receive';
+
+  @override
+  String get txReviewPrice => 'Price';
+
+  @override
+  String txReviewPaidTo(String address) {
+    return 'to $address';
+  }
+
+  @override
+  String get txReviewRent => 'NFT account rent';
+
+  @override
+  String get txReviewRentDetail => 'Held in the new NFT\'s accounts';
+
+  @override
+  String get txReviewNetworkFee => 'Network fee';
+
+  @override
+  String get txReviewTotal => 'Total';
+
+  @override
+  String get txReviewApprove => 'Approve in wallet';
+
+  @override
+  String mintReviewMachines(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sealed Diggle Machine NFTs',
+      one: '1 sealed Diggle Machine NFT',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mintReviewSimulated =>
+      'Simulated just now: this mint succeeds and won\'t trigger the bot tax. Your wallet should show the same amounts.';
+
+  @override
+  String get mintReviewEachApproval =>
+      'Each machine is its own wallet approval.';
+
+  @override
+  String get minersPassReviewNote =>
+      'Checked before your wallet opens: a payment that would fail is stopped first. Your wallet should show the same amount.';
+
+  @override
+  String get minersPassNotEnoughSol =>
+      'Not enough SOL for the network fee. Your wallet wasn\'t asked to sign anything.';
 }

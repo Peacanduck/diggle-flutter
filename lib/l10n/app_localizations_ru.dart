@@ -1770,4 +1770,62 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get reviewPromptFailed =>
       'Не удалось открыть магазин. Попробуйте позже.';
+
+  @override
+  String get txReviewTitle => 'Проверьте перед подписью';
+
+  @override
+  String get txReviewYouReceive => 'Вы получите';
+
+  @override
+  String get txReviewPrice => 'Цена';
+
+  @override
+  String txReviewPaidTo(String address) {
+    return 'получатель $address';
+  }
+
+  @override
+  String get txReviewRent => 'Рента аккаунтов NFT';
+
+  @override
+  String get txReviewRentDetail => 'Хранится в аккаунтах нового NFT';
+
+  @override
+  String get txReviewNetworkFee => 'Комиссия сети';
+
+  @override
+  String get txReviewTotal => 'Итого';
+
+  @override
+  String get txReviewApprove => 'Подтвердить в кошельке';
+
+  @override
+  String mintReviewMachines(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count запечатанных Diggle Machine NFT',
+      many: '$count запечатанных Diggle Machine NFT',
+      few: '$count запечатанных Diggle Machine NFT',
+      one: '1 запечатанный Diggle Machine NFT',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mintReviewSimulated =>
+      'Только что проверено симуляцией: минт пройдёт и не вызовет бот-налог. Кошелёк должен показать те же суммы.';
+
+  @override
+  String get mintReviewEachApproval =>
+      'Каждую машину нужно подтвердить в кошельке отдельно.';
+
+  @override
+  String get minersPassReviewNote =>
+      'Проверяется до открытия кошелька: платёж, который не пройдёт, останавливается заранее. Кошелёк должен показать ту же сумму.';
+
+  @override
+  String get minersPassNotEnoughSol =>
+      'Недостаточно SOL для комиссии сети. Кошелёк ничего не просил подписать.';
 }

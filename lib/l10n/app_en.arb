@@ -920,5 +920,33 @@
   "reviewPromptRate": "Rate on dApp Store",
   "reviewPromptLater": "Not now",
   "reviewPromptThanks": "Thank you.",
-  "reviewPromptFailed": "Couldn't open the store. Try again later."
+  "reviewPromptFailed": "Couldn't open the store. Try again later.",
+  "txReviewTitle": "Review before you sign",
+  "txReviewYouReceive": "You receive",
+  "txReviewPrice": "Price",
+  "txReviewPaidTo": "to {address}",
+  "@txReviewPaidTo": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "txReviewRent": "NFT account rent",
+  "txReviewRentDetail": "Held in the new NFT's accounts",
+  "txReviewNetworkFee": "Network fee",
+  "txReviewTotal": "Total",
+  "txReviewApprove": "Approve in wallet",
+  "mintReviewMachines": "{count, plural, =1{1 sealed Diggle Machine NFT} other{{count} sealed Diggle Machine NFTs}}",
+  "@mintReviewMachines": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mintReviewSimulated": "Simulated just now: this mint succeeds and won't trigger the bot tax. Your wallet should show the same amounts.",
+  "mintReviewEachApproval": "Each machine is its own wallet approval.",
+  "minersPassReviewNote": "Checked before your wallet opens: a payment that would fail is stopped first. Your wallet should show the same amount.",
+  "minersPassNotEnoughSol": "Not enough SOL for the network fee. Your wallet wasn't asked to sign anything."
 }

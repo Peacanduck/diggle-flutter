@@ -17,6 +17,7 @@ import '../l10n/app_localizations.dart';
 import '../game/systems/boost_manager.dart' show NFTCollectionInfo;
 import '../solana/wallet_service.dart';
 import '../solana/candy_machine_service.dart';
+import 'tx_review_sheet.dart';
 
 class NftMintPanel extends StatefulWidget {
   final CandyMachineService candyMachineService;
@@ -44,11 +45,14 @@ class _NftMintPanelState extends State<NftMintPanel> {
   int _mintBatchTotal = 0;
   int _mintBatchDone = 0;
 
-  void _showStatus(String msg) {
+  void _showStatus(String msg,
+      {Duration duration = const Duration(seconds: 2)}) {
     if (!mounted) return;
     setState(() => _statusMessage = msg);
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) setState(() => _statusMessage = null);
+    Future.delayed(duration, () {
+      if (mounted && _statusMessage == msg) {
+        setState(() => _statusMessage = null);
+      }
     });
   }
 
@@ -71,9 +75,11 @@ class _NftMintPanelState extends State<NftMintPanel> {
                 const Icon(Icons.info_outline,
                     color: Colors.purple, size: 16),
                 const SizedBox(width: 8),
-                Text(_statusMessage!,
-                    style: const TextStyle(
-                        color: Colors.white70, fontSize: 12)),
+                Expanded(
+                  child: Text(_statusMessage!,
+                      style: const TextStyle(
+                          color: Colors.white70, fontSize: 12)),
+                ),
               ],
             ),
           ),
@@ -530,9 +536,30 @@ class _NftMintPanelState extends State<NftMintPanel> {
   /// Mint [_mintQty] machines sequentially. Each mint is a separate
   /// edge-function transaction and wallet approval; the batch aborts on
   /// the first failure/rejection so nobody pays for a broken run.
+  ///
+  /// The first mint is built and simulated before anything else, and its
+  /// cost (× the quantity) is reviewed before the wallet opens. Later mints
+  /// cost the same and are each simulated again before their own prompt.
   Future<void> _mintNFT() async {
     final l10n = AppLocalizations.of(context)!;
+    final service = widget.candyMachineService;
     final qty = _mintQty;
+
+    final first = await service.prepareMint();
+    if (!mounted) return;
+    if (first == null) {
+      _showStatus(service.error ?? l10n.purchaseFailed,
+          duration: const Duration(seconds: 8));
+      return;
+    }
+
+    final approved = await _reviewMint(l10n, first.quote, qty);
+    if (!mounted) return;
+    if (!approved) {
+      service.resetMintStatus();
+      return;
+    }
+
     setState(() {
       _mintBatchTotal = qty;
       _mintBatchDone = 0;
@@ -541,7 +568,9 @@ class _NftMintPanelState extends State<NftMintPanel> {
     int minted = 0;
     try {
       for (int i = 0; i < qty; i++) {
-        final result = await widget.candyMachineService.mint();
+        final result = i == 0
+            ? await service.confirmMint(first)
+            : await service.mint();
         if (result == null) break; // rejected/failed — stop the batch
         minted++;
         if (mounted) setState(() => _mintBatchDone = minted);
@@ -556,7 +585,8 @@ class _NftMintPanelState extends State<NftMintPanel> {
             ? '$minted/$qty ${l10n.nftMinted}'
             : l10n.nftMinted);
       } else {
-        _showStatus(l10n.purchaseFailed);
+        _showStatus(service.error ?? l10n.purchaseFailed,
+            duration: const Duration(seconds: 8));
       }
       if (mounted) {
         setState(() {
@@ -566,5 +596,38 @@ class _NftMintPanelState extends State<NftMintPanel> {
         });
       }
     }
+  }
+
+  /// Everything the wallet is about to be asked for, from the simulated
+  /// [quote] of one mint, times [qty].
+  Future<bool> _reviewMint(AppLocalizations l10n, MintQuote quote, int qty) {
+    return showTxReviewSheet(
+      context,
+      rows: [
+        TxReviewRow(l10n.txReviewYouReceive, l10n.mintReviewMachines(qty)),
+        TxReviewRow(
+          l10n.txReviewPrice,
+          formatLamportsAsSol(quote.priceLamports * qty),
+          detail: quote.destination.isEmpty
+              ? null
+              : l10n.txReviewPaidTo(shortAddress(quote.destination)),
+        ),
+        TxReviewRow(
+          l10n.txReviewRent,
+          formatLamportsAsSol(quote.rentLamports * qty),
+          detail: l10n.txReviewRentDetail,
+        ),
+        TxReviewRow(
+            l10n.txReviewNetworkFee, formatLamportsAsSol(quote.feeLamports * qty)),
+        TxReviewRow(
+          l10n.txReviewTotal,
+          formatLamportsAsSol(quote.totalLamports * qty),
+          isTotal: true,
+        ),
+      ],
+      note: qty > 1
+          ? '${l10n.mintReviewSimulated} ${l10n.mintReviewEachApproval}'
+          : l10n.mintReviewSimulated,
+    );
   }
 }
