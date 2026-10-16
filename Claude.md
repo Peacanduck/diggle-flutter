@@ -137,12 +137,15 @@ The wallet uses `LocalAssociationScenario` from `solana_mobile_client`:
 Phantom's review rejected a version that broke these rules
 (docs.phantom.com/developer-powertools/domain-and-transaction-warnings). Keep them:
 
-- **Identity:** `WalletService._identityUri` = `https://www.pydigital.xyz/diggle`, icon
-  `diggle-icon.png`. The legal-hub site serves `/.well-known/assetlinks.json` (and a copy
-  under `/diggle/`) listing `com.example.diggle` + the release signing cert SHA-256
-  (`F4:79:F3:…:B6:AF`, from `apksigner verify --print-certs app-release.apk`). Use the
-  `www` host: the apex 308-redirects and asset-link checks don't follow redirects. A new
-  signing key or package name must be added to that file.
+- **Identity:** `WalletService._identityUri` = `https://diggle.pydigital.xyz` (Diggle's own
+  host on the legal-hub Vercel project), icon `diggle-icon.png`. That host serves
+  `/.well-known/assetlinks.json` listing `com.example.diggle` + the release signing cert
+  SHA-256 (`F4:79:F3:…:B6:AF`, from `apksigner verify --print-certs app-release.apk`); a
+  new signing key or package name must be added to that file. Wallets look the dApp up by
+  DOMAIN (the Seeker Wallet fetched an icon it couldn't decode while the identity was
+  `www.pydigital.xyz/diggle`), so the host's root, `/favicon.ico` and page head must all
+  be Diggle's. Builds from a `.claude/worktrees/` checkout are debug-signed (no
+  `key.properties`) and never verify — test identity with a release build from main.
 - **Wallet signs first.** The mint needs a second signer (the new NFT mint key). The app
   generates that keypair, `candy-machine /build-mint-tx` (with `nftMint`) returns the tx
   with NO signatures, the wallet signs via `signTransaction`, then `tx_cosign.dart` adds
@@ -593,5 +596,5 @@ The points → SPL token pipeline will work as follows:
 | `undefined_method 'writableSigner'` | Wrong API name | Use `AccountMeta.writeable(pubKey: ..., isSigner: true)` |
 | Wallet opens but no transaction prompt | Malformed transaction bytes | Verify `SignedTx.toByteArray()` serialization; check byte count in logs |
 | Phantom: "This dApp could be malicious" | Tx pre-signed by another signer, or it fails simulation | Wallet must sign first (see Phantom trust); check the edge fn's `simulation_failed` reason |
-| Phantom: "app's identity could not be verified" | assetlinks.json missing/redirected, or cert/package mismatch | `curl -sS --fail https://www.pydigital.xyz/.well-known/assetlinks.json`; compare the SHA-256 with the APK's signing cert |
+| Phantom: "app's identity could not be verified" | assetlinks.json missing/redirected, or cert/package mismatch | `curl -sS --fail https://diggle.pydigital.xyz/.well-known/assetlinks.json`; compare the SHA-256 with the APK's signing cert |
 | Miner's Pass button says "Unavailable" | `skr_prices` row inactive, treasury SKR account missing, or no Supabase session | Check `skr_prices`, create the treasury's SKR token account, check the `miners-pass` function logs |

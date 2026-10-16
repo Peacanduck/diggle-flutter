@@ -51,14 +51,14 @@ enum SolanaCluster {
 /// High-level wallet service with state management
 class WalletService extends ChangeNotifier {
   // Mobile Wallet Adapter identity, sent on every authorize/reauthorize.
-  // Phantom verifies the app against the Digital Asset Links file on this
+  // Wallets verify the app against the Digital Asset Links file on this
   // domain (/.well-known/assetlinks.json lists com.example.diggle and its
-  // release signing key) and shows "identity could not be verified"
-  // otherwise. It's the www host because the apex redirects, and
-  // asset-link checks don't follow redirects. The icon resolves relative
-  // to the URI; the site serves it at /diggle-icon.png and
-  // /diggle/diggle-icon.png so either reading finds it.
-  static final Uri _identityUri = Uri.parse('https://www.pydigital.xyz/diggle');
+  // release signing key) and warn "identity could not be verified"
+  // otherwise. They also look up the dApp's icon by domain, so Diggle has
+  // its own host whose root, favicon.ico and page head are all Diggle's;
+  // a path under the shared pydigital.xyz hub left wallets showing "?".
+  // Only release-signed builds verify (a debug key isn't in the file).
+  static final Uri _identityUri = Uri.parse('https://diggle.pydigital.xyz');
   static final Uri _iconUri = Uri.parse('diggle-icon.png');
   static const String _identityName = 'Diggle';
 
